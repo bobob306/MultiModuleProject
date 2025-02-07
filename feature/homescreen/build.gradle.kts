@@ -37,10 +37,15 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"
+    }
 }
 
 dependencies {
-    implementation(libs.hilt.android) // Or latest)
+    implementation(libs.hilt.android)
+    implementation(project(":core:network"))
+    implementation(project(":core:common")) // Or latest)
     kapt(libs.hilt.compiler) // Use kapt for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.androidx.navigation.compose) // Or latest
@@ -61,5 +66,8 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore.ktx)
 
 }

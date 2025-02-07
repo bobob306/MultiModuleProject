@@ -11,14 +11,15 @@ import com.bsdevs.homescreen.navigation.homeScreenSection
 @Composable
 fun MMPNavHost(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
 ) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
         startDestination = HomeScreenBaseRoute,
-        modifier = modifier,
     ) {
-        homeScreenSection()
+        homeScreenSection(
+            onShowSnackBar,
+        )
     }
 }

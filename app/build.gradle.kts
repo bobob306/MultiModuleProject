@@ -7,6 +7,7 @@ plugins {
     id("kotlin-kapt") // Kapt for Hilt annotation processing
     id("com.google.dagger.hilt.android")
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0" // Apply the plugin
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -42,7 +43,9 @@ android {
     buildFeatures {
         compose = true
     }
-
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"
+    }
     packaging {
         resources.excludes.add("META-INF/gradle/incremental.annotation.processors")
     }
@@ -76,4 +79,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose) // Hilt navigation
     implementation(libs.hilt.android.compiler) // Hilt compiler
     kapt(libs.hilt.compiler) // Hilt compiler
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.play.services.base)
 }

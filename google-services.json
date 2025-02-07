@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "726703981967",
+    "project_id": "flashcards-874f0",
+    "storage_bucket": "flashcards-874f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726703981967:android:4eb1323983cf2ab09677fa",
+        "android_client_info": {
+          "package_name": "com.bensdevelops.myGOT"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCug9a7mJ3hmn4SsYx3XYTVCuIG-0szgwE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726703981967:android:3123123f4752281f9677fa",
+        "android_client_info": {
+          "package_name": "com.bsdevs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCug9a7mJ3hmn4SsYx3XYTVCuIG-0szgwE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

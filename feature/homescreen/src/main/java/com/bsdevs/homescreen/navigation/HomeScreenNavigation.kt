@@ -1,5 +1,6 @@
 package com.bsdevs.homescreen.navigation
 
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
@@ -15,10 +16,10 @@ data object HomeScreenBaseRoute
 
 fun NavController.navigateToHome(navOptions: NavOptions) = navigate(route = HomeScreenRoute, navOptions)
 
-fun NavGraphBuilder.homeScreenSection() {
+fun NavGraphBuilder.homeScreenSection(onShowSnackBar: suspend (String, String?) -> Unit) {
     navigation<HomeScreenBaseRoute>(startDestination = HomeScreenRoute) {
         composable<HomeScreenRoute> {
-            HomeScreenRoute()
+            HomeScreenRoute(onShowSnackBar)
         }
     }
 }
