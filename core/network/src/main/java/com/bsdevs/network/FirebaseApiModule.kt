@@ -1,5 +1,8 @@
 package com.bsdevs.network
 
+import com.bsdevs.network.dto.ScreenDto
+import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.network.repository.ScreenRepositoryImpl
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
@@ -24,7 +27,12 @@ object FirebaseApiModule {
         FirebaseFirestore.getInstance().collection("screens")
 
     @Provides
-    fun provideScreenRepository(scr: CollectionReference): ScreenRepository {
-        return ScreenRepositoryImpl(scr)
+    fun provideMapper(): ScreenDtoMapper {
+        return ScreenDtoMapperImpl()
+    }
+
+    @Provides
+    fun provideScreenRepository(scr: CollectionReference, mapper: ScreenDtoMapper): ScreenRepository {
+        return ScreenRepositoryImpl(scr, mapper)
     }
 }

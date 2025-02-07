@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
-import com.bsdevs.network.ScreenDto
-import com.bsdevs.network.SpacerType
+import com.bsdevs.data.ScreenData
+import com.bsdevs.data.SpacerTypeData
 
 @Composable
 fun HomeScreenRoute(
@@ -32,7 +32,7 @@ fun HomeScreenRoute(
             HomeScreen(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
-                viewData = (viewData.value as Result.Success<List<ScreenDto>>).data
+                viewData = (viewData.value as Result.Success<List<ScreenData>>).data
             )
         }
 
@@ -56,7 +56,7 @@ internal fun LoadingScreen(getScreen: () -> Unit) {
 internal fun HomeScreen(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLoadData: () -> Unit,
-    viewData: List<ScreenDto>,
+    viewData: List<ScreenData>,
 ) {
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(
@@ -73,17 +73,17 @@ internal fun HomeScreen(
     ) {
         viewData.sortedBy { it.index }.forEach {
             when (it) {
-                is ScreenDto.TitleDto -> Text(it.content)
-                is ScreenDto.SubtitleDto -> Text(it.content)
-                is ScreenDto.SpacerDto -> {
-                    if (it.size.type == SpacerType.WEIGHT) {
-                        Spacer(modifier = Modifier.weight(it.size.weight!!))
+                is ScreenData.TitleData -> Text(it.content)
+                is ScreenData.SubtitleData -> Text(it.content)
+                is ScreenData.SpacerData -> {
+                    if (it.size.type == SpacerTypeData.WEIGHT) {
+                        Spacer(modifier = Modifier.weight(it.size.height.toFloat()))
                     } else {
-                        Spacer(modifier = Modifier.size(it.size.size!!.dp))
+                        Spacer(modifier = Modifier.size(it.size.height.dp))
                     }
                 }
 
-                is ScreenDto.Unknown -> Text("Unknown")
+                is ScreenData.Unknown -> Text("Unknown")
             }
         }
         Button(
