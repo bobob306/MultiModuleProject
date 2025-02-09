@@ -2,12 +2,12 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt") // Kapt for Hilt annotation processing
     id("com.google.dagger.hilt.android")
+    id("kotlin-kapt") // Use kapt for Hilt
 }
 
 android {
-    namespace = "com.bsdevs.core"
+    namespace = "com.bsdevs.renderer"
     compileSdk = 35
 
     defaultConfig {
@@ -46,21 +46,15 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.runtime.android)
+    implementation(project(":core:data"))
+    implementation(libs.androidx.material3.android)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    implementation(libs.hilt.android.compiler) // Hilt compiler
-    kapt(libs.hilt.compiler) // Hilt compiler
-    implementation(libs.hilt.android) // Hilt
+    kapt(libs.hilt.compiler) // Use kapt for Hilt
+    implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
+    implementation(libs.hilt.android) // Hilt compiler
 
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.ui.tooling)
-    implementation(libs.androidx.material3.android)
-
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
 }

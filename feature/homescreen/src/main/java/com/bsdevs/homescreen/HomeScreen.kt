@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenData
 import com.bsdevs.data.SpacerTypeData
+import com.bsdevs.renderer.RenderUI
 
 @Composable
 fun HomeScreenRoute(
@@ -32,7 +33,7 @@ fun HomeScreenRoute(
             HomeScreen(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
-                viewData = (viewData.value as Result.Success<List<ScreenData>>).data
+                viewData = (viewData.value as Result.Success<List<ScreenData>>).data,
             )
         }
 
@@ -69,22 +70,10 @@ internal fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(vertical = 24.dp, horizontal = 16.dp)
+            .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
         viewData.sortedBy { it.index }.forEach {
-            when (it) {
-                is ScreenData.TitleData -> Text(it.content)
-                is ScreenData.SubtitleData -> Text(it.content)
-                is ScreenData.SpacerData -> {
-                    if (it.size.type == SpacerTypeData.WEIGHT) {
-                        Spacer(modifier = Modifier.weight(it.size.height.toFloat()))
-                    } else {
-                        Spacer(modifier = Modifier.size(it.size.height.dp))
-                    }
-                }
-
-                is ScreenData.Unknown -> Text("Unknown")
-            }
+            RenderUI(item = it)
         }
         Button(
             onClick = {

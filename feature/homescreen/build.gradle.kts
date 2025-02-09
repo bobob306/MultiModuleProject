@@ -43,10 +43,10 @@ android {
 }
 
 dependencies {
-    implementation(libs.hilt.android)
     implementation(project(":core:network"))
     implementation(project(":core:common"))
-    implementation(project(":core:data")) // Or latest)
+    implementation(project(":core:data"))
+    implementation(project(":core:renderer")) // Or latest)
     kapt(libs.hilt.compiler) // Use kapt for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.androidx.navigation.compose) // Or latest
@@ -57,7 +57,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics) // Or latest
     implementation(libs.androidx.ui.tooling.preview) // Or latest
     implementation(libs.androidx.material3) // Or latest
-    implementation(libs.hilt.android.compiler) // Hilt compiler
+    implementation(libs.hilt.android) // Hilt compiler
     implementation(libs.kotlinx.serialization.json) // Or latest version
     implementation(libs.kotlinx.coroutines.android) // Or latest version
     implementation(libs.kotlinx.coroutines.core) // Or latest version

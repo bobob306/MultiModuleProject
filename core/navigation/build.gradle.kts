@@ -60,5 +60,6 @@ dependencies {
     implementation(libs.androidx.ui) // Or latest
     implementation(libs.androidx.ui.graphics) // Or latest
     implementation(libs.androidx.ui.tooling.preview) // Or latest
-    implementation(libs.androidx.material3) // Or latest
+    implementation(libs.androidx.ui.tooling) // Or latest
+    implementation(libs.androidx.material3.android) // Or latest
 }
