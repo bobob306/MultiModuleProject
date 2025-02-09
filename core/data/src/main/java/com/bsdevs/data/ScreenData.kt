@@ -19,7 +19,8 @@ sealed class ScreenData(
 }
 data class SizeData(
     val type: SpacerTypeData,
-    val height: Int,
+    val height: Int?,
+    val weight: Float?,
 )
 enum class SpacerTypeData {
     HEIGHT, WEIGHT,

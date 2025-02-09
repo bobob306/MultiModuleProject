@@ -21,6 +21,7 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                             else -> SpacerTypeData.HEIGHT
                         },
                         height = item.size.size ?: 0,
+                        weight = item.size.weight ?: 0f
                     )
                 )
 

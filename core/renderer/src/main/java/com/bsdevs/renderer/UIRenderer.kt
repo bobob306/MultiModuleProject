@@ -18,9 +18,9 @@ fun ColumnScope.RenderUI(item: ScreenData) {
         is ScreenData.Unknown -> {}
         is ScreenData.SpacerData -> {
             if (item.size.type == SpacerTypeData.WEIGHT) {
-                Spacer(modifier = Modifier.weight(item.size.height.toFloat()))
+                item.size.weight?.let { Spacer(modifier = Modifier.weight(it, fill = true)) }
             } else {
-                Spacer(modifier = Modifier.size(item.size.height.dp))
+                item.size.height?.let { Modifier.size(it.dp) }?.let { Spacer(modifier = it) }
             }
         }
     }
