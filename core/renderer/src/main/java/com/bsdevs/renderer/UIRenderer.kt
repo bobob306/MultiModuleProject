@@ -15,6 +15,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.bsdevs.data.ScreenData
 import com.bsdevs.data.SpacerTypeData
+import com.bsdevs.renderer.components.CardComponent
 
 @Composable
 fun ColumnScope.RenderUI(item: ScreenData, context: Context) {
@@ -36,5 +37,6 @@ fun ColumnScope.RenderUI(item: ScreenData, context: Context) {
                 modifier = Modifier.size(item.height.dp, item.width.dp),
             )
         }
+        is ScreenData.CardData -> CardComponent(cardData = item, context = context)
     }
 }

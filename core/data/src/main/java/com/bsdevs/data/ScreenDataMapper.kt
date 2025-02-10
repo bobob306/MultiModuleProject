@@ -43,6 +43,20 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     width = item.width
                 )
 
+                is ScreenDto.CardDto -> ScreenData.CardData(
+                    index = item.index,
+                    image = ScreenData.ImageData(
+                        index = item.index,
+                        url = item.image.url,
+                        contentDescription = item.image.contentDescription,
+                        height = item.image.height,
+                        width = item.image.width
+                    ),
+                    title = item.title,
+                    subtitle = item.subtitle,
+                    backgroundColor = item.backgroundColor
+                )
+
                 is ScreenDto.Unknown -> ScreenData.Unknown(99)
             }
         }

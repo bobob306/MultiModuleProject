@@ -34,6 +34,15 @@ sealed class ScreenDto(
         @SerialName("height") val height: Int,
         @SerialName("width") val width: Int,
     ) : ScreenDto(index)
+
+    @SerialName("CARD")
+    data class CardDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("image") val image: ImageDto,
+        @SerialName("title") val title: String,
+        @SerialName("subtitle") val subtitle: String,
+        @SerialName("backgroundColor") val backgroundColor: Int?,
+    ) : ScreenDto(index)
 }
 
 data class SizeDto(

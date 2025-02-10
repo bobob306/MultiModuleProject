@@ -15,6 +15,23 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
             listedItems.map { item ->
                 println("type = " + item["type"])
                 when (item["type"]) {
+                    "CARD" -> {
+                        val image = item["IMAGE"] as HashMap<*,*>
+                        ScreenDto.CardDto(
+                            index = item["index"].toString().toInt(),
+                            title = item["title"] as String,
+                            subtitle = item["subtitle"] as String,
+                            backgroundColor = item["backgroundColor"].toString().toIntOrNull(),
+                            image = ScreenDto.ImageDto(
+                                index = image["index"].toString().toInt(),
+                                url = image["url"] as String,
+                                contentDescription = image["contentDescription"] as String,
+                                height = image["height"].toString().toInt(),
+                                width = image["width"].toString().toInt(),
+                            ),
+                        )
+                    }
+
                     "IMAGE" -> {
                         ScreenDto.ImageDto(
                             index = item["index"].toString().toInt(),
@@ -24,6 +41,7 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             width = item["width"].toString().toInt(),
                         )
                     }
+
                     "TITLE" -> {
                         ScreenDto.TitleDto(
                             index = item["index"].toString().toInt(),
@@ -50,6 +68,7 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             )
                         )
                     }
+
                     else -> {
                         ScreenDto.Unknown(99)
                     }

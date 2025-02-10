@@ -23,6 +23,13 @@ sealed class ScreenData(
         val height: Int,
         val width: Int,
     ) : ScreenData(index)
+    data class CardData(
+        val image: ImageData,
+        val title: String,
+        val subtitle: String,
+        val backgroundColor: Int?,
+        override val index: Int,
+    ) : ScreenData(index)
 }
 data class SizeData(
     val type: SpacerTypeData,
