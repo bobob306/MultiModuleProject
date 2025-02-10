@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +60,7 @@ internal fun HomeScreen(
     onLoadData: () -> Unit,
     viewData: List<ScreenData>,
 ) {
+    val context = LocalContext.current
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(
         key1 = showSnackBar, block = {
@@ -73,7 +75,7 @@ internal fun HomeScreen(
             .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
         viewData.sortedBy { it.index }.forEach {
-            RenderUI(item = it)
+            RenderUI(item = it, context = context)
         }
         Button(
             onClick = {

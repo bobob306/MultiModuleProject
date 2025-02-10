@@ -16,6 +16,13 @@ sealed class ScreenData(
         override val index: Int,
         val size: SizeData,
     ) : ScreenData(index)
+    data class ImageData(
+        override val index: Int,
+        val url: String,
+        val contentDescription: String?,
+        val height: Int,
+        val width: Int,
+    ) : ScreenData(index)
 }
 data class SizeData(
     val type: SpacerTypeData,

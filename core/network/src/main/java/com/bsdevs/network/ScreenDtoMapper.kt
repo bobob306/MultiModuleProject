@@ -11,9 +11,19 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
     override fun mapToDto(map: HashMap<*, *>): List<ScreenDto> {
         val listOfLists = map.map {
             val listedItems = it.value as List<HashMap<*, *>>
+            println(("listedItems size = " + listedItems.size + map.toString()))
             listedItems.map { item ->
                 println("type = " + item["type"])
                 when (item["type"]) {
+                    "IMAGE" -> {
+                        ScreenDto.ImageDto(
+                            index = item["index"].toString().toInt(),
+                            url = item["url"] as String,
+                            contentDescription = item["contentDescription"] as String,
+                            height = item["height"].toString().toInt(),
+                            width = item["width"].toString().toInt(),
+                        )
+                    }
                     "TITLE" -> {
                         ScreenDto.TitleDto(
                             index = item["index"].toString().toInt(),
@@ -40,7 +50,6 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             )
                         )
                     }
-
                     else -> {
                         ScreenDto.Unknown(99)
                     }

@@ -57,4 +57,5 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.hilt.android) // Hilt compiler
 
+    implementation(libs.coil.compose)
 }

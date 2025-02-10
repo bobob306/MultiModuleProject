@@ -25,6 +25,15 @@ sealed class ScreenDto(
         @SerialName("index") override val index: Int,
         @SerialName("size") val size: SizeDto,
     ) : ScreenDto(index)
+
+    @SerialName("IMAGE")
+    data class ImageDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("url") val url: String,
+        @SerialName("contentDescription") val contentDescription: String? = null,
+        @SerialName("height") val height: Int,
+        @SerialName("width") val width: Int,
+    ) : ScreenDto(index)
 }
 
 data class SizeDto(
