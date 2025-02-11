@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,11 +15,12 @@ import com.bsdevs.data.ScreenData
 import com.bsdevs.data.SpacerTypeData
 import com.bsdevs.renderer.components.MMPButton
 import com.bsdevs.renderer.components.CardComponent
+import java.util.Locale
 
 @Composable
 fun ColumnScope.RenderUI(item: ScreenData, context: Context, onClick: (String, String) -> Unit) {
     when (item) {
-        is ScreenData.TitleData -> Text(item.content)
+        is ScreenData.TitleData -> Text(item.content.uppercase(Locale.getDefault()), style = MaterialTheme.typography.titleMedium)
         is ScreenData.SubtitleData -> Text(item.content)
         is ScreenData.Unknown -> {}
         is ScreenData.SpacerData -> {

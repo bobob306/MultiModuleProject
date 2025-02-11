@@ -3,11 +3,9 @@ package com.bsdevs.renderer.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -65,7 +63,6 @@ fun SecondaryButton(buttonData: ButtonData, onClick: (String, String) -> Unit) {
                 disabledContainerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f),
                 disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.3f),
             ),
-            shape = ButtonDefaults.shape,
             modifier = Modifier
                 .wrapContentSize(),
             onClick = {
@@ -129,31 +126,35 @@ fun ButtonsPreview() {
             )
         ) { _, _ -> }
 
-        TertiaryButton(buttonData = ButtonData(
-            label = "Click me",
-            destination = "SECOND_SCREEN",
-            location = LocationTypeData.INTERNAL,
-            sort = TERTIARY,
-            index = 1
-        )
+        TertiaryButton(
+            buttonData = ButtonData(
+                label = "Click me",
+                destination = "SECOND_SCREEN",
+                location = LocationTypeData.INTERNAL,
+                sort = TERTIARY,
+                index = 1
+            )
         ) { _, _ -> }
 
-        SecondaryButton(buttonData = ButtonData(
-            label = "Click me",
-            destination = "SECOND_SCREEN",
-            location = LocationTypeData.INTERNAL,
-            sort = SECONDARY,
-            index = 1
-        )
+        SecondaryButton(
+            buttonData = ButtonData(
+                label = "Click me",
+                destination = "SECOND_SCREEN",
+                location = LocationTypeData.INTERNAL,
+                sort = SECONDARY,
+                index = 1
+            )
         ) { _, _ -> }
 
-        PrimaryButton(buttonData = ButtonData(
-            label = "Click me",
-            destination = "SECOND_SCREEN",
-            location = LocationTypeData.INTERNAL,
-            sort = PRIMARY,
-            index = 1
+        PrimaryButton(
+            buttonData = ButtonData(
+                label = "Click me",
+                destination = "SECOND_SCREEN",
+                location = LocationTypeData.INTERNAL,
+                sort = PRIMARY,
+                index = 1
+            ),
+            onClick = { _, _ -> }
         )
-        ) { _, _ -> }
     }
 }

@@ -79,14 +79,5 @@ internal fun HomeScreen(
         viewData.sortedBy { it.index }.forEach {
             RenderUI(item = it, context = context, onClick = onClick)
         }
-//        Button(
-//            onClick = {
-//                onLoadData()
-//                showSnackBar = !showSnackBar
-//            }
-//        ) {
-//            Text("Button $showSnackBar")
-//        }
     }
-
 }
