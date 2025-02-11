@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
@@ -45,7 +44,9 @@ fun CardComponent(cardData: ScreenData.CardData, context: Context) {
             )
         ) {
             Column(
-                modifier = Modifier.wrapContentWidth().padding(24.dp),
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Top
             ) {
@@ -64,12 +65,19 @@ fun CardComponent(cardData: ScreenData.CardData, context: Context) {
                             .background(color = Color.White, shape = CircleShape)
                             .size(56.dp)
                             .clip(shape = CircleShape)
-                            .padding(8.dp)
-                        ,
+                            .padding(8.dp),
                     )
-                    Text(text = title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.wrapContentWidth())
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.wrapContentWidth()
+                    )
                 }
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, modifier = Modifier.wrapContentWidth())
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.wrapContentWidth()
+                )
             }
 
         }

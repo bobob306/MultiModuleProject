@@ -1,11 +1,11 @@
 package com.bsdevs.homescreen
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,7 +20,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenData
-import com.bsdevs.data.SpacerTypeData
 import com.bsdevs.renderer.RenderUI
 
 @Composable
@@ -35,6 +34,7 @@ fun HomeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
                 viewData = (viewData.value as Result.Success<List<ScreenData>>).data,
+                onClick = viewModel::click
             )
         }
 
@@ -59,6 +59,7 @@ internal fun HomeScreen(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLoadData: () -> Unit,
     viewData: List<ScreenData>,
+    onClick: (String, String) -> Unit,
 ) {
     val context = LocalContext.current
     var showSnackBar by remember { mutableStateOf(false) }
@@ -71,20 +72,21 @@ internal fun HomeScreen(
     )
     Column(
         modifier = Modifier
+            .background(color = MaterialTheme.colorScheme.surfaceVariant)
             .fillMaxSize()
             .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
         viewData.sortedBy { it.index }.forEach {
-            RenderUI(item = it, context = context)
+            RenderUI(item = it, context = context, onClick = onClick)
         }
-        Button(
-            onClick = {
-                onLoadData()
-                showSnackBar = !showSnackBar
-            }
-        ) {
-            Text("Button $showSnackBar")
-        }
+//        Button(
+//            onClick = {
+//                onLoadData()
+//                showSnackBar = !showSnackBar
+//            }
+//        ) {
+//            Text("Button $showSnackBar")
+//        }
     }
 
 }

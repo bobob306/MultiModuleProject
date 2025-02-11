@@ -1,5 +1,8 @@
 package com.bsdevs.data
 
+import com.bsdevs.network.dto.ButtonType
+import com.bsdevs.network.dto.LocationType
+
 sealed class ScreenData(
     open val index: Int,
 ) {
@@ -30,6 +33,13 @@ sealed class ScreenData(
         val backgroundColor: Int?,
         override val index: Int,
     ) : ScreenData(index)
+    data class ButtonData(
+        val label: String,
+        val destination: String,
+        val location: LocationTypeData,
+        val sort: ButtonTypeData,
+        override val index: Int,
+    ) : ScreenData(index)
 }
 data class SizeData(
     val type: SpacerTypeData,
@@ -38,4 +48,12 @@ data class SizeData(
 )
 enum class SpacerTypeData {
     HEIGHT, WEIGHT,
+}
+
+enum class ButtonTypeData {
+    PRIMARY, SECONDARY, TERTIARY
+}
+
+enum class LocationTypeData {
+    INTERNAL, EXTERNAL
 }

@@ -1,6 +1,8 @@
 package com.bsdevs.data
 
 import com.bsdevs.network.DataMapper
+import com.bsdevs.network.dto.ButtonType
+import com.bsdevs.network.dto.LocationType
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.SpacerType
 import javax.inject.Inject
@@ -58,8 +60,31 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                 )
 
                 is ScreenDto.Unknown -> ScreenData.Unknown(99)
+
+                is ScreenDto.ButtonDto -> ScreenData.ButtonData(
+                    index = item.index,
+                    label = item.label,
+                    destination = item.destination,
+                    location = item.location.toLocationTypeData,
+                    sort = item.sort.toButtonTypeData,
+                )
             }
         }
         return listOfData
     }
+
+    private val LocationType?.toLocationTypeData: LocationTypeData
+        get() = when (this) {
+            LocationType.INTERNAL -> LocationTypeData.INTERNAL
+            LocationType.EXTERNAL -> LocationTypeData.EXTERNAL
+            else -> LocationTypeData.INTERNAL
+        }
+
+    private val ButtonType?.toButtonTypeData
+        get() = when (this) {
+            ButtonType.PRIMARY -> ButtonTypeData.PRIMARY
+            ButtonType.SECONDARY -> ButtonTypeData.SECONDARY
+            ButtonType.TERTIARY -> ButtonTypeData.TERTIARY
+            else -> ButtonTypeData.PRIMARY
+        }
 }

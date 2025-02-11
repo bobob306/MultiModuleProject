@@ -40,4 +40,8 @@ class HomeScreenViewModel @Inject constructor(
 
         }
     }
+
+    fun click(destination: String, label: String) {
+        println("Destination: $destination, Label: $label")
+    }
 }

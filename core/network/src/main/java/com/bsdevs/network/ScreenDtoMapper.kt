@@ -1,5 +1,7 @@
 package com.bsdevs.network
 
+import com.bsdevs.network.dto.ButtonType
+import com.bsdevs.network.dto.LocationType
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.SizeDto
 import com.bsdevs.network.dto.SpacerType
@@ -16,7 +18,7 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                 println("type = " + item["type"])
                 when (item["type"]) {
                     "CARD" -> {
-                        val image = item["IMAGE"] as HashMap<*,*>
+                        val image = item["IMAGE"] as HashMap<*, *>
                         ScreenDto.CardDto(
                             index = item["index"].toString().toInt(),
                             title = item["title"] as String,
@@ -69,6 +71,16 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         )
                     }
 
+                    "BUTTON" -> {
+                        ScreenDto.ButtonDto(
+                            index = item["index"].toString().toInt(),
+                            label = item["label"] as String,
+                            destination = item["destination"] as String,
+                            location = item["location"].toString().toLocationType,
+                            sort = item["sort"].toString().toButtonType
+                        )
+                    }
+
                     else -> {
                         ScreenDto.Unknown(99)
                     }
@@ -85,5 +97,20 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
             "HEIGHT" -> SpacerType.HEIGHT
             "WEIGHT" -> SpacerType.WEIGHT
             else -> SpacerType.HEIGHT
+        }
+
+    private val String.toLocationType: LocationType
+        get() = when (this) {
+            "INTERNAL" -> LocationType.INTERNAL
+            "EXTERNAL" -> LocationType.EXTERNAL
+            else -> LocationType.INTERNAL
+        }
+
+    private val String.toButtonType: ButtonType
+        get() = when (this) {
+            "PRIMARY" -> ButtonType.PRIMARY
+            "SECONDARY" -> ButtonType.SECONDARY
+            "TERTIARY" -> ButtonType.TERTIARY
+            else -> ButtonType.PRIMARY
         }
 }
