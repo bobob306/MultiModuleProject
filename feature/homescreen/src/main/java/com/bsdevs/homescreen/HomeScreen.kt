@@ -1,10 +1,12 @@
 package com.bsdevs.homescreen
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,6 +74,7 @@ internal fun HomeScreen(
     )
     Column(
         modifier = Modifier
+            .scrollable(state = rememberScrollState(), orientation = Orientation.Vertical)
             .background(color = MaterialTheme.colorScheme.surfaceVariant)
             .fillMaxSize()
             .padding(vertical = 24.dp, horizontal = 16.dp),
