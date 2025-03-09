@@ -1,12 +1,11 @@
 package com.bsdevs.homescreen
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,15 +71,26 @@ internal fun HomeScreen(
             }
         }
     )
+//    val onClick: (String, String) -> Unit = { location, destination ->
+//        onClick(location, destination)
+//        showSnackBar = true
+//    }
+    val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
-            .scrollable(state = rememberScrollState(), orientation = Orientation.Vertical)
+            .verticalScroll(scrollState)
             .background(color = MaterialTheme.colorScheme.surfaceVariant)
             .fillMaxSize()
             .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
         viewData.sortedBy { it.index }.forEach {
-            RenderUI(item = it, context = context, onClick = onClick)
+            RenderUI(
+                item = it,
+                context = context,
+                onClick = onClick,
+                onChipClick = {},
+                onSwitchClick = {},
+            )
         }
     }
 }

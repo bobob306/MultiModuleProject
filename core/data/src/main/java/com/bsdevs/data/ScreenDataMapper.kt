@@ -56,7 +56,11 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     ),
                     title = item.title,
                     subtitle = item.subtitle,
-                    backgroundColor = item.backgroundColor
+                    backgroundColor = item.backgroundColor,
+                    sort = null,
+                    buttonRow = null,
+                    subheading = null,
+                    iconButtonRow = null,
                 )
 
                 is ScreenDto.Unknown -> ScreenData.Unknown(99)

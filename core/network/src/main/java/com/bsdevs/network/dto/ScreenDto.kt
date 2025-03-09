@@ -6,6 +6,47 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
+sealed class ZScreenDto(
+    open val indexProperty: Map<String, IndexPropertyDto>
+) {
+    @Serializable
+    data class ZTitleDto(
+        @SerialName("index") override val indexProperty: Map<String, IndexPropertyDto>,
+        @SerialName("stringContent") val content: Map<String, StringDto>,
+    ) : ZScreenDto(indexProperty)
+
+    @Serializable
+    data class ZSubtitleDto(
+        @SerialName("index") override val indexProperty: Map<String, IndexPropertyDto>,
+        @SerialName("stringContent") val content: Map<String, StringDto>,
+    ) : ZScreenDto(indexProperty)
+
+    @Serializable
+    data class ZSpacerDto(
+        @SerialName("index") override val indexProperty: Map<String, IndexPropertyDto>,
+        @SerialName("size") val size: Map<String, ZSizeDto>,
+    ) : ZScreenDto(indexProperty)
+}
+
+@Serializable
+data class ZSizeDto(
+    @SerialName("spacerType") val type: Map<String, StringDto>,
+    @SerialName("size") val size: Map<String, SizePropertyDto>? = null,
+    @SerialName("weight") val weight: Map<String, WeightPropertyDto>? = null,
+)
+@Serializable
+data class IndexPropertyDto(@SerialName("indexProperty") val int: Double)
+
+@Serializable
+data class SizePropertyDto(@SerialName("sizeProperty") val int: Double)
+
+@Serializable
+data class WeightPropertyDto(@SerialName("wieghtProperty") val int: Double)
+
+@Serializable
+data class StringDto(@SerialName("stringContent") val string: String)
+
+@Serializable
 sealed class ScreenDto(
     open val index: Int
 ) {

@@ -39,6 +39,7 @@ class ScreenRepositoryImpl @Inject constructor(
         } else {
             try {
                 val document = scr.document(screen).get().await().data
+                println("document = $document")
                 cacheFlow = mapper.mapToDto(document as HashMap)
                 return flowOf(Result.Success(cacheFlow!!))
             } catch (e: Exception) {

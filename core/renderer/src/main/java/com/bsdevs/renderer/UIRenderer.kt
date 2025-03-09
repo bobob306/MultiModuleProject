@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -13,14 +14,26 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.bsdevs.data.ScreenData
 import com.bsdevs.data.SpacerTypeData
-import com.bsdevs.renderer.components.MMPButton
 import com.bsdevs.renderer.components.CardComponent
+import com.bsdevs.renderer.components.ChipComponent
+import com.bsdevs.renderer.components.MMPButton
+import com.bsdevs.renderer.components.SwitchComponent
 import java.util.Locale
 
 @Composable
-fun ColumnScope.RenderUI(item: ScreenData, context: Context, onClick: (String, String) -> Unit) {
+fun ColumnScope.RenderUI(
+    item: ScreenData,
+    context: Context,
+    onClick: (String, String) -> Unit,
+    onChipClick: (Boolean) -> Unit,
+    onSwitchClick: (Boolean) -> Unit,
+) {
     when (item) {
-        is ScreenData.TitleData -> Text(item.content.uppercase(Locale.getDefault()), style = MaterialTheme.typography.titleMedium)
+        is ScreenData.TitleData -> Text(
+            item.content.uppercase(Locale.getDefault()),
+            style = MaterialTheme.typography.titleMedium
+        )
+
         is ScreenData.SubtitleData -> Text(item.content)
         is ScreenData.Unknown -> {}
         is ScreenData.SpacerData -> {
@@ -40,9 +53,26 @@ fun ColumnScope.RenderUI(item: ScreenData, context: Context, onClick: (String, S
         }
 
         is ScreenData.ButtonData -> {
-            MMPButton(buttonData = item, onClick = onClick)
+            MMPButton(
+                buttonData = item,
+                onClick = onClick,
+            )
         }
 
-        is ScreenData.CardData -> CardComponent(cardData = item, context = context)
+        is ScreenData.CardData -> {
+            CardComponent(cardData = item, context = context)
+        }
+
+        is ScreenData.DividerData -> HorizontalDivider()
+
+        is ScreenData.ChipData -> {
+            ChipComponent(chipData = item, context = context, onClick = onChipClick)
+        }
+
+        is ScreenData.SwitchData -> {
+            SwitchComponent(switchData = item, context, onSwitchClick = onSwitchClick)
+        }
+
+        else -> {}
     }
 }
