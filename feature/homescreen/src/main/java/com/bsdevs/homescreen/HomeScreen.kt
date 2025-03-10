@@ -35,7 +35,8 @@ fun HomeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
                 viewData = (viewData.value as Result.Success<List<ScreenData>>).data,
-                onClick = viewModel::click
+                onClick = viewModel::click,
+                onNavigationClick = {}
             )
         }
 
@@ -61,6 +62,7 @@ internal fun HomeScreen(
     onLoadData: () -> Unit,
     viewData: List<ScreenData>,
     onClick: (String, String) -> Unit,
+    onNavigationClick: (String) -> Unit,
 ) {
     val context = LocalContext.current
     var showSnackBar by remember { mutableStateOf(false) }

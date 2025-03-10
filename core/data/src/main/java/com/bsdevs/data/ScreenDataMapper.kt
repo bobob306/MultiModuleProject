@@ -65,7 +65,7 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
 
                 is ScreenDto.Unknown -> ScreenData.Unknown(99)
 
-                is ScreenDto.ButtonDto -> ScreenData.ButtonData(
+                is ScreenDto.NavigationButtonDto -> ScreenData.NavigationButtonData(
                     index = item.index,
                     label = item.label,
                     destination = item.destination,

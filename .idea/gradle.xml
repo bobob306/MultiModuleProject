@@ -20,9 +20,9 @@
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/firstscreen" />
             <option value="$PROJECT_DIR$/feature/homescreen" />
+            <option value="$PROJECT_DIR$/feature/priceinputscreen" />
           </set>
         </option>
-        <option name="resolveExternalAnnotations" value="false" />
       </GradleProjectSettings>
     </option>
   </component>

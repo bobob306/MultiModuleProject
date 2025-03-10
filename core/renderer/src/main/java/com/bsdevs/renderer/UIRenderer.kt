@@ -52,9 +52,9 @@ fun ColumnScope.RenderUI(
             )
         }
 
-        is ScreenData.ButtonData -> {
+        is ScreenData.NavigationButtonData -> {
             MMPButton(
-                buttonData = item,
+                navigationButtonData = item,
                 onClick = onClick,
             )
         }

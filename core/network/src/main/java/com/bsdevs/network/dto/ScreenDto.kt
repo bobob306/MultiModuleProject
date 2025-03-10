@@ -88,8 +88,8 @@ sealed class ScreenDto(
         @SerialName("backgroundColor") val backgroundColor: Int?,
     ) : ScreenDto(index)
 
-    @SerialName("BUTTON")
-    data class ButtonDto(
+    @SerialName("NAVIGATION_BUTTON")
+    data class NavigationButtonDto(
         @SerialName("index") override val index: Int,
         @SerialName("label") val label: String,
         @SerialName("location") val location: LocationType? = INTERNAL,

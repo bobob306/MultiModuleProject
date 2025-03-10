@@ -33,13 +33,13 @@ sealed class ScreenData(
         val subtitle: String,
         val backgroundColor: Int?,
         val sort: CardTypeData?,
-        val buttonRow: List<ButtonData>?,
+        val buttonRow: List<NavigationButtonData>?,
         val subheading: String?,
         val iconButtonRow: List<IconButtonData>?,
         override val index: Int,
     ) : ScreenData(index)
 
-    data class ButtonData(
+    data class NavigationButtonData(
         val label: String,
         val destination: String,
         val location: LocationTypeData,

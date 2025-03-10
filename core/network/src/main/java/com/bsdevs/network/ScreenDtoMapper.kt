@@ -72,8 +72,8 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         )
                     }
 
-                    "BUTTON" -> {
-                        ScreenDto.ButtonDto(
+                    "NAVIGATION_BUTTON" -> {
+                        ScreenDto.NavigationButtonDto(
                             index = item["index"].toString().toInt(),
                             label = item["label"] as String,
                             destination = item["destination"] as String,
