@@ -16,8 +16,7 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                 is ScreenDto.SpacerDto -> ScreenData.SpacerData(
                     index = item.index,
                     size = SizeData(
-                        type = when
-                                       (item.size.type) {
+                        type = when (item.size.type) {
                             SpacerType.HEIGHT -> SpacerTypeData.HEIGHT
                             SpacerType.WEIGHT -> SpacerTypeData.WEIGHT
                             else -> SpacerTypeData.HEIGHT
