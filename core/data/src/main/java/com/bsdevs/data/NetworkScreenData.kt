@@ -1,104 +1,104 @@
 package com.bsdevs.data
 
-sealed class ScreenData(
+sealed class NetworkScreenData(
     open val index: Int,
 ) {
-    data class Unknown(override val index: Int) : ScreenData(index)
-    data class TitleData(
+    data class Unknown(override val index: Int) : NetworkScreenData(index)
+    data class TitleDataNetwork(
         override val index: Int,
         val content: String,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class SubtitleData(
+    data class SubtitleDataNetwork(
         override val index: Int,
         val content: String,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class SpacerData(
+    data class SpacerDataNetwork(
         override val index: Int,
         val size: SizeData,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class ImageData(
+    data class ImageDataNetwork(
         override val index: Int,
         val url: String,
         val contentDescription: String?,
         val height: Int,
         val width: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class CardData(
-        val image: ImageData,
+    data class CardDataNetwork(
+        val image: ImageDataNetwork,
         val title: String,
         val subtitle: String,
         val backgroundColor: Int?,
         val sort: CardTypeData?,
-        val buttonRow: List<NavigationButtonData>?,
+        val buttonRow: List<NavigationButtonDataNetwork>?,
         val subheading: String?,
-        val iconButtonRow: List<IconButtonData>?,
+        val iconButtonRow: List<IconButtonDataNetwork>?,
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class NavigationButtonData(
+    data class NavigationButtonDataNetwork(
         val label: String,
         val destination: String,
         val location: LocationTypeData,
         val sort: ButtonTypeData,
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class IconButtonData(
+    data class IconButtonDataNetwork(
         val label: String?,
         val destination: String,
         val location: LocationTypeData,
         val url: String,
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class ProgressBarData(
+    data class ProgressBarDataNetwork(
         override val index: Int,
         val maxProgress: Int,
         val startProgress: Int?,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class DividerData(
+    data class DividerDataNetwork(
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class CarouselData(
-        val cards: List<CardData>,
+    data class CarouselDataNetwork(
+        val cards: List<CardDataNetwork>,
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class CheckboxData(
+    data class CheckboxDataNetwork(
         val label: String,
         val checked: Boolean,
         val imageUrl: String?,
         override val index: Int,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class CheckboxListData(
+    data class CheckboxListDataNetwork(
         override val index: Int,
-        val checkboxes: List<CheckboxData>,
-    ) : ScreenData(index)
+        val checkboxes: List<CheckboxDataNetwork>,
+    ) : NetworkScreenData(index)
 
-    data class RadioButtonData(
+    data class RadioButtonDataNetwork(
         override val index: Int,
         val labels: List<RadioButtonLabelData>,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class ChipData(
+    data class ChipDataNetwork(
         override val index: Int,
         val label: String,
         val imageUrl: String?,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 
-    data class SwitchData(
+    data class SwitchDataNetwork(
         override val index: Int,
         val label: String,
         val imageUrl: String?,
         val checked: Boolean,
-    ) : ScreenData(index)
+    ) : NetworkScreenData(index)
 }
 
 data class RadioButtonLabelData(

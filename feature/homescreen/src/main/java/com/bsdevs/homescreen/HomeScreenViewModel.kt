@@ -3,7 +3,7 @@ package com.bsdevs.homescreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.common.result.Result
-import com.bsdevs.data.ScreenData
+import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,8 +22,8 @@ class HomeScreenViewModel @Inject constructor(
     private val mapper: ScreenDataMapper
 ) : ViewModel() {
 
-    private val _viewData = MutableStateFlow<Result<List<ScreenData>>>(value = Result.Loading)
-    val viewData: StateFlow<Result<List<ScreenData>>>
+    private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)
+    val viewData: StateFlow<Result<List<NetworkScreenData>>>
         get() = _viewData.onStart {
             getScreen()
         }.stateIn(

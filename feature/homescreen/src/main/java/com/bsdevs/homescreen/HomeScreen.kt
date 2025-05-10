@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
-import com.bsdevs.data.ScreenData
+import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
 
 @Composable
@@ -37,7 +37,7 @@ fun HomeScreenRoute(
             HomeScreen(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
-                viewData = (viewData.value as Result.Success<List<ScreenData>>).data,
+                viewData = (viewData.value as Result.Success<List<NetworkScreenData>>).data,
                 onClick = viewModel::click,
                 onNavigationClick = {},
                 onNavigateToCoffee = onNavigateToCoffee,
@@ -63,7 +63,7 @@ internal fun LoadingScreen() {
 internal fun HomeScreen(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLoadData: () -> Unit,
-    viewData: List<ScreenData>,
+    viewData: List<NetworkScreenData>,
     onClick: (String, String) -> Unit,
     onNavigationClick: (String) -> Unit,
     onNavigateToCoffee: () -> Unit,

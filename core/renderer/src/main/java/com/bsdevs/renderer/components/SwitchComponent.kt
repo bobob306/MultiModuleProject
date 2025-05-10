@@ -19,10 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
-import com.bsdevs.data.ScreenData.SwitchData
+import com.bsdevs.data.NetworkScreenData.SwitchDataNetwork
 
 @Composable
-fun SwitchComponent(switchData: SwitchData, context: Context, onSwitchClick: (Boolean) -> Unit) {
+fun SwitchComponent(switchData: SwitchDataNetwork, context: Context, onSwitchClick: (Boolean) -> Unit) {
     var checked by remember { mutableStateOf(switchData.checked) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -53,7 +53,7 @@ fun SwitchComponent(switchData: SwitchData, context: Context, onSwitchClick: (Bo
 @Composable
 fun SwitchComponentPreview() {
     SwitchComponent(
-        switchData = SwitchData(0, "Should I change this option", null, false),
+        switchData = SwitchDataNetwork(0, "Should I change this option", null, false),
         context = LocalContext.current,
         onSwitchClick = { _ -> },
     )

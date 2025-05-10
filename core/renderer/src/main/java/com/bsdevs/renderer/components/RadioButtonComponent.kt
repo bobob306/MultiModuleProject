@@ -20,11 +20,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bsdevs.data.RadioButtonLabelData
-import com.bsdevs.data.ScreenData.RadioButtonData
+import com.bsdevs.data.NetworkScreenData.RadioButtonDataNetwork
 
 @Composable
 fun RadioButtonListComponent(
-    radioButtons: RadioButtonData,
+    radioButtons: RadioButtonDataNetwork,
 ) {
     val (selectedOption, onOptionSelected) = remember { mutableStateOf(radioButtons.labels[0]) }
     Column(Modifier.selectableGroup()) {
@@ -59,7 +59,7 @@ fun RadioButtonListComponent(
 @Composable
 fun RadioButtonListComponentPreview() {
     RadioButtonListComponent(
-        radioButtons = RadioButtonData(
+        radioButtons = RadioButtonDataNetwork(
             index = 0,
             labels = listOf(
                 RadioButtonLabelData("something", null, 0),
