@@ -41,7 +41,7 @@ fun HomeScreenRoute(
         }
 
         is Result.Error -> ErrorScreen()
-        is Result.Loading -> LoadingScreen(viewModel::getScreen)
+        is Result.Loading -> LoadingScreen()
     }
 }
 
@@ -51,8 +51,7 @@ internal fun ErrorScreen() {
 }
 
 @Composable
-internal fun LoadingScreen(getScreen: () -> Unit) {
-    getScreen()
+internal fun LoadingScreen() {
     Text("Loading")
 }
 
