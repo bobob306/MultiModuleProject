@@ -18,6 +18,7 @@
             <option value="$PROJECT_DIR$/core/network" />
             <option value="$PROJECT_DIR$/core/renderer" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/coffeescreen" />
             <option value="$PROJECT_DIR$/feature/firstscreen" />
             <option value="$PROJECT_DIR$/feature/homescreen" />
             <option value="$PROJECT_DIR$/feature/priceinputscreen" />

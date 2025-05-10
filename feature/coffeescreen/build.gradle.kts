@@ -1,13 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt") // Use kapt for Hilt
-    alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0" // Apply the plugin
 }
 
 android {
-    namespace = "com.bsdevs.navigation"
+    namespace = "com.bsdevs.coffeescreen"
     compileSdk = 35
 
     defaultConfig {
@@ -36,31 +37,37 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.10"
+    }
 }
 
 dependencies {
+    implementation(project(":core:network"))
+    implementation(project(":core:common"))
+    implementation(project(":core:data"))
 
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(project(":feature:homescreen"))
-    implementation(project(":feature:coffeescreen"))
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-
-    implementation(libs.hilt.android) // Or latest
     kapt(libs.hilt.compiler) // Use kapt for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
-
     implementation(libs.androidx.navigation.compose) // Or latest
-
     implementation(libs.androidx.lifecycle.runtime.ktx) // Or latest
     implementation(libs.androidx.activity.compose) // Or latest
     implementation(platform(libs.androidx.compose.bom)) // Or latest
     implementation(libs.androidx.ui) // Or latest
     implementation(libs.androidx.ui.graphics) // Or latest
     implementation(libs.androidx.ui.tooling.preview) // Or latest
-    implementation(libs.androidx.ui.tooling) // Or latest
-    implementation(libs.androidx.material3.android) // Or latest
+    implementation(libs.androidx.material3) // Or latest
+    implementation(libs.hilt.android) // Hilt compiler
+    implementation(libs.kotlinx.serialization.json) // Or latest version
+    implementation(libs.kotlinx.coroutines.android) // Or latest version
+    implementation(libs.kotlinx.coroutines.core) // Or latest version
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore.ktx)
 }
