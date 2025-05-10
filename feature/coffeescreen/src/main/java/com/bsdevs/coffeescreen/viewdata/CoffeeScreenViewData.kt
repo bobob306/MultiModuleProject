@@ -3,7 +3,7 @@ package com.bsdevs.coffeescreen.viewdata
 import java.time.LocalDate
 
 data class InputViewData(
-    val inputList: List<String> = coffeeTastingNotesList,
+    val inputList: List<String> = coffeeTastingNotesList.sortedBy { it } ,
     val selectedSet: Set<String> = emptySet(),
     val searchText: String? = null,
     val label: String,

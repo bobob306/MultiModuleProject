@@ -25,6 +25,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -38,15 +39,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
+import com.bsdevs.coffeescreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.viewdata.RadioInputsViewData
 import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.text.substringAfterLast
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -71,6 +75,7 @@ fun CoffeeScreenRoute(
                 onToggleCoffeeOriginSelected = viewModel::onToggleCoffeeOriginSelected,
                 onToggleDecaf = viewModel::onToggleDecaf,
                 onToggleCoffeeTasteSelected = viewModel::onToggleCoffeeTasteSelected,
+                onCoffeeTasteType = viewModel::onCoffeeTasteType,
             )
         }
     }
@@ -96,6 +101,7 @@ private fun CoffeeScreenContent(
     onToggleCoffeeOriginSelected: (String) -> Unit,
     onToggleDecaf: (Boolean) -> Unit,
     onToggleCoffeeTasteSelected: (String) -> Unit,
+    onCoffeeTasteType: (String) -> Unit,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
@@ -122,6 +128,81 @@ private fun CoffeeScreenContent(
 //            viewData.selectedTastingNotes,
 //            onToggleCoffeeTasteSelected,
 //        )
+        InputSection(
+            viewData.coffeeTastingNotesInput,
+            onToggleCoffeeTasteSelected,
+            onCoffeeTasteType,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InputSection(
+    coffeeTastingNotesInput: InputViewData,
+    onToggleCoffeeTasteSelected: (String) -> Unit,
+    onCoffeeTasteType: (String) -> Unit,
+) {
+    coffeeTastingNotesInput.run {
+        var expanded by remember { mutableStateOf(false) }
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
+            modifier = Modifier
+                .wrapContentWidth()
+                .wrapContentHeight()
+        ) {
+            OutlinedTextField(
+                modifier = Modifier
+                    .menuAnchor(MenuAnchorType.PrimaryEditable)
+                    .fillMaxWidth(),
+                readOnly = false,
+                value = selectedSet.joinToString(", ") + " ${ searchText }",
+                onValueChange = {
+                    val searchText = it.substringAfterLast(" ")
+                    onCoffeeTasteType(searchText)
+                    expanded = true
+                    TextRange(it.length)
+                },
+                label = { Text(coffeeTastingNotesInput.label) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                Column {
+                    val filteredList = if (!searchText.isNullOrEmpty()) {
+                        inputList.filter { it.contains(searchText) }
+                    } else inputList
+                    filteredList.forEach { option ->
+                        val isSelected = selectedSet.contains(option)
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(option)
+                                    // Show a checkmark if the item is selected
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = "Selected"
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = {
+                                onToggleCoffeeTasteSelected(option)
+                                onCoffeeTasteType("")
+                                expanded = true
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -148,30 +229,6 @@ private fun RadioInputRow(
                 Spacer(modifier = Modifier.width(8.dp))
             }
         }
-    }
-}
-
-@Composable
-private fun DecafRow(isDecaf: Boolean, onToggleDecaf: (Boolean) -> Unit) {
-    // Radio button for decaf
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Decaf")
-        Spacer(modifier = Modifier.width(8.dp))
-        // Radio button
-        RadioButton(
-            selected = isDecaf, // Use the decaf state from viewData
-            onClick = { onToggleDecaf(true) } // Toggle the decaf state
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Caffeinated")
-        Spacer(modifier = Modifier.width(8.dp))
-        RadioButton(
-            selected = !isDecaf, // Invert the decaf state
-            onClick = { onToggleDecaf(false) } // Toggle the decaf state
-        )
     }
 }
 

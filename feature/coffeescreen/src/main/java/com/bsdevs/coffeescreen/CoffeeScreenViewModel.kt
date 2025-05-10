@@ -109,4 +109,17 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
             )
         }
     }
+
+    fun onCoffeeTasteType(taste: String) {
+        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
+        _viewData.update {
+            Result.Success(
+                data = currentViewData.data.copy(
+                    coffeeTastingNotesInput = currentViewData.data.coffeeTastingNotesInput.copy(
+                        searchText = taste
+                    )
+                )
+            )
+        }
+    }
 }
