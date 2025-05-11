@@ -34,16 +34,18 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleCoffeeTypeSelected(coffeeType: String) {
         val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newSelectedCoffeeTypes = currentViewData.data.selectedCoffeeTypes
-        if (newSelectedCoffeeTypes.contains(coffeeType)) {
-            newSelectedCoffeeTypes = newSelectedCoffeeTypes - coffeeType
+        var newSelectedBean = currentViewData.data.beanTypeInput.selectedSet
+        if (newSelectedBean.contains(coffeeType)) {
+            newSelectedBean = newSelectedBean - coffeeType
         } else {
-            newSelectedCoffeeTypes = newSelectedCoffeeTypes + coffeeType
+            newSelectedBean = newSelectedBean + coffeeType
         }
         _viewData.update {
             Result.Success(
                 data = currentViewData.data.copy(
-                    selectedCoffeeTypes = newSelectedCoffeeTypes
+                    beanTypeInput = currentViewData.data.beanTypeInput.copy(
+                        selectedSet = newSelectedBean
+                    )
                 )
             )
         }
@@ -62,7 +64,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleCoffeeOriginSelected(originCountry: String) {
         val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newSelectedCountry = currentViewData.data.selectedOriginCountries
+        var newSelectedCountry = currentViewData.data.coffeeTastingNotesInput.selectedSet
         if (newSelectedCountry.contains(originCountry)) {
             newSelectedCountry = newSelectedCountry - originCountry
         } else {
@@ -71,7 +73,9 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
         _viewData.update {
             Result.Success(
                 data = currentViewData.data.copy(
-                    selectedOriginCountries = newSelectedCountry
+                    originInput = currentViewData.data.originInput.copy(
+                        selectedSet = newSelectedCountry
+                    )
                 )
             )
         }
@@ -111,12 +115,13 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onCoffeeTasteType(taste: String) {
+        val searchText = taste
         val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
         _viewData.update {
             Result.Success(
                 data = currentViewData.data.copy(
                     coffeeTastingNotesInput = currentViewData.data.coffeeTastingNotesInput.copy(
-                        searchText = taste
+                        searchText = searchText
                     )
                 )
             )

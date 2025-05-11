@@ -39,7 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,7 +50,6 @@ import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.text.substringAfterLast
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -75,7 +74,7 @@ fun CoffeeScreenRoute(
                 onToggleCoffeeOriginSelected = viewModel::onToggleCoffeeOriginSelected,
                 onToggleDecaf = viewModel::onToggleDecaf,
                 onToggleCoffeeTasteSelected = viewModel::onToggleCoffeeTasteSelected,
-                onCoffeeTasteType = viewModel::onCoffeeTasteType,
+                onCoffeeTasteSearchText = viewModel::onCoffeeTasteType,
             )
         }
     }
@@ -101,37 +100,24 @@ private fun CoffeeScreenContent(
     onToggleCoffeeOriginSelected: (String) -> Unit,
     onToggleDecaf: (Boolean) -> Unit,
     onToggleCoffeeTasteSelected: (String) -> Unit,
-    onCoffeeTasteType: (String) -> Unit,
+    onCoffeeTasteSearchText: (String) -> Unit,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         Text("Coffee Screen")
         Spacer(modifier = Modifier.height(16.dp))
-        CoffeeBeanSelection(
-            viewData.coffeeTypes,
-            viewData.selectedCoffeeTypes,
-            onToggleCoffeeTypeSelected
-        )
+        InputSection(viewData.beanTypeInput, onToggleCoffeeTypeSelected, {})
         Spacer(modifier = Modifier.height(16.dp))
         DatePickerSection(viewData.roastDate, onUpdateRoastDate)
         Spacer(modifier = Modifier.height(16.dp))
-        CoffeeOriginSelection(
-            viewData.originCountryOptions,
-            viewData.selectedOriginCountries,
-            onToggleCoffeeOriginSelected
-        )
+        InputSection(viewData.originInput, onToggleCoffeeOriginSelected, {})
         Spacer(modifier = Modifier.height(16.dp))
         RadioInputRow(viewData.decafInput, onToggleDecaf = onToggleDecaf)
         Spacer(modifier = Modifier.height(16.dp))
-//        CoffeeTasteSelection(
-//            viewData.coffeeTastingNotes,
-//            viewData.selectedTastingNotes,
-//            onToggleCoffeeTasteSelected,
-//        )
         InputSection(
             viewData.coffeeTastingNotesInput,
             onToggleCoffeeTasteSelected,
-            onCoffeeTasteType,
+            onCoffeeTasteSearchText,
         )
     }
 }
@@ -139,11 +125,12 @@ private fun CoffeeScreenContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InputSection(
-    coffeeTastingNotesInput: InputViewData,
-    onToggleCoffeeTasteSelected: (String) -> Unit,
-    onCoffeeTasteType: (String) -> Unit,
+    inputViewData: InputViewData,
+    onToggleSelected: (String) -> Unit,
+    onSearchTextChange: (String) -> Unit,
 ) {
-    coffeeTastingNotesInput.run {
+    val focusRequester = remember { FocusRequester() }
+    inputViewData.run {
         var expanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = expanded,
@@ -156,22 +143,30 @@ private fun InputSection(
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryEditable)
                     .fillMaxWidth(),
-                readOnly = false,
-                value = selectedSet.joinToString(", ") + " ${ searchText }",
+                readOnly = searchText?.let {
+                    if (inputViewData.searchText == "" || !inputViewData.searchText?.isEmpty()!!) false else true
+                } ?: true,
+                value = if (expanded) searchText ?: "" else "",
                 onValueChange = {
-                    val searchText = it.substringAfterLast(" ")
-                    onCoffeeTasteType(searchText)
+                    onSearchTextChange(it)
                     expanded = true
-                    TextRange(it.length)
                 },
-                label = { Text(coffeeTastingNotesInput.label) },
+                label = { Text(inputViewData.label) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = ExposedDropdownMenuDefaults.textFieldColors(),
-            )
+                suffix = {
+                    Text(
+                        selectedSet.joinToString(separator = ", "),
+                        modifier = Modifier
+                            .fillMaxWidth(if (expanded && searchText != null) 0.5f else 1f)
+                            .padding(horizontal = if (!expanded || searchText == null) 16.dp else 0.dp)
+                        
+                    )
+                })
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 Column {
                     val filteredList = if (!searchText.isNullOrEmpty()) {
-                        inputList.filter { it.contains(searchText) }
+                        inputList.filter { it.contains(searchText, ignoreCase = true) }
                     } else inputList
                     filteredList.forEach { option ->
                         val isSelected = selectedSet.contains(option)
@@ -193,8 +188,10 @@ private fun InputSection(
                                 }
                             },
                             onClick = {
-                                onToggleCoffeeTasteSelected(option)
-                                onCoffeeTasteType("")
+                                onToggleSelected(option)
+                                searchText?.let {
+                                    onSearchTextChange("")
+                                }
                                 expanded = true
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
@@ -214,8 +211,7 @@ private fun RadioInputRow(
     Column {
         Text(decafInput.label)
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
         ) {
             decafInput.option.forEach { option ->
                 Text(option.label)
@@ -224,8 +220,7 @@ private fun RadioInputRow(
                     selected = if (decafInput.isDecaf == option.isDecaf) true else false,
                     onClick = {
                         onToggleDecaf(option.isDecaf)
-                    }
-                )
+                    })
                 Spacer(modifier = Modifier.width(8.dp))
             }
         }
@@ -255,26 +250,21 @@ private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDa
                         if (selectedDateMillis != null) {
                             // Convert milliseconds to LocalDate and update ViewModel
                             val selectedLocalDate = Instant.ofEpochMilli(selectedDateMillis)
-                                .atZone(ZoneId.systemDefault())
-                                .toLocalDate()
+                                .atZone(ZoneId.systemDefault()).toLocalDate()
                             onUpdateRoastDate(selectedLocalDate)
                         }
                         showDatePicker = false // Dismiss dialog after confirming
-                    }
-                ) {
+                    }) {
                     Text("OK")
                 }
-            },
-            dismissButton = {
+            }, dismissButton = {
                 TextButton(
                     onClick = {
                         showDatePicker = false // Dismiss dialog on cancel
-                    }
-                ) {
+                    }) {
                     Text("Cancel")
                 }
-            }
-        ) {
+            }) {
             DatePicker(state = datePickerState)
         }
     }
@@ -363,9 +353,7 @@ fun MultiSelectFilterDropdown(
     }
 
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = modifier
+        expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier
     ) {
         OutlinedTextField(
             modifier = Modifier

@@ -31,7 +31,7 @@ data class CoffeeScreenViewData(
         label = "Coffee Type(s)",
         inputList = coffeeBeanTypes,
         selectedSet = emptySet(),
-        searchText = "",
+        searchText = null,
     ),
     val originInput: InputViewData = InputViewData(
         label = "Coffee Origin(s)",
