@@ -2,6 +2,7 @@ package com.bsdevs.coffeescreen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
@@ -25,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -40,6 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +56,7 @@ import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.exp
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -130,6 +137,7 @@ private fun InputSection(
     onSearchTextChange: (String) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
+    var isFocused by remember { mutableStateOf(false) }
     inputViewData.run {
         var expanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
@@ -142,11 +150,18 @@ private fun InputSection(
             OutlinedTextField(
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryEditable)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged{
+                        isFocused = it.isFocused
+                    }
+                    .wrapContentHeight()
+                ,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 readOnly = searchText?.let {
                     if (inputViewData.searchText == "" || !inputViewData.searchText?.isEmpty()!!) false else true
                 } ?: true,
-                value = if (expanded) searchText ?: "" else "",
+                value = if (expanded && isFocused) searchText ?: "" else inputViewData.selectedSet.joinToString(" ,"),
                 onValueChange = {
                     onSearchTextChange(it)
                     expanded = true
@@ -155,16 +170,17 @@ private fun InputSection(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = ExposedDropdownMenuDefaults.textFieldColors(),
                 suffix = {
+                    if (isFocused && expanded)
                     Text(
                         selectedSet.joinToString(separator = ", "),
                         modifier = Modifier
                             .fillMaxWidth(if (expanded && searchText != null) 0.5f else 1f)
                             .padding(horizontal = if (!expanded || searchText == null) 16.dp else 0.dp)
-                        
+
                     )
                 })
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                Column {
+                Column(modifier = Modifier.wrapContentHeight()) {
                     val filteredList = if (!searchText.isNullOrEmpty()) {
                         inputList.filter { it.contains(searchText, ignoreCase = true) }
                     } else inputList
@@ -173,7 +189,7 @@ private fun InputSection(
                         DropdownMenuItem(
                             text = {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {

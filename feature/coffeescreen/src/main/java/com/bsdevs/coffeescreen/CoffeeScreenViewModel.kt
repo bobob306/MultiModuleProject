@@ -64,7 +64,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleCoffeeOriginSelected(originCountry: String) {
         val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newSelectedCountry = currentViewData.data.coffeeTastingNotesInput.selectedSet
+        var newSelectedCountry = currentViewData.data.originInput.selectedSet
         if (newSelectedCountry.contains(originCountry)) {
             newSelectedCountry = newSelectedCountry - originCountry
         } else {
