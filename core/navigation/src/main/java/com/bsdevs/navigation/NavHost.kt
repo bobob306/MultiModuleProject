@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
+import com.bsdevs.coffeescreen.navigation.CoffeeScreenRoute
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
 import com.bsdevs.coffeescreen.navigation.navigateToCoffee
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
@@ -17,7 +19,7 @@ fun MMPNavHost(
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = HomeScreenBaseRoute,
+        startDestination = CoffeeScreenBaseRoute,
     ) {
         homeScreenSection(
             onShowSnackBar,

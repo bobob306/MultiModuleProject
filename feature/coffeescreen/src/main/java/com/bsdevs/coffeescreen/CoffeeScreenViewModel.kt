@@ -3,6 +3,8 @@ package com.bsdevs.coffeescreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
+import com.bsdevs.coffeescreen.viewdata.InputType
+import com.bsdevs.coffeescreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,21 +35,29 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onToggleCoffeeTypeSelected(coffeeType: String) {
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newSelectedBean = currentViewData.data.beanTypeInput.selectedSet
-        if (newSelectedBean.contains(coffeeType)) {
-            newSelectedBean = newSelectedBean - coffeeType
-        } else {
-            newSelectedBean = newSelectedBean + coffeeType
-        }
-        _viewData.update {
-            Result.Success(
-                data = currentViewData.data.copy(
-                    beanTypeInput = currentViewData.data.beanTypeInput.copy(
-                        selectedSet = newSelectedBean
-                    )
-                )
-            )
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == InputType.BEANS) {
+                        // Update the selected set for the beans input
+                        val newSelectedBeans = if (input.selectedSet.contains(coffeeType)) {
+                            input.selectedSet - coffeeType
+                        } else {
+                            input.selectedSet + coffeeType
+                        }
+                        input.copy(selectedSet = newSelectedBeans)
+                    } else {
+                        // Keep other inputs as they are
+                        input
+                    }
+                }
+                // Return a new Success result with the updated inputs list
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                // If the current state is not Success, return it unchanged
+                currentResult
+            }
         }
     }
 
@@ -63,68 +73,98 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onToggleCoffeeOriginSelected(originCountry: String) {
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newSelectedCountry = currentViewData.data.originInput.selectedSet
-        if (newSelectedCountry.contains(originCountry)) {
-            newSelectedCountry = newSelectedCountry - originCountry
-        } else {
-            newSelectedCountry = newSelectedCountry + originCountry
-        }
-        _viewData.update {
-            Result.Success(
-                data = currentViewData.data.copy(
-                    originInput = currentViewData.data.originInput.copy(
-                        selectedSet = newSelectedCountry
-                    )
-                )
-            )
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == InputType.ORIGIN) {
+                        // Update the selected set for the beans input
+                        val newSelectedOrigin = if (input.selectedSet.contains(originCountry)) {
+                            input.selectedSet - originCountry
+                        } else {
+                            input.selectedSet + originCountry
+                        }
+                        input.copy(selectedSet = newSelectedOrigin)
+                    } else {
+                        // Keep other inputs as they are
+                        input
+                    }
+                }
+                // Return a new Success result with the updated inputs list
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                // If the current state is not Success, return it unchanged
+                currentResult
+            }
         }
     }
 
     fun onToggleCoffeeTasteSelected(taste: String) {
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        var newTaste = currentViewData.data.coffeeTastingNotesInput.selectedSet
-        if (newTaste.contains(taste)) {
-            newTaste = newTaste - taste
-        } else {
-            newTaste = newTaste + taste
-        }
-        _viewData.update {
-            Result.Success(
-                data = currentViewData.data.copy(
-                    coffeeTastingNotesInput = currentViewData.data.coffeeTastingNotesInput.copy(
-                        selectedSet = newTaste
-                    )
-                )
-            )
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == InputType.TASTE) {
+                        // Update the selected set for the beans input
+                        val newSelectedTaste = if (input.selectedSet.contains(taste)) {
+                            input.selectedSet - taste
+                        } else {
+                            input.selectedSet + taste
+                        }
+                        input.copy(selectedSet = newSelectedTaste)
+                    } else {
+                        // Keep other inputs as they are
+                        input
+                    }
+                }
+                // Return a new Success result with the updated inputs list
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                // If the current state is not Success, return it unchanged
+                currentResult
+            }
         }
     }
 
     fun onToggleDecaf(isDecaf: Boolean) {
-        println("isDecaf $isDecaf")
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        _viewData.update {
-            Result.Success(
-                data = currentViewData.data.copy(
-                    decafInput = currentViewData.data.decafInput.copy(
-                        isDecaf = isDecaf
-                    )
-                )
-            )
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputRadioVD) {
+                        input.copy(isDecaf = isDecaf)
+                    } else {
+                        // Keep other inputs as they are
+                        input
+                    }
+                }
+                // Return a new Success result with the updated inputs list
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                // If the current state is not Success, return it unchanged
+                currentResult
+            }
         }
     }
 
     fun onCoffeeTasteType(taste: String) {
-        val searchText = taste
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
-        _viewData.update {
-            Result.Success(
-                data = currentViewData.data.copy(
-                    coffeeTastingNotesInput = currentViewData.data.coffeeTastingNotesInput.copy(
-                        searchText = searchText
-                    )
-                )
-            )
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == InputType.TASTE) {
+                        input.copy(searchText = taste)
+                    } else {
+                        // Keep other inputs as they are
+                        input
+                    }
+                }
+                // Return a new Success result with the updated inputs list
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                // If the current state is not Success, return it unchanged
+                currentResult
+            }
         }
     }
 }

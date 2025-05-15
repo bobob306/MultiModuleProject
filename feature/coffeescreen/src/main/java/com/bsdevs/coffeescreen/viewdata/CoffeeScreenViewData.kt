@@ -1,8 +1,11 @@
 package com.bsdevs.coffeescreen.viewdata
 
+import android.R.attr.label
+import com.bsdevs.coffeescreen.viewdata.InputViewData.InputRadioVD
+import com.bsdevs.coffeescreen.viewdata.InputViewData.InputVD
 import java.time.LocalDate
 
-data class InputViewData(
+data class InputsViewData(
     val inputList: List<String> = coffeeTastingNotesList.sortedBy { it } ,
     val selectedSet: Set<String> = emptySet(),
     val searchText: String? = null,
@@ -21,45 +24,65 @@ data class RadioInputViewData(
 )
 
 data class CoffeeScreenViewData(
-    val coffeeTypes: List<String> = coffeeBeanTypes,
-    val selectedCoffeeTypes: Set<String> = emptySet(),
     val roastDate: LocalDate? = null,
-    val originCountryOptions: List<String> = originCountries,
-    val selectedOriginCountries: Set<String> = emptySet(),
-    val decaf: Boolean = false,
-    val beanTypeInput: InputViewData = InputViewData(
-        label = "Coffee Type(s)",
-        inputList = coffeeBeanTypes,
-        selectedSet = emptySet(),
-        searchText = null,
-    ),
-    val originInput: InputViewData = InputViewData(
-        label = "Coffee Origin(s)",
-        inputList = originCountries,
-        selectedSet = emptySet(),
-        searchText = null,
-    ),
-    val coffeeTastingNotesInput: InputViewData = InputViewData(
-        label = "Coffee Tasting Notes",
-        inputList = coffeeTastingNotesList,
-        selectedSet = emptySet(),
-        searchText = "",
-    ),
-    val decafInput: RadioInputsViewData = RadioInputsViewData(
-        label = "Decaf",
-        option = listOf(
-            RadioInputViewData(
-                label = "Caffeinated",
-                isDecaf = false,
+    val inputs: List<InputViewData> = listOf<InputViewData>(
+        InputVD(
+            label = "Coffee Type(s)",
+            inputList = coffeeBeanTypes,
+            selectedSet = emptySet(),
+            searchText = null,
+            inputType = InputType.BEANS
             ),
-            RadioInputViewData(
-                label = "Decaffeinated",
-                isDecaf = true,
-            )
+        InputVD(
+            label = "Coffee Origin(s)",
+            inputList = originCountries,
+            selectedSet = emptySet(),
+            searchText = null,
+            inputType = InputType.ORIGIN
         ),
-        isDecaf = false,
-    )
+        InputVD(
+            label = "Coffee Tasting Notes",
+            inputList = coffeeTastingNotesList,
+            selectedSet = emptySet(),
+            searchText = "",
+            inputType = InputType.TASTE
+        ),
+        InputRadioVD(
+            label = "Decaf",
+            option = listOf(
+                RadioInputViewData(
+                    label = "Caffeinated",
+                    isDecaf = false,
+                ),
+                RadioInputViewData(
+                    label = "Decaffeinated",
+                    isDecaf = true,
+                )
+            ),
+            isDecaf = false,
+            ),
+    ),
 )
+
+sealed class InputViewData {
+    data class InputVD(
+        val label: String,
+        val inputList: List<String>,
+        val selectedSet: Set<String>,
+        val searchText: String?,
+        val inputType: InputType,
+    ) : InputViewData()
+
+    data class InputRadioVD(
+        val label: String,
+        val option: List<RadioInputViewData>,
+        val isDecaf: Boolean,
+    ) : InputViewData()
+}
+
+enum class InputType{
+    BEANS, ORIGIN, TASTE,
+}
 
 private val coffeeBeanTypes: List<String> = listOf(
     "Arabica", "Robusta", "Liberica", "Excelsa", "Typica",

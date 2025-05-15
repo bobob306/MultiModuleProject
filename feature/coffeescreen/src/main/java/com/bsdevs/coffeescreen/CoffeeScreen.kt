@@ -2,7 +2,6 @@ package com.bsdevs.coffeescreen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,7 +24,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -50,13 +46,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
+import com.bsdevs.coffeescreen.viewdata.InputType
 import com.bsdevs.coffeescreen.viewdata.InputViewData
-import com.bsdevs.coffeescreen.viewdata.RadioInputsViewData
 import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import kotlin.math.exp
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -109,30 +104,46 @@ private fun CoffeeScreenContent(
     onToggleCoffeeTasteSelected: (String) -> Unit,
     onCoffeeTasteSearchText: (String) -> Unit,
 ) {
-    var showDatePicker by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
-        Text("Coffee Screen")
-        Spacer(modifier = Modifier.height(16.dp))
-        InputSection(viewData.beanTypeInput, onToggleCoffeeTypeSelected, {})
-        Spacer(modifier = Modifier.height(16.dp))
+        viewData.inputs.forEach { inputViewData ->
+            when (inputViewData) {
+                is InputViewData.InputVD -> {
+                    when (inputViewData.inputType) {
+                        InputType.BEANS -> {
+                            InputSection(inputViewData, onToggleCoffeeTypeSelected) { }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        InputType.ORIGIN -> {
+                            InputSection(inputViewData, onToggleCoffeeOriginSelected) { }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        InputType.TASTE -> {
+                            InputSection(
+                                inputViewData,
+                                onToggleCoffeeTasteSelected
+                            ) { onCoffeeTasteSearchText(it) }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+
+                is InputViewData.InputRadioVD -> {
+                    RadioInputRow(inputViewData, onToggleDecaf)
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
         DatePickerSection(viewData.roastDate, onUpdateRoastDate)
         Spacer(modifier = Modifier.height(16.dp))
-        InputSection(viewData.originInput, onToggleCoffeeOriginSelected, {})
-        Spacer(modifier = Modifier.height(16.dp))
-        RadioInputRow(viewData.decafInput, onToggleDecaf = onToggleDecaf)
-        Spacer(modifier = Modifier.height(16.dp))
-        InputSection(
-            viewData.coffeeTastingNotesInput,
-            onToggleCoffeeTasteSelected,
-            onCoffeeTasteSearchText,
-        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InputSection(
-    inputViewData: InputViewData,
+    inputViewData: InputViewData.InputVD,
     onToggleSelected: (String) -> Unit,
     onSearchTextChange: (String) -> Unit,
 ) {
@@ -152,16 +163,16 @@ private fun InputSection(
                     .menuAnchor(MenuAnchorType.PrimaryEditable)
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
-                    .onFocusChanged{
+                    .onFocusChanged {
                         isFocused = it.isFocused
                     }
-                    .wrapContentHeight()
-                ,
+                    .wrapContentHeight(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 readOnly = searchText?.let {
                     if (inputViewData.searchText == "" || !inputViewData.searchText?.isEmpty()!!) false else true
                 } ?: true,
-                value = if (expanded && isFocused) searchText ?: "" else inputViewData.selectedSet.joinToString(" ,"),
+                value = if (expanded && isFocused) searchText
+                    ?: "" else inputViewData.selectedSet.joinToString(", "),
                 onValueChange = {
                     onSearchTextChange(it)
                     expanded = true
@@ -171,13 +182,13 @@ private fun InputSection(
                 colors = ExposedDropdownMenuDefaults.textFieldColors(),
                 suffix = {
                     if (isFocused && expanded)
-                    Text(
-                        selectedSet.joinToString(separator = ", "),
-                        modifier = Modifier
-                            .fillMaxWidth(if (expanded && searchText != null) 0.5f else 1f)
-                            .padding(horizontal = if (!expanded || searchText == null) 16.dp else 0.dp)
+                        Text(
+                            selectedSet.joinToString(separator = ", "),
+                            modifier = Modifier
+                                .fillMaxWidth(if (expanded && searchText != null) 0.5f else 1f)
+                                .padding(horizontal = if (!expanded || searchText == null) 16.dp else 0.dp)
 
-                    )
+                        )
                 })
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 Column(modifier = Modifier.wrapContentHeight()) {
@@ -189,7 +200,9 @@ private fun InputSection(
                         DropdownMenuItem(
                             text = {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight(),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
@@ -221,7 +234,7 @@ private fun InputSection(
 
 @Composable
 private fun RadioInputRow(
-    decafInput: RadioInputsViewData,
+    decafInput: InputViewData.InputRadioVD,
     onToggleDecaf: (Boolean) -> Unit,
 ) {
     Column {
