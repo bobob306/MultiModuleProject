@@ -48,6 +48,13 @@ data class CoffeeScreenViewData(
             searchText = "",
             inputType = InputType.TASTE
         ),
+        InputVD(
+            label = "Coffee Preparation Method",
+            inputList = listOf("Washed", "Natural", "Honey", "Wet", "Anaerobic", "Pulped",),
+            selectedSet = emptySet(),
+            searchText = null,
+            inputType = InputType.METHOD
+        ),
         InputRadioVD(
             label = "Decaf",
             option = listOf(
@@ -82,7 +89,7 @@ sealed class InputViewData {
 }
 
 enum class InputType{
-    BEANS, ORIGIN, TASTE,
+    BEANS, ORIGIN, TASTE, METHOD
 }
 
 private val coffeeBeanTypes: List<String> = listOf(

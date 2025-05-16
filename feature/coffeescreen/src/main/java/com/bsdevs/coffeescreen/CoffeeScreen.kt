@@ -82,6 +82,7 @@ fun CoffeeScreenRoute(
                 onToggleDecaf = viewModel::onToggleDecaf,
                 onToggleCoffeeTasteSelected = viewModel::onToggleCoffeeTasteSelected,
                 onCoffeeTasteSearchText = viewModel::onCoffeeTasteType,
+                onToggleProcessSelected = viewModel::onToggleProcessSelected,
             )
         }
     }
@@ -108,6 +109,7 @@ private fun CoffeeScreenContent(
     onToggleDecaf: (Boolean) -> Unit,
     onToggleCoffeeTasteSelected: (String) -> Unit,
     onCoffeeTasteSearchText: (String) -> Unit,
+    onToggleProcessSelected: (String) -> Unit,
 ) {
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
@@ -148,6 +150,10 @@ private fun CoffeeScreenContent(
                                 inputViewData,
                                 onToggleCoffeeTasteSelected
                             ) { onCoffeeTasteSearchText(it) }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        InputType.METHOD -> {
+                            InputSection(inputViewData, onToggleProcessSelected) { }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
