@@ -1,5 +1,7 @@
 package com.bsdevs.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
@@ -11,6 +13,7 @@ import com.bsdevs.coffeescreen.navigation.navigateToCoffee
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.homeScreenSection
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MMPNavHost(
     onShowSnackBar: suspend (String, String?) -> Unit,

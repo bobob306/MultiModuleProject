@@ -6,12 +6,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +53,7 @@ import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.viewdata.InputType
 import com.bsdevs.coffeescreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
+import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -104,6 +109,25 @@ private fun CoffeeScreenContent(
     onToggleCoffeeTasteSelected: (String) -> Unit,
     onCoffeeTasteSearchText: (String) -> Unit,
 ) {
+    var showSnackBar by remember { mutableStateOf(false) }
+    LaunchedEffect(key1 = showSnackBar) {
+        if (showSnackBar) {
+            var inputsContent = viewData.inputs.joinToString{
+                when (it) {
+                    is InputViewData.InputVD -> {
+                        (it.selectedSet.joinToString(", "))
+                    }
+                    is InputViewData.InputRadioVD -> {
+                        (if (it.isDecaf) "Decaf" else "Caffeinated")
+                    }
+                }
+            }
+            val snackBarContent = "Coffee Details Entered" + "\n\n${inputsContent}" +
+                    "\n\nRoast Date: ${viewData.roastDate}"
+            onShowSnackBar.invoke(snackBarContent, null)
+            showSnackBar = false
+        }
+    }
     Column(modifier = Modifier.padding(vertical = 16.dp)) {
         viewData.inputs.forEach { inputViewData ->
             when (inputViewData) {
@@ -136,7 +160,14 @@ private fun CoffeeScreenContent(
             }
         }
         DatePickerSection(viewData.roastDate, onUpdateRoastDate)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.weight(1f))
+        Button(
+            onClick = { showSnackBar = true },
+            enabled = viewData.isButtonEnabled,
+            modifier = Modifier.wrapContentSize()
+        )
+        { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
+        Spacer(modifier = Modifier.weight(0.1f))
     }
 }
 

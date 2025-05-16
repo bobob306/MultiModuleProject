@@ -1,15 +1,18 @@
 package com.bsdevs.coffeescreen
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.viewdata.InputType
 import com.bsdevs.coffeescreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
+import com.bsdevs.common.result.Result.Success
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -26,6 +29,93 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = Result.Loading
+        )
+
+    val isButtonEnabledState = derivedStateOf {
+        // Access the value of the State inside the derivedStateOf lambda
+        // This lambda will re-run whenever viewDataResult changes.
+        if (_viewData.value is Success<*>) {
+            val cviewData = (_viewData.value as Success<*>).data as CoffeeScreenViewData
+            val inputs = cviewData.inputs
+
+            // Your validation logic here...
+            val areSetsValid = inputs.all { input ->
+                // ... validation logic for sets ...
+                when (input) {
+                    is InputViewData.InputVD -> {
+                        when (input.inputType) {
+                            InputType.BEANS, InputType.ORIGIN, InputType.TASTE -> input.selectedSet.isNotEmpty()
+                            else -> true
+                        }
+                    }
+
+                    else -> true
+                }
+            }
+
+            val isRadioValid =
+                inputs.filterIsInstance<InputViewData.InputRadioVD>().all { it.isDecaf != null }
+            val isDateValid = cviewData.roastDate != null
+
+            areSetsValid && isRadioValid && isDateValid
+            _viewData.update {
+                Success(
+                    data = cviewData.copy(
+                        isButtonEnabled = areSetsValid && isRadioValid && isDateValid
+                    )
+                )
+            }
+        } else {
+            false
+        }
+    }
+
+
+    val isButtonEnabled: StateFlow<Boolean> = viewData.map { currentResult ->
+        if (currentResult is Success) {
+            val viewData = currentResult.data
+            val inputs = viewData.inputs
+
+            // Check mutable sets (assuming BEANS, ORIGIN, TASTE are the ones)
+            val areSetsValid = inputs.all { input ->
+                when (input) {
+                    is InputViewData.InputVD -> {
+                        when (input.inputType) {
+                            InputType.BEANS, InputType.ORIGIN, InputType.TASTE -> input.selectedSet.isNotEmpty()
+                            else -> true // Other InputVD types are considered valid
+                        }
+                    }
+
+                    else -> true // Other input types (like InputRadioVD) are checked separately
+                }
+            }
+
+            // Check radio button (assuming there's one InputRadioVD)
+            val isRadioValid =
+                inputs.filterIsInstance<InputViewData.InputRadioVD>().all { it.isDecaf != null }
+            // Note: Assuming isDecaf being non-null indicates a selection. Adjust logic based on your ViewData.
+
+            // Check the date field
+            val isDateValid = viewData.roastDate != null
+            // Note: Assuming a non-null roastDate indicates a valid entry. Adjust logic based on your ViewData.
+            _viewData.update {
+                Success(
+                    data = viewData.copy(
+                        isButtonEnabled = areSetsValid && isRadioValid && isDateValid
+                    )
+                )
+            }
+            areSetsValid && isRadioValid && isDateValid
+        } else {
+            // If the result is not Success (e.g., Loading or Error), the button should be disabled
+            false
+        }
+    }
+        // Convert the Flow<Boolean> into a StateFlow<Boolean>
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false // Initial state is disabled
         )
 
     private fun loadData() {
@@ -166,5 +256,13 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                 currentResult
             }
         }
+    }
+
+    private fun buttonEnableLogic() {
+
+    }
+
+    fun onEnterPress() {
+
     }
 }
