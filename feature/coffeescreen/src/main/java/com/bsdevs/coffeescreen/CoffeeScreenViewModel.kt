@@ -1,8 +1,11 @@
 package com.bsdevs.coffeescreen
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.derivedStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.viewdata.InputType
 import com.bsdevs.coffeescreen.viewdata.InputViewData
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,44 +34,6 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = Result.Loading
         )
-
-//    val isButtonEnabledState = derivedStateOf {
-//        // Access the value of the State inside the derivedStateOf lambda
-//        // This lambda will re-run whenever viewDataResult changes.
-//        if (_viewData.value is Success<*>) {
-//            val cviewData = (_viewData.value as Success<*>).data as CoffeeScreenViewData
-//            val inputs = cviewData.inputs
-//
-//            // Your validation logic here...
-//            val areSetsValid = inputs.all { input ->
-//                // ... validation logic for sets ...
-//                when (input) {
-//                    is InputViewData.InputVD -> {
-//                        when (input.inputType) {
-//                            InputType.BEANS, InputType.ORIGIN, InputType.TASTE -> input.selectedSet.isNotEmpty()
-//                            else -> true
-//                        }
-//                    }
-//
-//                    else -> true
-//                }
-//            }
-//
-//            val isDateValid = cviewData.roastDate != null
-//
-//            areSetsValid && isDateValid
-//            _viewData.update {
-//                Success(
-//                    data = cviewData.copy(
-//                        isButtonEnabled = areSetsValid && isDateValid
-//                    )
-//                )
-//            }
-//        } else {
-//            false
-//        }
-//    }
-
 
     val isButtonEnabled: StateFlow<Boolean> = viewData.map { currentResult ->
         if (currentResult is Success) {
@@ -114,14 +80,32 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
         )
 
     private fun loadData() {
-        _viewData.value = Result.Success(
+        _viewData.value = Success(
             data = CoffeeScreenViewData()
         )
     }
 
+    fun processIntent(intent: CoffeeScreenIntent) {
+        when (intent) {
+            is CoffeeScreenIntent.UpdateRoastDate -> onUpdateRoastData(intent.date)
+            is CoffeeScreenIntent.SetDecaf -> onToggleDecaf(intent.isDecaf)
+            CoffeeScreenIntent.SubmitCoffee -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    onEnterPress()
+                }
+            }
+            is CoffeeScreenIntent.ToggleDropdownSelection -> {
+                handleToggleDropdownSelection(intent.inputType, intent.selection)
+            }
+            is CoffeeScreenIntent.UpdateSearchText -> {
+                handleUpdateSearchText(intent.inputType, intent.searchText)
+            }
+        }
+    }
+
     fun onToggleCoffeeTypeSelected(coffeeType: String) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputVD && input.inputType == InputType.BEANS) {
@@ -138,7 +122,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -148,7 +132,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleProcessSelected(processType: String) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputVD && input.inputType == InputType.METHOD) {
@@ -165,7 +149,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -174,9 +158,9 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onUpdateRoastData(date: LocalDate) {
-        val currentViewData = _viewData.value as Result.Success<CoffeeScreenViewData>
+        val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
         _viewData.update {
-            Result.Success(
+            Success(
                 data = currentViewData.data.copy(
                     roastDate = date
                 )
@@ -186,7 +170,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleCoffeeOriginSelected(originCountry: String) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputVD && input.inputType == InputType.ORIGIN) {
@@ -203,7 +187,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -213,7 +197,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleCoffeeTasteSelected(taste: String) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputVD && input.inputType == InputType.TASTE) {
@@ -230,7 +214,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -240,7 +224,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onToggleDecaf(isDecaf: Boolean) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputRadioVD) {
@@ -251,7 +235,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -261,7 +245,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
 
     fun onCoffeeTasteType(taste: String) {
         _viewData.update { currentResult ->
-            if (currentResult is Result.Success) {
+            if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputViewData.InputVD && input.inputType == InputType.TASTE) {
@@ -272,7 +256,7 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
                     }
                 }
                 // Return a new Success result with the updated inputs list
-                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+                Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
                 // If the current state is not Success, return it unchanged
                 currentResult
@@ -280,11 +264,98 @@ class CoffeeScreenViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    private fun buttonEnableLogic() {
-
-    }
-
+    @RequiresApi(Build.VERSION_CODES.O)
     fun onEnterPress() {
-
+        val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
+        val coffeeDto = mapToCoffeeDto(currentViewData.data)
+        println(coffeeDto)
     }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun mapToCoffeeDto(viewData: CoffeeScreenViewData): CoffeeDto {
+        var beanTypes = emptySet<String>()
+        var originCountries = emptySet<String>()
+        var tastingNotes = emptySet<String>()
+        var beanPreparationMethod = emptySet<String>() // For METHOD
+        var isDecaf: Boolean? = null
+        val formattedRoastDate: String = viewData.roastDate?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: ""
+
+        viewData.inputs.forEach { input ->
+            when (input) {
+                is InputViewData.InputVD -> {
+                    when (input.inputType) {
+                        InputType.BEANS -> beanTypes = input.selectedSet
+                        InputType.ORIGIN -> originCountries = input.selectedSet
+                        InputType.TASTE -> tastingNotes = input.selectedSet
+                        InputType.METHOD -> beanPreparationMethod = input.selectedSet // Map METHOD
+                    }
+                }
+                is InputViewData.InputRadioVD -> {
+                    // Assuming the label for the decaf radio button is consistent
+                    // or you only have one InputRadioVD for decaf.
+                    isDecaf = input.isDecaf
+                }
+            }
+        }
+
+        return CoffeeDto(
+            roastDate = formattedRoastDate,
+            beanTypes = beanTypes.toList(),
+            originCountries = originCountries.toList(),
+            tastingNotes = tastingNotes.toList(),
+            beanPreparationMethod = beanPreparationMethod.toList(),
+            isDecaf = isDecaf == true
+        )
+    }
+
+    private fun handleToggleDropdownSelection(inputType: InputType, selection: String) {
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == inputType) {
+                        val newSelectedSet = if (input.selectedSet.contains(selection)) {
+                            input.selectedSet - selection
+                        } else {
+                            // For multi-select, add. For single-select, replace.
+                            // Assuming multi-select for now based on selectedSet
+                            input.selectedSet + selection
+                        }
+                        input.copy(selectedSet = newSelectedSet)
+                    } else {
+                        input
+                    }
+                }
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                currentResult
+            }
+        }
+    }
+
+    private fun handleUpdateSearchText(inputType: InputType, searchText: String) {
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                val currentViewData = currentResult.data
+                val updatedInputs = currentViewData.inputs.map { input ->
+                    if (input is InputViewData.InputVD && input.inputType == inputType) {
+                        input.copy(searchText = searchText)
+                    } else {
+                        input
+                    }
+                }
+                Result.Success(data = currentViewData.copy(inputs = updatedInputs))
+            } else {
+                currentResult
+            }
+        }
+    }
+}
+
+sealed class CoffeeScreenIntent {
+    data class UpdateRoastDate(val date: LocalDate) : CoffeeScreenIntent()
+    data class SetDecaf(val isDecaf: Boolean) : CoffeeScreenIntent()
+    object SubmitCoffee : CoffeeScreenIntent() // For the "Enter" press or submit button
+    data class ToggleDropdownSelection(val inputType: InputType, val selection: String) : CoffeeScreenIntent()
+    data class UpdateSearchText(val inputType: InputType, val searchText: String) : CoffeeScreenIntent()
 }

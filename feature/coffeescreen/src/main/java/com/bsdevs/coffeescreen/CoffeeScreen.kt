@@ -2,16 +2,16 @@ package com.bsdevs.coffeescreen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -26,7 +27,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -35,12 +38,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -50,10 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
-import com.bsdevs.coffeescreen.viewdata.InputType
 import com.bsdevs.coffeescreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
-import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -76,13 +77,7 @@ fun CoffeeScreenRoute(
             is Result.Success -> CoffeeScreenContent(
                 onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeScreenViewData>).data,
-                onToggleCoffeeTypeSelected = viewModel::onToggleCoffeeTypeSelected,
-                onUpdateRoastDate = viewModel::onUpdateRoastData,
-                onToggleCoffeeOriginSelected = viewModel::onToggleCoffeeOriginSelected,
-                onToggleDecaf = viewModel::onToggleDecaf,
-                onToggleCoffeeTasteSelected = viewModel::onToggleCoffeeTasteSelected,
-                onCoffeeTasteSearchText = viewModel::onCoffeeTasteType,
-                onToggleProcessSelected = viewModel::onToggleProcessSelected,
+                onIntent = viewModel::processIntent,
             )
         }
     }
@@ -103,22 +98,17 @@ private fun ErrorScreen() {
 private fun CoffeeScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeScreenViewData,
-    onToggleCoffeeTypeSelected: (String) -> Unit,
-    onUpdateRoastDate: (LocalDate) -> Unit,
-    onToggleCoffeeOriginSelected: (String) -> Unit,
-    onToggleDecaf: (Boolean) -> Unit,
-    onToggleCoffeeTasteSelected: (String) -> Unit,
-    onCoffeeTasteSearchText: (String) -> Unit,
-    onToggleProcessSelected: (String) -> Unit,
+    onIntent: (CoffeeScreenIntent) -> Unit,
 ) {
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
         if (showSnackBar) {
-            var inputsContent = viewData.inputs.joinToString{
+            var inputsContent = viewData.inputs.joinToString {
                 when (it) {
                     is InputViewData.InputVD -> {
                         (it.selectedSet.joinToString(", "))
                     }
+
                     is InputViewData.InputRadioVD -> {
                         (if (it.isDecaf) "Decaf" else "Caffeinated")
                     }
@@ -134,41 +124,28 @@ private fun CoffeeScreenContent(
         viewData.inputs.forEach { inputViewData ->
             when (inputViewData) {
                 is InputViewData.InputVD -> {
-                    when (inputViewData.inputType) {
-                        InputType.BEANS -> {
-                            InputSection(inputViewData, onToggleCoffeeTypeSelected) { }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        InputType.ORIGIN -> {
-                            InputSection(inputViewData, onToggleCoffeeOriginSelected) { }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
-                        InputType.TASTE -> {
-                            InputSection(
-                                inputViewData,
-                                onToggleCoffeeTasteSelected
-                            ) { onCoffeeTasteSearchText(it) }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                        InputType.METHOD -> {
-                            InputSection(inputViewData, onToggleProcessSelected) { }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
+                    InputSection(
+                        inputViewData = inputViewData,
+                        onIntent = onIntent // Pass the main onIntent callback
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
                 is InputViewData.InputRadioVD -> {
-                    RadioInputRow(inputViewData, onToggleDecaf)
+                    RadioInputRow(inputViewData, onIntent)
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
-        DatePickerSection(viewData.roastDate, onUpdateRoastDate)
+        DatePickerSection(viewData.roastDate) { date ->
+            onIntent(CoffeeScreenIntent.UpdateRoastDate(date = date))
+        }
         Spacer(modifier = Modifier.weight(1f))
         Button(
-            onClick = { showSnackBar = true },
+            onClick = {
+                showSnackBar = true
+                onIntent(CoffeeScreenIntent.SubmitCoffee)
+            },
             enabled = viewData.isButtonEnabled,
             modifier = Modifier.wrapContentSize()
         )
@@ -181,8 +158,7 @@ private fun CoffeeScreenContent(
 @Composable
 private fun InputSection(
     inputViewData: InputViewData.InputVD,
-    onToggleSelected: (String) -> Unit,
-    onSearchTextChange: (String) -> Unit,
+    onIntent: (CoffeeScreenIntent) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
@@ -211,7 +187,7 @@ private fun InputSection(
                 value = if (expanded && isFocused) searchText
                     ?: "" else inputViewData.selectedSet.joinToString(", "),
                 onValueChange = {
-                    onSearchTextChange(it)
+                    onIntent(CoffeeScreenIntent.UpdateSearchText(inputType, it))
                     expanded = true
                 },
                 label = { Text(inputViewData.label) },
@@ -254,9 +230,14 @@ private fun InputSection(
                                 }
                             },
                             onClick = {
-                                onToggleSelected(option)
-                                searchText?.let {
-                                    onSearchTextChange("")
+                                onIntent(
+                                    CoffeeScreenIntent.ToggleDropdownSelection(
+                                        inputType,
+                                        option
+                                    )
+                                )
+                                searchText?.let { text ->
+                                    onIntent(CoffeeScreenIntent.UpdateSearchText(inputType, ""))
                                 }
                                 expanded = true
                             },
@@ -272,22 +253,39 @@ private fun InputSection(
 @Composable
 private fun RadioInputRow(
     decafInput: InputViewData.InputRadioVD,
-    onToggleDecaf: (Boolean) -> Unit,
+    onIntent: (CoffeeScreenIntent) -> Unit,
 ) {
-    Column {
-        Text(decafInput.label)
-        Row(
-            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
+    OutlinedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shape = CardDefaults.outlinedShape,
+        colors = CardDefaults.outlinedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(start = 16.dp, end = 16.dp)
         ) {
-            decafInput.option.forEach { option ->
-                Text(option.label)
-                Spacer(modifier = Modifier.width(8.dp))
-                RadioButton(
-                    selected = if (decafInput.isDecaf == option.isDecaf) true else false,
-                    onClick = {
-                        onToggleDecaf(option.isDecaf)
-                    })
-                Spacer(modifier = Modifier.width(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                decafInput.option.forEach { option ->
+                    Row(modifier = Modifier.wrapContentWidth(), verticalAlignment = CenterVertically) {
+                        Text(option.label)
+                        RadioButton(
+                            selected = if (decafInput.isDecaf == option.isDecaf) true else false,
+                            onClick = {
+                                onIntent(CoffeeScreenIntent.SetDecaf(option.isDecaf))
+                            })
+                    }
+                }
             }
         }
     }
