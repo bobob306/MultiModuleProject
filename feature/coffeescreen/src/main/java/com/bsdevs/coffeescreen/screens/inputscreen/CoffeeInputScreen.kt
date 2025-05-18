@@ -1,10 +1,9 @@
-package com.bsdevs.coffeescreen
+package com.bsdevs.coffeescreen.screens.inputscreen
 
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,7 +41,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -52,8 +50,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bsdevs.coffeescreen.viewdata.CoffeeScreenViewData
-import com.bsdevs.coffeescreen.viewdata.InputViewData
+import androidx.navigation.NavOptions
+import androidx.navigation.NavOptions.*
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
@@ -61,9 +61,10 @@ import java.time.ZoneId
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CoffeeScreenRoute(
+fun CoffeeInputScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    viewModel: CoffeeScreenViewModel = hiltViewModel(),
+    viewModel: CoffeeInputScreenViewModel = hiltViewModel(),
+    navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
@@ -74,31 +75,44 @@ fun CoffeeScreenRoute(
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()
             is Result.Error -> ErrorScreen()
-            is Result.Success -> CoffeeScreenContent(
+            is Result.Success -> CoffeeInputScreenContent(
                 onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeScreenViewData>).data,
                 onIntent = viewModel::processIntent,
             )
         }
     }
+    LaunchedEffect(key1 = Unit) {
+        viewModel.navigationEvent.collect { event ->
+            when (event) {
+                NavigationEvent.NavigateToHome -> navigateToCoffeeHome(
+                    Builder()
+                        .setPopUpTo(0, true)
+                        .build()
+                )
+
+                NavigationEvent.NavigateToInput -> {}
+            }
+        }
+    }
 }
 
 @Composable
-private fun LoadingScreen() {
+internal fun LoadingScreen() {
     Text("Loading")
 }
 
 @Composable
-private fun ErrorScreen() {
+internal fun ErrorScreen() {
     Text("Error")
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-private fun CoffeeScreenContent(
+private fun CoffeeInputScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeScreenViewData,
-    onIntent: (CoffeeScreenIntent) -> Unit,
+    onIntent: (CoffeeInputScreenIntent) -> Unit,
 ) {
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
@@ -138,13 +152,13 @@ private fun CoffeeScreenContent(
             }
         }
         DatePickerSection(viewData.roastDate) { date ->
-            onIntent(CoffeeScreenIntent.UpdateRoastDate(date = date))
+            onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
         }
         Spacer(modifier = Modifier.weight(1f))
         Button(
             onClick = {
                 showSnackBar = true
-                onIntent(CoffeeScreenIntent.SubmitCoffee)
+                onIntent(CoffeeInputScreenIntent.SubmitCoffee)
             },
             enabled = viewData.isButtonEnabled,
             modifier = Modifier.wrapContentSize()
@@ -158,7 +172,7 @@ private fun CoffeeScreenContent(
 @Composable
 private fun InputSection(
     inputViewData: InputViewData.InputVD,
-    onIntent: (CoffeeScreenIntent) -> Unit,
+    onIntent: (CoffeeInputScreenIntent) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
@@ -187,7 +201,7 @@ private fun InputSection(
                 value = if (expanded && isFocused) searchText
                     ?: "" else inputViewData.selectedSet.joinToString(", "),
                 onValueChange = {
-                    onIntent(CoffeeScreenIntent.UpdateSearchText(inputType, it))
+                    onIntent(CoffeeInputScreenIntent.UpdateSearchText(inputType, it))
                     expanded = true
                 },
                 label = { Text(inputViewData.label) },
@@ -216,7 +230,7 @@ private fun InputSection(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .wrapContentHeight(),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                    verticalAlignment = CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(option)
@@ -231,13 +245,13 @@ private fun InputSection(
                             },
                             onClick = {
                                 onIntent(
-                                    CoffeeScreenIntent.ToggleDropdownSelection(
+                                    CoffeeInputScreenIntent.ToggleDropdownSelection(
                                         inputType,
                                         option
                                     )
                                 )
                                 searchText?.let { text ->
-                                    onIntent(CoffeeScreenIntent.UpdateSearchText(inputType, ""))
+                                    onIntent(CoffeeInputScreenIntent.UpdateSearchText(inputType, ""))
                                 }
                                 expanded = true
                             },
@@ -253,7 +267,7 @@ private fun InputSection(
 @Composable
 private fun RadioInputRow(
     decafInput: InputViewData.InputRadioVD,
-    onIntent: (CoffeeScreenIntent) -> Unit,
+    onIntent: (CoffeeInputScreenIntent) -> Unit,
 ) {
     OutlinedCard(
         modifier = Modifier
@@ -282,7 +296,7 @@ private fun RadioInputRow(
                         RadioButton(
                             selected = if (decafInput.isDecaf == option.isDecaf) true else false,
                             onClick = {
-                                onIntent(CoffeeScreenIntent.SetDecaf(option.isDecaf))
+                                onIntent(CoffeeInputScreenIntent.SetDecaf(option.isDecaf))
                             })
                     }
                 }

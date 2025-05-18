@@ -6,5 +6,7 @@ data class CoffeeDto(
     val originCountries: List<String>,
     val tastingNotes: List<String>,
     val beanPreparationMethod: List<String>,
-    val isDecaf: Boolean
+    val roaster: String,
+    val isDecaf: Boolean,
+    val label: String,
 )

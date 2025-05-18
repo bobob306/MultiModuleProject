@@ -1,12 +1,12 @@
-package com.bsdevs.coffeescreen.viewdata
+package com.bsdevs.coffeescreen.screens.inputscreen.viewdata
 
-import android.R.attr.label
-import com.bsdevs.coffeescreen.viewdata.InputViewData.InputRadioVD
-import com.bsdevs.coffeescreen.viewdata.InputViewData.InputVD
+import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputRadioVD
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
 import java.time.LocalDate
 
 data class InputsViewData(
-    val inputList: List<String> = coffeeTastingNotesList.sortedBy { it } ,
+    val inputList: List<String> = coffeeTastingNotesList.sortedBy { it },
     val selectedSet: Set<String> = emptySet(),
     val searchText: String? = null,
     val label: String,
@@ -33,7 +33,7 @@ data class CoffeeScreenViewData(
             selectedSet = emptySet(),
             searchText = null,
             inputType = InputType.BEANS
-            ),
+        ),
         InputVD(
             label = "Coffee Origin(s)",
             inputList = originCountries,
@@ -50,10 +50,19 @@ data class CoffeeScreenViewData(
         ),
         InputVD(
             label = "Coffee Preparation Method",
-            inputList = listOf("Washed", "Natural", "Honey", "Wet", "Anaerobic", "Pulped",),
+            inputList = beanPreparationMethod,
             selectedSet = emptySet(),
             searchText = null,
-            inputType = InputType.METHOD
+            inputType = InputType.METHOD,
+            singleInput = true,
+        ),
+        InputVD(
+            label = "Roaster",
+            inputList = coffeeRoasters,
+            selectedSet = emptySet(),
+            searchText = "",
+            inputType = InputType.ROASTER,
+            singleInput = true,
         ),
         InputRadioVD(
             label = "Decaf",
@@ -68,7 +77,7 @@ data class CoffeeScreenViewData(
                 )
             ),
             isDecaf = false,
-            ),
+        ),
     ),
 )
 
@@ -79,6 +88,7 @@ sealed class InputViewData {
         val selectedSet: Set<String>,
         val searchText: String?,
         val inputType: InputType,
+        val singleInput: Boolean = false
     ) : InputViewData()
 
     data class InputRadioVD(
@@ -88,9 +98,12 @@ sealed class InputViewData {
     ) : InputViewData()
 }
 
-enum class InputType{
-    BEANS, ORIGIN, TASTE, METHOD
+enum class InputType {
+    BEANS, ORIGIN, TASTE, METHOD, ROASTER
 }
+
+private val beanPreparationMethod =
+    listOf("Washed", "Natural", "Honey", "Wet", "Anaerobic", "Pulped")
 
 private val coffeeBeanTypes: List<String> = listOf(
     "Arabica", "Robusta", "Liberica", "Excelsa", "Typica",
@@ -100,6 +113,10 @@ private val coffeeBeanTypes: List<String> = listOf(
     "Kona Robusta", "Kona", "Blue Mountain", "Sumatra Mandheling", "Java",
     "Ethiopian Yirgacheffe", "Ethiopian Sidamo", "Colombian Supremo/Excelso",
     "Brazilian Santos", "Vietnamese Robusta", "Tabi"
+)
+
+private val coffeeRoasters: List<String> = listOf(
+    "CoffeeLink", "Wogan", "Pact"
 )
 
 private val coffeeTastingNotesList: List<String> = listOf(
@@ -208,3 +225,56 @@ private val originCountries: List<String> = listOf(
     "Haiti",
     "Philippines"
 )
+
+val sampleRoasters = listOf(
+    "Pact Coffee",
+    "CoffeeLink",
+    "Wogan Coffee"
+)
+
+fun generateSampleCoffeeDto(count: Int): List<CoffeeDto> {
+    val list = mutableListOf<CoffeeDto>()
+    val random = java.util.Random()
+
+    // Ensure sampleRoasters is defined as:
+    // val sampleRoasters = listOf("Pact Coffee", "CoffeeLink", "Wogan Coffee")
+    // This should be defined at the top level of your file or passed into the function.
+
+    for (i in 1..count) {
+        val year = 2024
+        val month = random.nextInt(12) + 1
+        val day = random.nextInt(28) + 1
+        val roastDate = String.format("%d-%02d-%02d", year, month, day)
+
+        val numBeanTypes = if (i % 4 == 0) 2 else 1
+        val beans = coffeeBeanTypes.shuffled().take(numBeanTypes)
+
+        val numOrigins = if (i % 4 == 0) 2 else 1
+        val origins = listOf(originCountries.random())
+
+        val numTastingNotes = if (i % 4 == 0) 1 else 2
+        val notes = listOf(coffeeTastingNotesList.random(), coffeeTastingNotesList.random(), coffeeTastingNotesList.random())
+
+        val singleMethod = listOf(beanPreparationMethod.random())
+
+        val singleRoaster = sampleRoasters.random()
+
+        val isDecaf = random.nextBoolean() && (i % 4 == 0)
+
+        list.add(
+            CoffeeDto(
+                roastDate = roastDate,
+                beanTypes = beans,
+                originCountries = origins,
+                tastingNotes = notes,
+                beanPreparationMethod = singleMethod,
+                roaster = singleRoaster, // This will now correctly pick from the restricted list
+                isDecaf = isDecaf,
+                label = singleRoaster + " " + origins.joinToString(", ") + " " +
+                        singleMethod.first() + " " + roastDate
+
+            )
+        )
+    }
+    return list
+}

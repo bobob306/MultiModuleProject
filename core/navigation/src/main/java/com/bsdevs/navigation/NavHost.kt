@@ -7,10 +7,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
-import com.bsdevs.coffeescreen.navigation.CoffeeScreenRoute
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
-import com.bsdevs.coffeescreen.navigation.navigateToCoffee
-import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.homescreen.navigation.homeScreenSection
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -26,10 +25,12 @@ fun MMPNavHost(
     ) {
         homeScreenSection(
             onShowSnackBar,
-            navController::navigateToCoffee
+            navController::navigateToCoffeeHome,
         )
         coffeeScreenSection(
-            onShowSnackBar
+            onShowSnackBar,
+            navigateToCoffeeInput = navController::navigateToCoffeeInput,
+            navigateToCoffeeHome = navController::navigateToCoffeeHome
         )
     }
 }
