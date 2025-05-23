@@ -10,6 +10,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -157,6 +158,7 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
             job = this.coroutineContext.job
             val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
             val coffeeDto = mapToCoffeeDto(currentViewData.data)
+            uploadCoffee(coffeeDto)
             println(coffeeDto.label)
         }.invokeOnCompletion {
             if (it == null) {
@@ -213,6 +215,23 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
             label = roaster + " " + originCountries.joinToString(", ") + " " +
                     beanPreparationMethod.first() + " " + formattedRoastDate
         )
+    }
+
+    private fun uploadCoffee(coffee: CoffeeDto) {
+        val collectionReference = FirebaseFirestore.getInstance().collection("coffeeUploads")
+        viewModelScope.launch {
+            collectionReference.document("${coffee.label}").set(
+                mapOf(
+                    "isDecaf" to coffee.isDecaf,
+                    "roastDate" to coffee.roastDate,
+                    "beanTypes" to coffee.beanTypes,
+                    "originCountries" to coffee.originCountries,
+                    "tastingNotes" to coffee.tastingNotes,
+                    "beanPreparationMethod" to coffee.beanPreparationMethod,
+                    "roaster" to coffee.roaster
+                )
+            )
+        }
     }
 
     private fun handleToggleDropdownSelection(inputType: InputType, selection: String) {
@@ -272,6 +291,7 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
 sealed class NavigationEvent {
     object NavigateToHome : NavigationEvent()
     object NavigateToInput : NavigationEvent()
+    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
     // Add other navigation events here if needed, e.g.:
     // data class NavigateToDetails(val itemId: String) : NavigationEvent()
 }

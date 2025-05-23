@@ -1,7 +1,6 @@
 package com.bsdevs.coffeescreen.screens.homescreen
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,8 +33,9 @@ import com.bsdevs.common.result.Result
 @Composable
 fun CoffeeHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
     navigateToCoffeeInput: () -> Unit,
+    onNavigateToDetail: (CoffeeDto) -> Unit,
+    viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
@@ -59,6 +59,7 @@ fun CoffeeHomeScreenRoute(
             when (event) {
                 NavigationEvent.NavigateToInput -> navigateToCoffeeInput()
                 NavigationEvent.NavigateToHome -> {}
+                is NavigationEvent.NavigateToDetail -> onNavigateToDetail(event.coffee)
             }
         }
     }
@@ -83,14 +84,14 @@ fun CoffeeHomeScreenContent(
             viewData.viewData.first { it is CoffeeHomeScreenViewDatas.CoffeeList }
                     as CoffeeHomeScreenViewDatas.CoffeeList
         items(count = coffeeListItems.coffeeList.size) { index ->
-            CoffeeListItem(coffee = coffeeListItems.coffeeList[index])
+            CoffeeListItem(coffee = coffeeListItems.coffeeList[index], onIntent = onIntent)
             Spacer(Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-fun CoffeeListItem(coffee: CoffeeDto) {
+fun CoffeeListItem(coffee: CoffeeDto, onIntent: (CoffeeHomeScreenIntent) -> Unit) {
     Card(
         modifier = Modifier
             .wrapContentHeight()
@@ -101,6 +102,13 @@ fun CoffeeListItem(coffee: CoffeeDto) {
             }
     )
     {
-        Text("Coffee: ${coffee.label}", modifier = Modifier.padding(8.dp))
+        Text(
+            "Coffee: ${coffee.label}",
+            modifier = Modifier
+                .padding(8.dp)
+                .clickable {
+                    onIntent.invoke(CoffeeHomeScreenIntent.NavigateToDetail(coffee))
+                }
+        )
     }
 }

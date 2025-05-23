@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.homescreen.navigation.homeScreenSection
@@ -30,7 +31,8 @@ fun MMPNavHost(
         coffeeScreenSection(
             onShowSnackBar,
             navigateToCoffeeInput = navController::navigateToCoffeeInput,
-            navigateToCoffeeHome = navController::navigateToCoffeeHome
+            navigateToCoffeeHome = navController::navigateToCoffeeHome,
+            navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
         )
     }
 }

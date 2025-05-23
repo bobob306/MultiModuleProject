@@ -7,8 +7,15 @@ import com.bsdevs.coffeescreen.screens.homescreen.viewdata.ButtonDestination
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.beanPreparationMethod
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeBeanTypes
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeRoasters
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesList
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,10 +59,32 @@ class CoffeeHomeScreenViewModel @Inject constructor() : ViewModel() {
                     // Handle showing a snack bar
                 }
 
-                is CoffeeHomeScreenIntent.NavigateToDetailScreen -> {
+                is CoffeeHomeScreenIntent.NavigateToDetail -> {
                     // Handle navigation to a detail screen
+                    _navigationEvent.send(NavigationEvent.NavigateToDetail(intent.coffee))
                 }
             }
+        }
+    }
+
+    private fun uploadCoffeeData() {
+        val beans = coffeeBeanTypes
+        val method = beanPreparationMethod
+        val taste = coffeeTastingNotesList
+        val roaster = coffeeRoasters
+        val caffeine = listOf("Caffeinated", "Decaffeinated")
+        val origin = originCountries
+        val coffeeDetails = listOf(
+            beans, method, taste, roaster, caffeine, origin
+        )
+
+        val collectionReference = FirebaseFirestore.getInstance().collection("screens").document("coffeeInput")
+        viewModelScope.launch {
+            collectionReference.update("METHOD", method)
+            collectionReference.update("TASTE", taste)
+            collectionReference.update("ROASTER", roaster)
+            collectionReference.update("CAFFEINE", caffeine)
+            collectionReference.update("ORIGIN", origin)
         }
     }
 }
@@ -66,7 +95,7 @@ sealed class CoffeeHomeScreenIntent {
     data class ShowSnackBar(val message: String, val actionLabel: String?) :
         CoffeeHomeScreenIntent()
 
-    data class NavigateToDetailScreen(val coffee: CoffeeDto) : CoffeeHomeScreenIntent()
+    data class NavigateToDetail(val coffee: CoffeeDto) : CoffeeHomeScreenIntent()
 }
 
 private val coffeeList = generateSampleCoffeeDto(100).sortedBy { it.roastDate }.reversed()

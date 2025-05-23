@@ -5,19 +5,6 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputR
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
 import java.time.LocalDate
 
-data class InputsViewData(
-    val inputList: List<String> = coffeeTastingNotesList.sortedBy { it },
-    val selectedSet: Set<String> = emptySet(),
-    val searchText: String? = null,
-    val label: String,
-)
-
-data class RadioInputsViewData(
-    val label: String = "Decaf",
-    val option: List<RadioInputViewData>,
-    val isDecaf: Boolean = false,
-)
-
 data class RadioInputViewData(
     val label: String,
     val isDecaf: Boolean,
@@ -102,10 +89,10 @@ enum class InputType {
     BEANS, ORIGIN, TASTE, METHOD, ROASTER
 }
 
-private val beanPreparationMethod =
+internal val beanPreparationMethod =
     listOf("Washed", "Natural", "Honey", "Wet", "Anaerobic", "Pulped")
 
-private val coffeeBeanTypes: List<String> = listOf(
+internal val coffeeBeanTypes: List<String> = listOf(
     "Arabica", "Robusta", "Liberica", "Excelsa", "Typica",
     "Bourbon", "Catuai", "Caturra", "Pacamara", "Gesha (or Geisha)",
     "SL28", "SL34", "Mundo Novo", "Pacas", "Maragogipe",
@@ -115,11 +102,11 @@ private val coffeeBeanTypes: List<String> = listOf(
     "Brazilian Santos", "Vietnamese Robusta", "Tabi"
 )
 
-private val coffeeRoasters: List<String> = listOf(
+internal val coffeeRoasters: List<String> = listOf(
     "CoffeeLink", "Wogan", "Pact"
 )
 
-private val coffeeTastingNotesList: List<String> = listOf(
+internal val coffeeTastingNotesList: List<String> = listOf(
     "Berry",
     "Blueberry",
     "Raspberry",
@@ -193,7 +180,7 @@ private val coffeeTastingNotesList: List<String> = listOf(
     "Watery"
 )
 
-private val originCountries: List<String> = listOf(
+internal val originCountries: List<String> = listOf(
     "Brazil",
     "Vietnam",
     "Colombia",

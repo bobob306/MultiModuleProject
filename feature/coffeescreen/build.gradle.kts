@@ -5,6 +5,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt") // Use kapt for Hilt
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0" // Apply the plugin
+    id("kotlin-parcelize")
 }
 
 android {

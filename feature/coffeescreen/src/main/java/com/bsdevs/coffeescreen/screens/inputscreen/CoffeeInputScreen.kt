@@ -92,6 +92,7 @@ fun CoffeeInputScreenRoute(
                 )
 
                 NavigationEvent.NavigateToInput -> {}
+                is NavigationEvent.NavigateToDetail -> {}
             }
         }
     }
