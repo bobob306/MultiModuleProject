@@ -26,10 +26,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.bsdevs.data.ScreenData
+import com.bsdevs.data.NetworkScreenData
 
 @Composable
-fun CardComponent(cardData: ScreenData.CardData, context: Context) {
+fun CardComponent(cardData: NetworkScreenData.CardDataNetwork, context: Context) {
     cardData.run {
         Card(
             modifier = Modifier

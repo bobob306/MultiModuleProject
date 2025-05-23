@@ -16,10 +16,10 @@ import com.bsdevs.data.ButtonTypeData.PRIMARY
 import com.bsdevs.data.ButtonTypeData.SECONDARY
 import com.bsdevs.data.ButtonTypeData.TERTIARY
 import com.bsdevs.data.LocationTypeData
-import com.bsdevs.data.ScreenData.NavigationButtonData
+import com.bsdevs.data.NetworkScreenData.NavigationButtonDataNetwork
 
 @Composable
-fun MMPButton(navigationButtonData: NavigationButtonData, onClick: (String, String) -> Unit) {
+fun MMPButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
     navigationButtonData.run {
         when (sort) {
             PRIMARY -> {
@@ -38,7 +38,7 @@ fun MMPButton(navigationButtonData: NavigationButtonData, onClick: (String, Stri
 }
 
 @Composable
-fun PrimaryButton(navigationButtonData: NavigationButtonData, onClick: (String, String) -> Unit) {
+fun PrimaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
     navigationButtonData.run {
         Button(
             modifier = Modifier
@@ -54,7 +54,7 @@ fun PrimaryButton(navigationButtonData: NavigationButtonData, onClick: (String, 
 }
 
 @Composable
-fun SecondaryButton(navigationButtonData: NavigationButtonData, onClick: (String, String) -> Unit) {
+fun SecondaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
     navigationButtonData.run {
         Button(
             colors = ButtonColors(
@@ -80,7 +80,7 @@ fun SecondaryButton(navigationButtonData: NavigationButtonData, onClick: (String
 }
 
 @Composable
-fun TertiaryButton(navigationButtonData: NavigationButtonData, onClick: (String, String) -> Unit) {
+fun TertiaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
     navigationButtonData.run {
         Text(
             text = label,
@@ -99,7 +99,7 @@ fun TertiaryButton(navigationButtonData: NavigationButtonData, onClick: (String,
 fun ButtonsPreview() {
     Column {
         MMPButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,
@@ -108,7 +108,7 @@ fun ButtonsPreview() {
             )
         ) { _, _ -> }
         MMPButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,
@@ -117,7 +117,7 @@ fun ButtonsPreview() {
             )
         ) { _, _ -> }
         MMPButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,
@@ -127,7 +127,7 @@ fun ButtonsPreview() {
         ) { _, _ -> }
 
         TertiaryButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,
@@ -137,7 +137,7 @@ fun ButtonsPreview() {
         ) { _, _ -> }
 
         SecondaryButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,
@@ -147,7 +147,7 @@ fun ButtonsPreview() {
         ) { _, _ -> }
 
         PrimaryButton(
-            navigationButtonData = NavigationButtonData(
+            navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
                 destination = "SECOND_SCREEN",
                 location = LocationTypeData.INTERNAL,

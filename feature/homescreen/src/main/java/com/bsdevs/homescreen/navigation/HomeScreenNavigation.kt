@@ -17,10 +17,16 @@ data object HomeScreenBaseRoute
 fun NavController.navigateToHome(navOptions: NavOptions) =
     navigate(route = HomeScreenRoute, navOptions)
 
-fun NavGraphBuilder.homeScreenSection(onShowSnackBar: suspend (String, String?) -> Unit) {
+fun NavGraphBuilder.homeScreenSection(
+    onShowSnackBar: suspend (String, String?) -> Unit,
+    onNavigateToCoffee: () -> Unit,
+    ) {
     navigation<HomeScreenBaseRoute>(startDestination = HomeScreenRoute) {
         composable<HomeScreenRoute> {
-            HomeScreenRoute(onShowSnackBar)
+            HomeScreenRoute(
+                onShowSnackBar,
+                onNavigateToCoffee,
+            )
         }
     }
 }

@@ -1,13 +1,19 @@
 package com.bsdevs.navigation
 
-import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
-import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
+import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
+import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.homescreen.navigation.homeScreenSection
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MMPNavHost(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -16,10 +22,17 @@ fun MMPNavHost(
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = HomeScreenBaseRoute,
+        startDestination = CoffeeScreenBaseRoute,
     ) {
         homeScreenSection(
             onShowSnackBar,
+            navController::navigateToCoffeeHome,
+        )
+        coffeeScreenSection(
+            onShowSnackBar,
+            navigateToCoffeeInput = navController::navigateToCoffeeInput,
+            navigateToCoffeeHome = navController::navigateToCoffeeHome,
+            navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
         )
     }
 }

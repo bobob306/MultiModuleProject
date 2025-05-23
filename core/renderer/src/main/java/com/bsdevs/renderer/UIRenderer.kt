@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.bsdevs.data.ScreenData
+import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.SpacerTypeData
 import com.bsdevs.renderer.components.CardComponent
 import com.bsdevs.renderer.components.ChipComponent
@@ -22,21 +22,21 @@ import java.util.Locale
 
 @Composable
 fun ColumnScope.RenderUI(
-    item: ScreenData,
+    item: NetworkScreenData,
     context: Context,
     onClick: (String, String) -> Unit,
     onChipClick: (Boolean) -> Unit,
     onSwitchClick: (Boolean) -> Unit,
 ) {
     when (item) {
-        is ScreenData.TitleData -> Text(
+        is NetworkScreenData.TitleDataNetwork -> Text(
             item.content.uppercase(Locale.getDefault()),
             style = MaterialTheme.typography.titleMedium
         )
 
-        is ScreenData.SubtitleData -> Text(item.content)
-        is ScreenData.Unknown -> {}
-        is ScreenData.SpacerData -> {
+        is NetworkScreenData.SubtitleDataNetwork -> Text(item.content)
+        is NetworkScreenData.Unknown -> {}
+        is NetworkScreenData.SpacerDataNetwork -> {
             if (item.size.type == SpacerTypeData.WEIGHT) {
                 item.size.weight?.let { Spacer(modifier = Modifier.weight(it, fill = true)) }
             } else {
@@ -44,7 +44,7 @@ fun ColumnScope.RenderUI(
             }
         }
 
-        is ScreenData.ImageData -> {
+        is NetworkScreenData.ImageDataNetwork -> {
             AsyncImage(
                 model = ImageRequest.Builder(context).data(item.url).build(),
                 contentDescription = item.contentDescription,
@@ -52,24 +52,24 @@ fun ColumnScope.RenderUI(
             )
         }
 
-        is ScreenData.NavigationButtonData -> {
+        is NetworkScreenData.NavigationButtonDataNetwork -> {
             MMPButton(
                 navigationButtonData = item,
                 onClick = onClick,
             )
         }
 
-        is ScreenData.CardData -> {
+        is NetworkScreenData.CardDataNetwork -> {
             CardComponent(cardData = item, context = context)
         }
 
-        is ScreenData.DividerData -> HorizontalDivider()
+        is NetworkScreenData.DividerDataNetwork -> HorizontalDivider()
 
-        is ScreenData.ChipData -> {
+        is NetworkScreenData.ChipDataNetwork -> {
             ChipComponent(chipData = item, context = context, onClick = onChipClick)
         }
 
-        is ScreenData.SwitchData -> {
+        is NetworkScreenData.SwitchDataNetwork -> {
             SwitchComponent(switchData = item, context, onSwitchClick = onSwitchClick)
         }
 

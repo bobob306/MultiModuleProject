@@ -7,13 +7,13 @@ import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.SpacerType
 import javax.inject.Inject
 
-interface ScreenDataMapper : DataMapper<List<ScreenDto>, List<ScreenData>> {}
+interface ScreenDataMapper : DataMapper<List<ScreenDto>, List<NetworkScreenData>> {}
 
 class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
-    override fun mapToData(dto: List<ScreenDto>): List<ScreenData> {
+    override fun mapToData(dto: List<ScreenDto>): List<NetworkScreenData> {
         val listOfData = dto.map { item ->
             when (item) {
-                is ScreenDto.SpacerDto -> ScreenData.SpacerData(
+                is ScreenDto.SpacerDto -> NetworkScreenData.SpacerDataNetwork(
                     index = item.index,
                     size = SizeData(
                         type = when (item.size.type) {
@@ -26,17 +26,17 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     )
                 )
 
-                is ScreenDto.SubtitleDto -> ScreenData.SubtitleData(
+                is ScreenDto.SubtitleDto -> NetworkScreenData.SubtitleDataNetwork(
                     index = item.index,
                     content = item.content
                 )
 
-                is ScreenDto.TitleDto -> ScreenData.TitleData(
+                is ScreenDto.TitleDto -> NetworkScreenData.TitleDataNetwork(
                     index = item.index,
                     content = item.content
                 )
 
-                is ScreenDto.ImageDto -> ScreenData.ImageData(
+                is ScreenDto.ImageDto -> NetworkScreenData.ImageDataNetwork(
                     index = item.index,
                     url = item.url,
                     contentDescription = item.contentDescription,
@@ -44,9 +44,9 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     width = item.width
                 )
 
-                is ScreenDto.CardDto -> ScreenData.CardData(
+                is ScreenDto.CardDto -> NetworkScreenData.CardDataNetwork(
                     index = item.index,
-                    image = ScreenData.ImageData(
+                    image = NetworkScreenData.ImageDataNetwork(
                         index = item.index,
                         url = item.image.url,
                         contentDescription = item.image.contentDescription,
@@ -62,9 +62,9 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     iconButtonRow = null,
                 )
 
-                is ScreenDto.Unknown -> ScreenData.Unknown(99)
+                is ScreenDto.Unknown -> NetworkScreenData.Unknown(99)
 
-                is ScreenDto.NavigationButtonDto -> ScreenData.NavigationButtonData(
+                is ScreenDto.NavigationButtonDto -> NetworkScreenData.NavigationButtonDataNetwork(
                     index = item.index,
                     label = item.label,
                     destination = item.destination,

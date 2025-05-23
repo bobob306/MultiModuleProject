@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.bsdevs.homescreen"
+    namespace = "com.bsdevs.coffeescreen"
     compileSdk = 35
 
     defaultConfig {
@@ -47,7 +47,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:common"))
     implementation(project(":core:data"))
-    implementation(project(":core:renderer"))
+
     kapt(libs.hilt.compiler) // Use kapt for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.androidx.navigation.compose) // Or latest
@@ -71,5 +71,4 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)
-
 }

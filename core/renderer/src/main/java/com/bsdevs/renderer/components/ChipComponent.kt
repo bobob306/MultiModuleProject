@@ -19,10 +19,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.bsdevs.data.ScreenData.ChipData
+import com.bsdevs.data.NetworkScreenData.ChipDataNetwork
 
 @Composable
-fun ChipComponent(chipData: ChipData, context: Context, onClick: (Boolean) -> Unit) {
+fun ChipComponent(chipData: ChipDataNetwork, context: Context, onClick: (Boolean) -> Unit) {
     var enabledState by remember { mutableStateOf(false) }
     FilterChip(
         onClick = {
@@ -48,7 +48,7 @@ fun ChipComponent(chipData: ChipData, context: Context, onClick: (Boolean) -> Un
 @Composable
 fun ChipComponentPreview() {
     ChipComponent(
-        chipData = ChipData(0, "Chip", "https://picsum.photos/200"),
+        chipData = ChipDataNetwork(0, "Chip", "https://picsum.photos/200"),
         context = LocalContext.current,
         onClick = { _ -> }
     )

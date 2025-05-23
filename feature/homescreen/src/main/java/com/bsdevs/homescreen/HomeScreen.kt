@@ -4,8 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,12 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
-import com.bsdevs.data.ScreenData
+import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
 
 @Composable
 fun HomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
+    onNavigateToCoffee: () -> Unit,
     viewModel: HomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
@@ -34,9 +37,10 @@ fun HomeScreenRoute(
             HomeScreen(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
-                viewData = (viewData.value as Result.Success<List<ScreenData>>).data,
+                viewData = (viewData.value as Result.Success<List<NetworkScreenData>>).data,
                 onClick = viewModel::click,
-                onNavigationClick = {}
+                onNavigationClick = {},
+                onNavigateToCoffee = onNavigateToCoffee,
             )
         }
 
@@ -59,9 +63,10 @@ internal fun LoadingScreen() {
 internal fun HomeScreen(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLoadData: () -> Unit,
-    viewData: List<ScreenData>,
+    viewData: List<NetworkScreenData>,
     onClick: (String, String) -> Unit,
     onNavigationClick: (String) -> Unit,
+    onNavigateToCoffee: () -> Unit,
 ) {
     val context = LocalContext.current
     var showSnackBar by remember { mutableStateOf(false) }
@@ -84,6 +89,12 @@ internal fun HomeScreen(
             .fillMaxSize()
             .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
+        Button(
+            modifier = Modifier.wrapContentSize().padding(12.dp),
+            onClick = onNavigateToCoffee,
+        ) {
+            Text("Navigate to coffee")
+        }
         viewData.sortedBy { it.index }.forEach {
             RenderUI(
                 item = it,
