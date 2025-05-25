@@ -1,6 +1,5 @@
 package com.bsdevs.network
 
-import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.repository.ScreenRepository
 import com.bsdevs.network.repository.ScreenRepositoryImpl
 import com.google.firebase.firestore.CollectionReference

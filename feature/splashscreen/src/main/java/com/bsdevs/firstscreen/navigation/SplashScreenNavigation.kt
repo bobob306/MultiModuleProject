@@ -14,18 +14,20 @@ data object SplashScreenRoute
 @Serializable
 data object SplashScreenBaseRoute
 
-fun NavController.navigateToSplash(navOptions: NavOptions) =
+fun NavController.navigateToSplash(navOptions: NavOptions?) =
     navigate(route = SplashScreenRoute, navOptions)
 
 fun NavGraphBuilder.splashScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    onNavigateToCoffeeHome: () -> Unit,
+    onNavigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    onNavigateToSignIn: (navOptions: NavOptions?) -> Unit
 ) {
-    navigation<SplashScreenBaseRoute>(startDestination = SplashScreenBaseRoute) {
+    navigation<SplashScreenBaseRoute>(startDestination = SplashScreenRoute) {
         composable<SplashScreenRoute> {
             SplashScreenRoute(
                 onShowSnackBar,
                 onNavigateToCoffeeHome,
+                onNavigateToSignIn,
             )
         }
     }
