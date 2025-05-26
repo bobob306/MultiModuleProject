@@ -10,6 +10,7 @@ import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
+import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
 import com.bsdevs.firstscreen.navigation.splashScreenSection
 import com.bsdevs.homescreen.navigation.homeScreenSection
 import com.bsdevs.login.loginScreenSection
@@ -24,7 +25,7 @@ fun MMPNavHost(
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = CoffeeScreenBaseRoute,
+        startDestination = SplashScreenBaseRoute,
     ) {
         homeScreenSection(
             onShowSnackBar,

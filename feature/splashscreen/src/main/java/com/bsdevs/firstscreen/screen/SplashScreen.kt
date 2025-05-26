@@ -41,7 +41,7 @@ fun SplashScreenRoute(
         viewModel.navigationEvent.collect { event ->
             when (event) {
                 SplashScreenNavigationEvents.NavigateToHomeScreen -> onNavigateToCoffeeHome
-                SplashScreenNavigationEvents.NavigateToSignInScreen -> onNavigateToSignIn
+                SplashScreenNavigationEvents.NavigateToSignInScreen -> onNavigateToSignIn.invoke(null)
             }
         }
     }

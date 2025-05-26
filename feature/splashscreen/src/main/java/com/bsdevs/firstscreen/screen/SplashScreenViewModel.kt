@@ -3,16 +3,19 @@ package com.bsdevs.firstscreen.screen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@HiltViewModel
 class SplashScreenViewModel @Inject constructor(
     private val accountService: AccountService
 ) : ViewModel() {
     private val _navigationEvent = Channel<SplashScreenNavigationEvents>()
     val navigationEvent get() = _navigationEvent.receiveAsFlow()
+
     fun onAppStart() {
         if (accountService.hasUser()) {
             viewModelScope.launch {
@@ -22,7 +25,7 @@ class SplashScreenViewModel @Inject constructor(
         } else {
             // Navigate to the sign-in screen
             viewModelScope.launch {
-                _navigationEvent.send(SplashScreenNavigationEvents.NavigateToHomeScreen)
+                _navigationEvent.send(SplashScreenNavigationEvents.NavigateToSignInScreen)
             }
         }
     }
