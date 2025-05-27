@@ -7,6 +7,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.common.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -79,26 +80,26 @@ class LoginScreenViewModel @Inject constructor(
 //        }
 //    }
 
-    private fun onLoginClick() {
-        println("start to do something")
-        if (_viewData.value is Result.Success) {
-            println("do something")
-            viewModelScope.launch {
-                CoroutineExceptionHandler { _, throwable ->
-                    Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())
-                    println("COFFEE_ERROR_TAG " + throwable.message.orEmpty())
-                }
-                val currentViewData = _viewData.value as Result.Success
-                accountService.signIn(
-                    email = currentViewData.data.email,
-                    password = currentViewData.data.password
-                )
-            }.invokeOnCompletion {
-                it?.let {
-                    println("COFFEE_ERROR_TAG " + it.toString())
-                } ?: runCatching{
-                    println("COFFEE_ERROR_TAG " + "success???")
-                }
+//    private fun onLoginClick() {
+//        println("start to do something")
+//        if (_viewData.value is Result.Success) {
+//            println("do something")
+//            viewModelScope.launch {
+//                CoroutineExceptionHandler { _, throwable ->
+//                    Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())
+//                    println("COFFEE_ERROR_TAG " + throwable.message.orEmpty())
+//                }
+//                val currentViewData = _viewData.value as Result.Success
+//                accountService.signIn(
+//                    email = currentViewData.data.email,
+//                    password = currentViewData.data.password
+//                )
+//            }.invokeOnCompletion {
+//                it?.let {
+//                    println("COFFEE_ERROR_TAG " + it.toString())
+//                } ?: runCatching{
+//                    println("COFFEE_ERROR_TAG " + "success???")
+//                }
 //                if (it == null) {
 //                    viewModelScope.launch {
 //                        println("COFFEE_ERROR_TAG " + "success???")
@@ -118,9 +119,50 @@ class LoginScreenViewModel @Inject constructor(
 //                        )
 //                    }
 //                }
+//            }
+//        }
+//    }
+
+    private fun onLoginClick() {
+        if (_viewData.value is Result.Success) {
+            val currentViewData = _viewData.value as Result.Success
+            launchCatching {
+                _viewData.update {
+                    currentViewData.copy(
+                        currentViewData.data.copy(
+                            isLoading = true
+                        )
+                    )
+                }
+                accountService.signIn(
+                    email = currentViewData.data.email,
+                    password = currentViewData.data.password,
+                )
+                _navigationEvent.send(NavigationEvent.NavigateToCoffeeHome)
+            }.invokeOnCompletion {
+                it?.let { throwable ->
+                    _viewData.update {
+                        Result.Success(
+                            LoginViewData(
+                                email = currentViewData.data.email,
+                                password = currentViewData.data.password,
+                                isLoading = false,
+                                emailError = "The details you have provided do not match our records."
+                            )
+                        )
+                    }
+                }
             }
         }
     }
+
+    fun launchCatching(block: suspend CoroutineScope.() -> Unit) =
+        viewModelScope.launch(
+            CoroutineExceptionHandler { _, throwable ->
+                Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())
+            },
+            block = block
+        )
 
     private fun onRegisterClick() {
         viewModelScope.launch {
@@ -148,7 +190,7 @@ class LoginScreenViewModel @Inject constructor(
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
                 val currentViewData = currentResult.data
-                val updatedViewData = currentViewData.copy(email = email)
+                val updatedViewData = currentViewData.copy(email = email, emailError = null)
                 Result.Success(updatedViewData)
             } else {
                 currentResult
@@ -162,7 +204,7 @@ class LoginScreenViewModel @Inject constructor(
                 val currentViewData = currentResult.data
                 val visible = if (password.isEmpty()) false else currentViewData.isPasswordVisible
                 val updatedViewData =
-                    currentViewData.copy(password = password, isPasswordVisible = visible)
+                    currentViewData.copy(password = password, isPasswordVisible = visible, emailError = null)
                 Result.Success(updatedViewData)
 
             } else {
@@ -190,5 +232,7 @@ data class LoginViewData(
     val password: String = "",
     val isLoading: Boolean = false,
     val isEnabled: Boolean = false,
-    val isPasswordVisible: Boolean = false
+    val isPasswordVisible: Boolean = false,
+    val emailError: String? = null,
+    val otherError: String? = null
 )

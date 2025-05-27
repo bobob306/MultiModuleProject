@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -51,6 +52,15 @@ fun LoginScreenRoute(
             viewData = (viewData.value as Result.Success<LoginViewData>).data,
             onIntent = viewModel::processIntent
         )
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect { event ->
+            when (event) {
+                NavigationEvent.NavigateToCoffeeHome -> onNavigateToCoffeeHome(null)
+                NavigationEvent.NavigateToRegister -> onShowSnackBar("Register", null)
+            }
+        }
     }
 }
 
@@ -86,6 +96,7 @@ fun LoginScreenContent(
                         contentDescription = "Email Icon"
                     )
                 },
+                supportingText = { emailError?.let { Text(it) } },
                 trailingIcon = {
                     if (viewData.email.isNotEmpty()) {
                         IconButton(onClick = { onIntent(LoginScreenIntent.UpdateEmail("")) }) {
@@ -149,7 +160,7 @@ fun LoginScreenContent(
             Button(
                 onClick = { onIntent(LoginScreenIntent.Login) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = viewData.email.isNotEmpty() && viewData.password.isNotEmpty() // Disable button while loading
+                enabled = viewData.email.isNotEmpty() && viewData.password.isNotEmpty() && !isLoading // Disable button while loading
             ) {
                 if (viewData.isLoading) {
                     CircularProgressIndicator(
