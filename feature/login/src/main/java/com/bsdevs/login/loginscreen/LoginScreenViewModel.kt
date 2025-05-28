@@ -1,4 +1,4 @@
-package com.bsdevs.login
+package com.bsdevs.login.loginscreen
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -156,7 +156,7 @@ class LoginScreenViewModel @Inject constructor(
         }
     }
 
-    fun launchCatching(block: suspend CoroutineScope.() -> Unit) =
+    private fun launchCatching(block: suspend CoroutineScope.() -> Unit) =
         viewModelScope.launch(
             CoroutineExceptionHandler { _, throwable ->
                 Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())

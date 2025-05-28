@@ -2,7 +2,7 @@ package com.bsdevs.coffeescreen.screens.homescreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.ButtonDestination
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
@@ -14,8 +14,8 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesLi
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
-import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,7 +26,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class CoffeeHomeScreenViewModel @Inject constructor() : ViewModel() {
+@HiltViewModel
+class CoffeeHomeScreenViewModel @Inject constructor(
+    private val accountService: AccountService
+) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
     val viewData: StateFlow<Result<CoffeeHomeScreenViewData>>
         get() = _viewData.onStart {
@@ -59,11 +62,22 @@ class CoffeeHomeScreenViewModel @Inject constructor() : ViewModel() {
                     // Handle showing a snack bar
                 }
 
+                is CoffeeHomeScreenIntent.Logout -> {
+                    handleSignOut()
+                }
+
 //                is CoffeeHomeScreenIntent.NavigateToDetail -> {
 //                    // Handle navigation to a detail screen
 //                    _navigationEvent.send(NavigationEvent.NavigateToDetail(intent.coffee))
 //                }
             }
+        }
+    }
+
+    private fun handleSignOut() {
+        viewModelScope.launch {
+            accountService.signOut()
+            _navigationEvent.send(NavigationEvent.NavigateToLogin)
         }
     }
 
@@ -78,7 +92,8 @@ class CoffeeHomeScreenViewModel @Inject constructor() : ViewModel() {
             beans, method, taste, roaster, caffeine, origin
         )
 
-        val collectionReference = FirebaseFirestore.getInstance().collection("screens").document("coffeeInput")
+        val collectionReference =
+            FirebaseFirestore.getInstance().collection("screens").document("coffeeInput")
         viewModelScope.launch {
             collectionReference.update("METHOD", method)
             collectionReference.update("TASTE", taste)
@@ -90,10 +105,12 @@ class CoffeeHomeScreenViewModel @Inject constructor() : ViewModel() {
 }
 
 sealed class CoffeeHomeScreenIntent {
-    object LoadData : CoffeeHomeScreenIntent()
-    object NavigateToInput : CoffeeHomeScreenIntent()
+    data object LoadData : CoffeeHomeScreenIntent()
+    data object NavigateToInput : CoffeeHomeScreenIntent()
     data class ShowSnackBar(val message: String, val actionLabel: String?) :
         CoffeeHomeScreenIntent()
+
+    data object Logout : CoffeeHomeScreenIntent()
 
 //    data class NavigateToDetail(val coffee: CoffeeDto) : CoffeeHomeScreenIntent()
 }

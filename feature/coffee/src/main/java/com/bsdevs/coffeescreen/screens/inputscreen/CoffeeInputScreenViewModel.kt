@@ -291,6 +291,7 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
 sealed class NavigationEvent {
     object NavigateToHome : NavigationEvent()
     object NavigateToInput : NavigationEvent()
+    data object NavigateToLogin : NavigationEvent()
 //    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
     // Add other navigation events here if needed, e.g.:
     // data class NavigateToDetails(val itemId: String) : NavigationEvent()

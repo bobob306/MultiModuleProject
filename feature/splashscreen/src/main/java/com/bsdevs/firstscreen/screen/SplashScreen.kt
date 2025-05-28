@@ -40,7 +40,7 @@ fun SplashScreenRoute(
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->
             when (event) {
-                SplashScreenNavigationEvents.NavigateToHomeScreen -> onNavigateToCoffeeHome
+                SplashScreenNavigationEvents.NavigateToHomeScreen -> onNavigateToCoffeeHome.invoke(null)
                 SplashScreenNavigationEvents.NavigateToSignInScreen -> onNavigateToSignIn.invoke(null)
             }
         }

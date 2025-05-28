@@ -1,4 +1,4 @@
-package com.bsdevs.login
+package com.bsdevs.login.loginscreen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,6 +42,7 @@ import com.bsdevs.uicomponents.LoadingScreen
 fun LoginScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    onNavigateToRegisterScreen: (navOptions: NavOptions?) -> Unit,
     viewModel: LoginScreenViewModel = hiltViewModel()
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
@@ -58,7 +59,7 @@ fun LoginScreenRoute(
         viewModel.navigationEvent.collect { event ->
             when (event) {
                 NavigationEvent.NavigateToCoffeeHome -> onNavigateToCoffeeHome(null)
-                NavigationEvent.NavigateToRegister -> onShowSnackBar("Register", null)
+                NavigationEvent.NavigateToRegister -> onNavigateToRegisterScreen(null)
             }
         }
     }
@@ -149,7 +150,9 @@ fun LoginScreenContent(
                 keyboardActions = KeyboardActions(
                     onDone = {
                         focusManager.clearFocus() // Clear focus when "Done" is pressed
-                        onIntent(LoginScreenIntent.Login) // Optionally trigger login on Done
+                        if (viewData.email.isNotEmpty() && viewData.password.isNotEmpty() && !isLoading) {
+                            onIntent(LoginScreenIntent.Login) // Optionally trigger login on Done
+                        }
                     }
                 ),
                 singleLine = true,

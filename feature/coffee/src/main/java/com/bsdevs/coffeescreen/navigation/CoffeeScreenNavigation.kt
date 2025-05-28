@@ -45,6 +45,7 @@ fun NavGraphBuilder.coffeeScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeInput: () -> Unit,
     navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    navigateToLogin: (navOptions: NavOptions?) -> Unit,
 //    navigateToCoffeeDetail: (CoffeeDto) -> Unit,
 ) {
     navigation<CoffeeScreenBaseRoute>(startDestination = CoffeeHomeScreenRoute) {
@@ -55,6 +56,7 @@ fun NavGraphBuilder.coffeeScreenSection(
             CoffeeHomeScreenRoute(
                 onShowSnackBar,
                 navigateToCoffeeInput = navigateToCoffeeInput,
+                navigateToLogin = navigateToLogin,
 //                onNavigateToDetail = navigateToCoffeeDetail,
             )
         }

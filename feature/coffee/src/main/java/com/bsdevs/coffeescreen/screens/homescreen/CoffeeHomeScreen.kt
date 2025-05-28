@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavOptions
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
@@ -34,6 +35,7 @@ import com.bsdevs.common.result.Result
 fun CoffeeHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeInput: () -> Unit,
+    navigateToLogin: (navOptions: NavOptions?) -> Unit,
 //    onNavigateToDetail: (CoffeeDto) -> Unit,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
@@ -59,6 +61,10 @@ fun CoffeeHomeScreenRoute(
             when (event) {
                 NavigationEvent.NavigateToInput -> navigateToCoffeeInput()
                 NavigationEvent.NavigateToHome -> {}
+                NavigationEvent.NavigateToLogin -> {
+                    onShowSnackBar.invoke("Logged out", "")
+                    navigateToLogin.invoke(null)
+                }
 //                is NavigationEvent.NavigateToDetail -> onNavigateToDetail(event.coffee)
             }
         }
@@ -79,6 +85,10 @@ fun CoffeeHomeScreenContent(
                 modifier = Modifier.wrapContentSize()
             ) { Text("Click to navigate to coffee input") }
             Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = { onIntent.invoke(CoffeeHomeScreenIntent.Logout) },
+                modifier = Modifier.wrapContentSize()
+            ) { Text("Logout") }
         }
         val coffeeListItems: CoffeeHomeScreenViewDatas.CoffeeList =
             viewData.viewData.first { it is CoffeeHomeScreenViewDatas.CoffeeList }
