@@ -12,15 +12,19 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/core" />
+            <option value="$PROJECT_DIR$/core/authentication" />
             <option value="$PROJECT_DIR$/core/common" />
+            <option value="$PROJECT_DIR$/core/common/uicomponents" />
             <option value="$PROJECT_DIR$/core/data" />
             <option value="$PROJECT_DIR$/core/navigation" />
             <option value="$PROJECT_DIR$/core/network" />
             <option value="$PROJECT_DIR$/core/renderer" />
             <option value="$PROJECT_DIR$/feature" />
-            <option value="$PROJECT_DIR$/feature/coffeescreen" />
-            <option value="$PROJECT_DIR$/feature/homescreen" />
-            <option value="$PROJECT_DIR$/feature/priceinputscreen" />
+            <option value="$PROJECT_DIR$/feature/coffee" />
+            <option value="$PROJECT_DIR$/feature/home" />
+            <option value="$PROJECT_DIR$/feature/login" />
+            <option value="$PROJECT_DIR$/feature/logins" />
+            <option value="$PROJECT_DIR$/feature/priceinput" />
             <option value="$PROJECT_DIR$/feature/splashscreen" />
           </set>
         </option>
