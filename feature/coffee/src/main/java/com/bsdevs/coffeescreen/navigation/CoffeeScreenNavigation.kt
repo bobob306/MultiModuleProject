@@ -9,7 +9,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
 import com.bsdevs.coffeescreen.network.CoffeeDto
-import com.bsdevs.coffeescreen.network.CoffeeDtoType
 import com.bsdevs.coffeescreen.screens.detailscreen.CoffeeDetailScreenRoute
 import com.bsdevs.coffeescreen.screens.homescreen.CoffeeHomeScreenRoute
 import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenRoute
@@ -23,7 +22,7 @@ data object CoffeeInputScreenRoute
 data object CoffeeHomeScreenRoute
 
 @Serializable
-data object CoffeeDetailScreenRoute //(val coffeeDetail: CoffeeDto)
+data class CoffeeDetailScreenRoute(val coffeeId: String)
 
 @Serializable
 data object CoffeeScreenBaseRoute
@@ -33,6 +32,9 @@ fun NavController.navigateToCoffeeInput(navOptions: NavOptions? = null) =
 
 fun NavController.navigateToCoffeeHome(navOptions: NavOptions? = null) =
     navigate(route = CoffeeHomeScreenRoute, navOptions = navOptions)
+
+fun NavController.navigateToCoffeeDetail(coffeeId: String, navOptions: NavOptions? = null) =
+    navigate(route = CoffeeDetailScreenRoute(coffeeId), navOptions = navOptions)
 
 //fun NavController.navigateToCoffeeDetail(coffeeDetail: CoffeeDto, navOptions: NavOptions? = null) =
 //    navigate(
@@ -46,7 +48,7 @@ fun NavGraphBuilder.coffeeScreenSection(
     navigateToCoffeeInput: () -> Unit,
     navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
-//    navigateToCoffeeDetail: (CoffeeDto) -> Unit,
+    navigateToCoffeeDetail: (String) -> Unit,
 ) {
     navigation<CoffeeScreenBaseRoute>(startDestination = CoffeeHomeScreenRoute) {
         composable<CoffeeInputScreenRoute> {
@@ -57,11 +59,10 @@ fun NavGraphBuilder.coffeeScreenSection(
                 onShowSnackBar,
                 navigateToCoffeeInput = navigateToCoffeeInput,
                 navigateToLogin = navigateToLogin,
-//                onNavigateToDetail = navigateToCoffeeDetail,
+                onNavigateToDetail = navigateToCoffeeDetail,
             )
         }
         composable<CoffeeDetailScreenRoute> { backStackEntry ->
-            val coffeeDetail = backStackEntry.toRoute<CoffeeDto>()
             CoffeeDetailScreenRoute(onShowSnackBar, navigateToCoffeeHome = navigateToCoffeeHome)
         }
     }

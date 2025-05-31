@@ -92,7 +92,7 @@ fun CoffeeInputScreenRoute(
                 )
 
                 NavigationEvent.NavigateToInput -> {}
-//                is NavigationEvent.NavigateToDetail -> {}
+                is NavigationEvent.NavigateToDetail -> {}
                 NavigationEvent.NavigateToLogin -> {}
             }
         }

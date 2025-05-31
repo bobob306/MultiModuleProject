@@ -27,7 +27,7 @@ sealed class CoffeeHomeScreenViewDatas {
     ) : CoffeeHomeScreenViewDatas()
 
     data class CoffeeList(
-        val coffeeList: List<CoffeeDto>
+        val coffeeList: List<CoffeeDto>?
     ) : CoffeeHomeScreenViewDatas()
 }
 

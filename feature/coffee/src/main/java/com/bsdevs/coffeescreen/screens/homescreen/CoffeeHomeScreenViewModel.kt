@@ -3,6 +3,7 @@ package com.bsdevs.coffeescreen.screens.homescreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.ButtonDestination
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
@@ -15,6 +16,8 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffee
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.Query.Direction.DESCENDING
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +27,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -33,7 +37,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
     val viewData: StateFlow<Result<CoffeeHomeScreenViewData>>
         get() = _viewData.onStart {
-            loadData()
+            loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -46,6 +50,29 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     private fun loadData() {
         _viewData.value = Result.Success(
             data = loadedData
+        )
+    }
+
+    private suspend fun loadDataFromNetwork() {
+        val currentUser = accountService.currentUserId
+        val collectionReference =
+            FirebaseFirestore.getInstance().collection("coffeeUploads")
+                .whereEqualTo("userId", currentUser)
+                .get()
+                .await()
+        val coffeeListFromNetwork = collectionReference.toObjects(CoffeeDto::class.java)
+        val vd = loadedData.copy(
+            viewData = loadedData.viewData.map {
+                when (it) {
+                    is CoffeeHomeScreenViewDatas.CoffeeList -> {
+                        it.copy(coffeeList = coffeeListFromNetwork)
+                    }
+                    else -> it
+                }
+            }
+        )
+        _viewData.value = Result.Success(
+            data = vd
         )
     }
 
@@ -66,10 +93,11 @@ class CoffeeHomeScreenViewModel @Inject constructor(
                     handleSignOut()
                 }
 
-//                is CoffeeHomeScreenIntent.NavigateToDetail -> {
-//                    // Handle navigation to a detail screen
-//                    _navigationEvent.send(NavigationEvent.NavigateToDetail(intent.coffee))
-//                }
+                is CoffeeHomeScreenIntent.NavigateToDetail -> {
+                    // Handle navigation to a detail screen
+                    println("Navigating to detail screen with ID: ${intent.id}")
+                    _navigationEvent.send(NavigationEvent.NavigateToDetail(intent.id))
+                }
             }
         }
     }
@@ -112,7 +140,7 @@ sealed class CoffeeHomeScreenIntent {
 
     data object Logout : CoffeeHomeScreenIntent()
 
-//    data class NavigateToDetail(val coffee: CoffeeDto) : CoffeeHomeScreenIntent()
+    data class NavigateToDetail(val id: String) : CoffeeHomeScreenIntent()
 }
 
 private val coffeeList = generateSampleCoffeeDto(100).sortedBy { it.roastDate }.reversed()

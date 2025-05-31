@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
+import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
@@ -36,7 +37,7 @@ fun MMPNavHost(
             navigateToCoffeeInput = navController::navigateToCoffeeInput,
             navigateToCoffeeHome = navController::navigateToCoffeeHome,
             navigateToLogin = navController::navigateToLoginScreen,
-//            navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
+            navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
         )
         loginScreenSection(
             onShowSnackBar,

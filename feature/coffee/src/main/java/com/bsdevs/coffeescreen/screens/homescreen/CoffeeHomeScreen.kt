@@ -36,7 +36,7 @@ fun CoffeeHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeInput: () -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
-//    onNavigateToDetail: (CoffeeDto) -> Unit,
+    onNavigateToDetail: (String) -> Unit,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
@@ -65,7 +65,8 @@ fun CoffeeHomeScreenRoute(
                     onShowSnackBar.invoke("Logged out", "")
                     navigateToLogin.invoke(null)
                 }
-//                is NavigationEvent.NavigateToDetail -> onNavigateToDetail(event.coffee)
+
+                is NavigationEvent.NavigateToDetail -> onNavigateToDetail(event.coffeeId)
             }
         }
     }
@@ -93,9 +94,11 @@ fun CoffeeHomeScreenContent(
         val coffeeListItems: CoffeeHomeScreenViewDatas.CoffeeList =
             viewData.viewData.first { it is CoffeeHomeScreenViewDatas.CoffeeList }
                     as CoffeeHomeScreenViewDatas.CoffeeList
-        items(count = coffeeListItems.coffeeList.size) { index ->
-            CoffeeListItem(coffee = coffeeListItems.coffeeList[index], onIntent = onIntent)
-            Spacer(Modifier.height(8.dp))
+        coffeeListItems.coffeeList?.let {
+            items(count = coffeeListItems.coffeeList.size) { index ->
+                CoffeeListItem(coffee = coffeeListItems.coffeeList[index], onIntent = onIntent)
+                Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
@@ -104,12 +107,11 @@ fun CoffeeHomeScreenContent(
 fun CoffeeListItem(coffee: CoffeeDto, onIntent: (CoffeeHomeScreenIntent) -> Unit) {
     Card(
         modifier = Modifier
+            .clickable {
+                onIntent.invoke(CoffeeHomeScreenIntent.NavigateToDetail(coffee.id ?: ""))
+            }
             .wrapContentHeight()
             .fillMaxWidth()
-            .clickable {
-                // Handle item click
-                // Navigate to the Coffee Detail Screen
-            }
     )
     {
         Text(
@@ -117,7 +119,7 @@ fun CoffeeListItem(coffee: CoffeeDto, onIntent: (CoffeeHomeScreenIntent) -> Unit
             modifier = Modifier
                 .padding(8.dp)
                 .clickable {
-//                    onIntent.invoke(CoffeeHomeScreenIntent.NavigateToDetail(coffee))
+                    onIntent.invoke(CoffeeHomeScreenIntent.NavigateToDetail(coffee.id ?: ""))
                 }
         )
     }

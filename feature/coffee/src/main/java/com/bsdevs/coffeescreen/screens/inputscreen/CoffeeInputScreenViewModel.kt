@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -215,7 +216,8 @@ class CoffeeInputScreenViewModel @Inject constructor(
             roaster = roaster,
             isDecaf = isDecaf == true,
             label = roaster + " " + originCountries.joinToString(", ") + " " +
-                    beanPreparationMethod.first() + " " + formattedRoastDate
+                    beanPreparationMethod.first() + " " + formattedRoastDate,
+            id = UUID.randomUUID().toString()
         )
     }
 
@@ -227,15 +229,18 @@ class CoffeeInputScreenViewModel @Inject constructor(
             "originCountries" to coffee.originCountries,
             "tastingNotes" to coffee.tastingNotes,
             "beanPreparationMethod" to coffee.beanPreparationMethod,
-            "roaster" to coffee.roaster
+            "roaster" to coffee.roaster,
+            "label" to coffee.label,
+            "userId" to accountService.currentUserId,
+            "id" to coffee.id
         )
-        val itemWithUserId = item + ("userId" to accountService.currentUserId)
+//        val itemWithUserId = item + ("userId" to accountService.currentUserId)
 
         val userId = accountService.currentUserId
         val request = Firebase.firestore.collection("coffeeUploads")
         val something = Firebase.auth.addAuthStateListener {
             it.currentUser?.let {
-                request.document("${coffee.label}").set(itemWithUserId)
+                request.document("${coffee.label}").set(item)
             }
         }
 
@@ -311,7 +316,7 @@ sealed class NavigationEvent {
     data object NavigateToLogin : NavigationEvent()
 //    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
     // Add other navigation events here if needed, e.g.:
-    // data class NavigateToDetails(val itemId: String) : NavigationEvent()
+     data class NavigateToDetail(val coffeeId: String) : NavigationEvent()
 }
 
 sealed class CoffeeInputScreenIntent {

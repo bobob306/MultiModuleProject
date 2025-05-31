@@ -4,9 +4,13 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import androidx.navigation.NavType
+import com.google.firebase.firestore.PropertyName
 import kotlinx.parcelize.Parcelize
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.util.Date
+import javax.annotation.processing.Generated
 
 @Serializable
 @Parcelize
@@ -17,31 +21,8 @@ data class CoffeeDto(
     val tastingNotes: List<String>? = null,
     val beanPreparationMethod: List<String>? = null,
     val roaster: String? = null,
-    val isDecaf: Boolean? = null,
+    @get:PropertyName("isDecaf") val isDecaf: Boolean? = null,
     val label: String? = null,
+    val userId: String? = null,
+    val id: String? =  null,
 ) : Parcelable
-
-val CoffeeDtoType = object : NavType<CoffeeDto>(
-    isNullableAllowed = false
-) {
-    override fun get(bundle: Bundle, key: String): CoffeeDto? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            bundle.getParcelable(key, CoffeeDto::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            bundle.getParcelable(key)
-        }
-    }
-
-    override fun parseValue(value: String): CoffeeDto {
-        return Json.decodeFromString<CoffeeDto>(value)
-    }
-
-    override fun serializeAsValue(value: CoffeeDto): String {
-        return Json.encodeToString(value)
-    }
-
-    override fun put(bundle: Bundle, key: String, value: CoffeeDto) {
-        bundle.putParcelable(key, value)
-    }
-}

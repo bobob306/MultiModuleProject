@@ -258,8 +258,9 @@ fun generateSampleCoffeeDto(count: Int): List<CoffeeDto> {
                 roaster = singleRoaster, // This will now correctly pick from the restricted list
                 isDecaf = isDecaf,
                 label = singleRoaster + " " + origins.joinToString(", ") + " " +
-                        singleMethod.first() + " " + roastDate
-
+                        singleMethod.first() + " " + roastDate,
+                userId = "user123",
+                id = "coffee$i"
             )
         )
     }
