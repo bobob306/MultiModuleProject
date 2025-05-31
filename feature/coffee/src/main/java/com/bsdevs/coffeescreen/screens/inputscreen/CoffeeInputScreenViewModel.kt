@@ -4,15 +4,18 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,14 +25,16 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @HiltViewModel
-class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
+class CoffeeInputScreenViewModel @Inject constructor(
+    private val accountService: AccountService
+) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<CoffeeScreenViewData>>
         get() = _viewData.onStart {
@@ -153,13 +158,10 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun onEnterPress() {
-        var job: Job? = null
         viewModelScope.launch {
-            job = this.coroutineContext.job
             val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
             val coffeeDto = mapToCoffeeDto(currentViewData.data)
             uploadCoffee(coffeeDto)
-            println(coffeeDto.label)
         }.invokeOnCompletion {
             if (it == null) {
                 viewModelScope.launch {
@@ -218,20 +220,35 @@ class CoffeeInputScreenViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun uploadCoffee(coffee: CoffeeDto) {
-        val collectionReference = FirebaseFirestore.getInstance().collection("coffeeUploads")
-        viewModelScope.launch {
-            collectionReference.document("${coffee.label}").set(
-                mapOf(
-                    "isDecaf" to coffee.isDecaf,
-                    "roastDate" to coffee.roastDate,
-                    "beanTypes" to coffee.beanTypes,
-                    "originCountries" to coffee.originCountries,
-                    "tastingNotes" to coffee.tastingNotes,
-                    "beanPreparationMethod" to coffee.beanPreparationMethod,
-                    "roaster" to coffee.roaster
-                )
-            )
+        val item = mapOf(
+            "isDecaf" to coffee.isDecaf,
+            "roastDate" to coffee.roastDate,
+            "beanTypes" to coffee.beanTypes,
+            "originCountries" to coffee.originCountries,
+            "tastingNotes" to coffee.tastingNotes,
+            "beanPreparationMethod" to coffee.beanPreparationMethod,
+            "roaster" to coffee.roaster
+        )
+        val itemWithUserId = item + ("userId" to accountService.currentUserId)
+
+        val userId = accountService.currentUserId
+        val request = Firebase.firestore.collection("coffeeUploads")
+        val something = Firebase.auth.addAuthStateListener {
+            it.currentUser?.let {
+                request.document("${coffee.label}").set(itemWithUserId)
+            }
         }
+
+        viewModelScope.launch { doSomething(something) }
+
+//        val collectionReference = FirebaseFirestore.getInstance().collection("$userId")
+//        viewModelScope.launch {
+//            request.document().collection("$userId").add(mapOf(userId to "id")).await().id
+//        }
+    }
+
+    private suspend fun doSomething(something: Unit) {
+        something
     }
 
     private fun handleToggleDropdownSelection(inputType: InputType, selection: String) {
