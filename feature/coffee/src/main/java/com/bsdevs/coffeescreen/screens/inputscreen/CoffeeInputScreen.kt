@@ -3,6 +3,7 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,10 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
@@ -73,6 +77,7 @@ fun CoffeeInputScreenRoute(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .systemBarsPadding()
     ) {
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()
@@ -138,7 +143,8 @@ private fun CoffeeInputScreenContent(
             showSnackBar = false
         }
     }
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
+    val scrollState = rememberScrollState()
+    Column(modifier = Modifier.padding(vertical = 16.dp).verticalScroll(state = scrollState)) {
         viewData.inputs.forEach { inputViewData ->
             when (inputViewData) {
                 is InputViewData.InputVD -> {

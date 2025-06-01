@@ -1,11 +1,21 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowColumn
+import androidx.compose.foundation.layout.FlowColumnOverflow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -14,7 +24,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,6 +48,7 @@ fun CoffeeDetailScreenRoute(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .systemBarsPadding()
     ) {
         when (viewData.value) {
             is Result.Loading -> {
@@ -55,23 +68,82 @@ fun CoffeeDetailScreenRoute(
 
 @Composable
 fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()) // Make content scrollable if it overflows
-        ) {
-            Text(
-                text = coffeeDto.label ?: "Unnamed Coffee",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-            // Display each field if it has a value
+    val contentModifier = if (isLandscape) {
+        Modifier
+            .padding(16.dp) // Add padding around the content area in landscape
+            .fillMaxHeight() // Card column will fill height
+            .fillMaxWidth(0.5f) // Card column takes left half
+    } else {
+        Modifier
+            .padding(16.dp) // Add padding around the content area in portrait
+            .fillMaxWidth() // Card column takes full width
+            .wrapContentHeight() // Height wraps content
+    }
+
+    if (isLandscape) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            // Left half: Coffee Details Card
+            Card(
+                modifier = contentModifier, // This now applies .fillMaxWidth(0.5f) from above
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                CoffeeDetailsScrollableColumn(coffeeDto)
+            }
+            // Right half: Empty or for other content (e.g., an image, related items)
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth() // Fills the remaining half
+                    .padding(16.dp), // Optional padding for the right side
+                contentAlignment = Alignment.Center
+            ) {
+                // You could put something else here for landscape mode
+                // For example: an image of the coffee, or related info
+                Text("Landscape Right Panel (Optional Content)")
+            }
+        }
+    } else {
+        // Portrait mode: Card takes full width
+        Box(
+            modifier = Modifier.fillMaxSize(), // Box to center the card if it's not filling size
+            contentAlignment = Alignment.TopCenter // Align card to the top
+        ) {
+            Card(
+                modifier = contentModifier, // This applies .fillMaxWidth() from above
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                CoffeeDetailsScrollableColumn(coffeeDto)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CoffeeDetailsScrollableColumn(coffeeDto: CoffeeDto) {
+    Column(
+        verticalArrangement = Arrangement.Top,
+        modifier = Modifier
+            .padding(16.dp)
+            .wrapContentHeight()
+            // Apply verticalScroll only to the Column, not the Card directly
+            // to ensure the Card itself doesn't try to scroll if its content is fixed height.
+            // Allow column to take available height within the Card
+    ) {
+        Text(
+            text = coffeeDto.label ?: "Unnamed Coffee",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        FlowColumn(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
             coffeeDto.roastDate?.takeIf { it.isNotBlank() }?.let {
                 CoffeeDetailItem(label = "Roast Date", value = it)
             }
@@ -90,11 +162,9 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
             coffeeDto.beanPreparationMethod?.takeIf { it.isNotEmpty() }?.let {
                 CoffeeDetailItem(label = "Preparation Method", value = it.joinToString(", "))
             }
-            coffeeDto.isDecaf?.let { // Boolean, so no need for takeIf { it.isNotBlank() }
+            coffeeDto.isDecaf?.let {
                 CoffeeDetailItem(label = "Decaf", value = if (it) "Yes" else "No")
             }
-
-            // Note: 'id' and 'userId' are intentionally excluded as per the request.
         }
     }
 }
