@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -178,6 +180,7 @@ private fun InputSection(
 ) {
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
     inputViewData.run {
         var expanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
@@ -194,6 +197,7 @@ private fun InputSection(
                     .focusRequester(focusRequester)
                     .onFocusChanged {
                         isFocused = it.isFocused
+                        keyboardController?.hide()
                     }
                     .wrapContentHeight(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),

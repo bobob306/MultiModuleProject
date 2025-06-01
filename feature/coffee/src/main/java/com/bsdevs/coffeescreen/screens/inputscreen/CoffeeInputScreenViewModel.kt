@@ -9,11 +9,19 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputRadioVD
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.RadioInputViewData
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.beanPreparationMethod
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeBeanTypes
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeRoasters
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesList
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.PropertyName
 import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -31,6 +39,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.collections.List
 
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
@@ -39,7 +48,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<CoffeeScreenViewData>>
         get() = _viewData.onStart {
-            loadData()
+            loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -95,6 +104,71 @@ class CoffeeInputScreenViewModel @Inject constructor(
     private fun loadData() {
         _viewData.value = Success(
             data = CoffeeScreenViewData()
+        )
+    }
+
+    private suspend fun loadDataFromNetwork() {
+        val collectionReference = Firebase.firestore.collection("screens").document("coffeeInput")
+        val documentSnapshot = collectionReference.get().await()
+        val data = documentSnapshot.toObject(CoffeeInputScreenDto::class.java)
+        val viewData = CoffeeScreenViewData()
+        val updatedViewData = viewData.copy(
+            inputs = listOf(
+                InputVD(
+                    label = "Coffee Type(s)",
+                    inputList = data?.BEANS ?: coffeeBeanTypes,
+                    selectedSet = emptySet(),
+                    searchText = null,
+                    inputType = InputType.BEANS
+                ),
+                InputVD(
+                    label = "Coffee Origin(s)",
+                    inputList = data?.ORIGIN ?: originCountries,
+                    selectedSet = emptySet(),
+                    searchText = null,
+                    inputType = InputType.ORIGIN
+                ),
+                InputVD(
+                    label = "Coffee Tasting Notes",
+                    inputList = data?.TASTE ?: coffeeTastingNotesList,
+                    selectedSet = emptySet(),
+                    searchText = "",
+                    inputType = InputType.TASTE
+                ),
+                InputVD(
+                    label = "Coffee Preparation Method",
+                    inputList = data?.METHOD ?: beanPreparationMethod,
+                    selectedSet = emptySet(),
+                    searchText = null,
+                    inputType = InputType.METHOD,
+                    singleInput = true,
+                ),
+                InputVD(
+                    label = "Roaster",
+                    inputList = data?.ROASTER ?: coffeeRoasters,
+                    selectedSet = emptySet(),
+                    searchText = "",
+                    inputType = InputType.ROASTER,
+                    singleInput = true,
+                ),
+                InputRadioVD(
+                    label = "Decaf",
+                    option = listOf(
+                        RadioInputViewData(
+                            label = "Caffeinated",
+                            isDecaf = false,
+                        ),
+                        RadioInputViewData(
+                            label = "Decaffeinated",
+                            isDecaf = true,
+                            )
+                    ),
+                    isDecaf = false,
+                ),
+            ),
+            )
+        _viewData.value = Success(
+            data = updatedViewData
         )
     }
 
@@ -314,9 +388,10 @@ sealed class NavigationEvent {
     object NavigateToHome : NavigationEvent()
     object NavigateToInput : NavigationEvent()
     data object NavigateToLogin : NavigationEvent()
-//    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
+
+    //    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
     // Add other navigation events here if needed, e.g.:
-     data class NavigateToDetail(val coffeeId: String) : NavigationEvent()
+    data class NavigateToDetail(val coffeeId: String) : NavigationEvent()
 }
 
 sealed class CoffeeInputScreenIntent {
@@ -331,3 +406,12 @@ sealed class CoffeeInputScreenIntent {
 
     object NavigateHome : CoffeeInputScreenIntent()
 }
+
+data class CoffeeInputScreenDto(
+    @get:PropertyName("BEANS") val BEANS: List<String> = emptyList(),
+    @get:PropertyName("CAFFEINE") val CAFFEINE: List<String> = emptyList(),
+    @get:PropertyName("METHOD") val METHOD: List<String> = emptyList(),
+    @get:PropertyName("ORIGIN") val ORIGIN: List<String> = emptyList(),
+    @get:PropertyName("ROASTER") val ROASTER: List<String> = emptyList(),
+    @get:PropertyName("TASTE") val TASTE: List<String> = emptyList(),
+)

@@ -6,6 +6,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
+import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
 import com.bsdevs.coffeescreen.network.CoffeeDto
@@ -54,7 +55,9 @@ fun NavGraphBuilder.coffeeScreenSection(
         composable<CoffeeInputScreenRoute> {
             CoffeeInputScreenRoute(onShowSnackBar, navigateToCoffeeHome = navigateToCoffeeHome)
         }
-        composable<CoffeeHomeScreenRoute> {
+        composable<CoffeeHomeScreenRoute>(
+            deepLinks = listOf(navDeepLink { uriPattern = "app://com.bsdevs.multimoduleproject/coffeehome" })
+        ) {
             CoffeeHomeScreenRoute(
                 onShowSnackBar,
                 navigateToCoffeeInput = navigateToCoffeeInput,

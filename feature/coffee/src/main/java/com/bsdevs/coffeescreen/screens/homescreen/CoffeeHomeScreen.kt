@@ -1,5 +1,6 @@
 package com.bsdevs.coffeescreen.screens.homescreen
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,7 +32,9 @@ import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.common.result.Result
+import kotlinx.coroutines.launch
 
+@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun CoffeeHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -39,6 +43,8 @@ fun CoffeeHomeScreenRoute(
     onNavigateToDetail: (String) -> Unit,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
+    val scope = rememberCoroutineScope()
+    scope.launch { viewModel.start() }
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier

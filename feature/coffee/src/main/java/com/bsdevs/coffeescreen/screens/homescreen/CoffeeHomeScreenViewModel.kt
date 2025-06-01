@@ -34,6 +34,7 @@ import javax.inject.Inject
 class CoffeeHomeScreenViewModel @Inject constructor(
     private val accountService: AccountService
 ) : ViewModel() {
+    private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
     val viewData: StateFlow<Result<CoffeeHomeScreenViewData>>
         get() = _viewData.onStart {
@@ -43,7 +44,14 @@ class CoffeeHomeScreenViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = Result.Loading
         )
-
+    suspend fun start() {
+        currentUser = try {
+            accountService.currentUserId
+        } catch (e: Exception) {
+            _navigationEvent.send(NavigationEvent.NavigateToLogin)
+            ""
+        }
+    }
     private val _navigationEvent = Channel<NavigationEvent>()
     val navigationEvent = _navigationEvent.receiveAsFlow()
 
@@ -54,7 +62,6 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     }
 
     private suspend fun loadDataFromNetwork() {
-        val currentUser = accountService.currentUserId
         val collectionReference =
             FirebaseFirestore.getInstance().collection("coffeeUploads")
                 .whereEqualTo("userId", currentUser)
