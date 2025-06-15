@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowColumn
-import androidx.compose.foundation.layout.FlowColumnOverflow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -14,16 +13,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -48,7 +48,6 @@ fun CoffeeDetailScreenRoute(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .systemBarsPadding()
     ) {
         when (viewData.value) {
             is Result.Loading -> {
@@ -129,9 +128,9 @@ private fun CoffeeDetailsScrollableColumn(coffeeDto: CoffeeDto) {
         modifier = Modifier
             .padding(16.dp)
             .wrapContentHeight()
-            // Apply verticalScroll only to the Column, not the Card directly
-            // to ensure the Card itself doesn't try to scroll if its content is fixed height.
-            // Allow column to take available height within the Card
+        // Apply verticalScroll only to the Column, not the Card directly
+        // to ensure the Card itself doesn't try to scroll if its content is fixed height.
+        // Allow column to take available height within the Card
     ) {
         Text(
             text = coffeeDto.label ?: "Unnamed Coffee",

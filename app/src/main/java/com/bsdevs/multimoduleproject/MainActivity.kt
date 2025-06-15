@@ -5,10 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.mandatorySystemGesturesPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.systemGesturesPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration.Short
 import androidx.compose.material3.SnackbarHost
@@ -30,11 +35,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val snackbarHostState = remember { SnackbarHostState() }
             val scope = rememberCoroutineScope()
+            val paddingValues = WindowInsets.navigationBars.asPaddingValues()
             Scaffold(
-                contentWindowInsets = WindowInsets.systemBars,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
                 snackbarHost = { SnackbarHost(snackbarHostState) },
-            ) { pv ->
+            ) { it
                 MMPNavHost(
                     onShowSnackBar = { message, action ->
                         scope.launch {
@@ -45,7 +50,7 @@ class MainActivity : ComponentActivity() {
                             ) == SnackbarResult.ActionPerformed
                         }
                     },
-                    modifier = Modifier.padding(paddingValues = pv).systemBarsPadding(),
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }

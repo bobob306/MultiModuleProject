@@ -27,8 +27,7 @@ class CoffeeDetailsViewModel @Inject constructor(
     private lateinit var selectedCoffee: String
 
     private val _viewData = MutableStateFlow<Result<CoffeeDto>>(Loading)
-    val viewData: StateFlow<Result<CoffeeDto>>
-        get() = _viewData.onStart {
+    val viewData: StateFlow<Result<CoffeeDto>> = _viewData.onStart {
             loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,

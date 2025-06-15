@@ -24,12 +24,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import com.bsdevs.coffeescreen.network.CoffeeDto
@@ -51,11 +53,10 @@ fun CoffeeHomeScreenRoute(
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
     val scope = rememberCoroutineScope()
-    scope.launch { viewModel.start() }
+//    scope.launch { viewModel.start() }
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
-            .windowInsetsPadding(WindowInsets.systemBars)
             .fillMaxSize()
             .padding(16.dp)
     ) {

@@ -46,12 +46,11 @@ class CoffeeInputScreenViewModel @Inject constructor(
     private val accountService: AccountService
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
-    val viewData: StateFlow<Result<CoffeeScreenViewData>>
-        get() = _viewData.onStart {
+    val viewData: StateFlow<Result<CoffeeScreenViewData>> = _viewData.onStart {
             loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = Result.Loading
         )
 
