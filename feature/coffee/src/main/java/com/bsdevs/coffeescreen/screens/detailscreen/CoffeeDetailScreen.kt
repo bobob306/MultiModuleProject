@@ -1,7 +1,9 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.content.res.Configuration
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -13,21 +15,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -81,7 +87,6 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
             .fillMaxWidth() // Card column takes full width
             .wrapContentHeight() // Height wraps content
     }
-
     if (isLandscape) {
         Row(modifier = Modifier.fillMaxSize()) {
             // Left half: Coffee Details Card
@@ -91,24 +96,17 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
             ) {
                 CoffeeDetailsScrollableColumn(coffeeDto)
             }
-            // Right half: Empty or for other content (e.g., an image, related items)
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth() // Fills the remaining half
-                    .padding(16.dp), // Optional padding for the right side
-                contentAlignment = Alignment.Center
-            ) {
-                // You could put something else here for landscape mode
-                // For example: an image of the coffee, or related info
-                Text("Landscape Right Panel (Optional Content)")
+            // Right half: Empty or for other content
+            Box(Modifier.padding(16.dp)) {
+                SecondHalfContent()
             }
         }
     } else {
         // Portrait mode: Card takes full width
-        Box(
+        Column(
             modifier = Modifier.fillMaxSize(), // Box to center the card if it's not filling size
-            contentAlignment = Alignment.TopCenter // Align card to the top
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
             Card(
                 modifier = contentModifier, // This applies .fillMaxWidth() from above
@@ -116,6 +114,46 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
             ) {
                 CoffeeDetailsScrollableColumn(coffeeDto)
             }
+            Card(
+                modifier = contentModifier, // This applies .fillMaxWidth() from above
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                SecondHalfContent()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecondHalfContent() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxSize(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Text(
+                "Shot recordings",
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        IconButton(
+            modifier = Modifier
+                .padding(bottom = 24.dp, end = 24.dp)
+                .align(Alignment.BottomEnd),
+            onClick = { /* Handle add new shot */ }
+        ) {
+            Icon(
+                Icons.Default.AddCircle,
+                contentDescription = "Add New Shot",
+                Modifier.size(32.dp)
+            )
         }
     }
 }
@@ -181,6 +219,26 @@ fun CoffeeDetailItem(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Preview(device = "spec:parent=pixel_5,orientation=landscape")
+@Composable
+fun CoffeeDetailContentPreview() {
+    MaterialTheme {
+        CoffeeDetailContent(
+            coffeeDto = CoffeeDto(
+                label = "Ethiopian Yirgacheffe",
+                roastDate = "2023-10-26",
+                roaster = "Artisan Coffee Roasters",
+                beanTypes = listOf("Arabica"),
+                originCountries = listOf("Ethiopia"),
+                tastingNotes = listOf("Floral", "Citrus", "Berry"),
+                beanPreparationMethod = listOf("Washed"),
+                isDecaf = false
+            )
         )
     }
 }
