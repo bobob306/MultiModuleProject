@@ -266,3 +266,79 @@ fun generateSampleCoffeeDto(count: Int): List<CoffeeDto> {
     }
     return list
 }
+
+fun generateSampleCoffeeScreenViewData(): CoffeeScreenViewData {
+    val random = java.util.Random()
+
+    val year = 2024
+    val month = random.nextInt(12) + 1
+    val day = random.nextInt(28) + 1
+    val roastDate = LocalDate.of(year, month, day)
+
+    val isButtonEnabled = random.nextBoolean()
+
+    val beansSelected = coffeeBeanTypes.shuffled().take(random.nextInt(3) + 1).toSet()
+    val originSelected = originCountries.shuffled().take(random.nextInt(2) + 1).toSet()
+    val tasteSelected = coffeeTastingNotesList.shuffled().take(random.nextInt(4) + 1).toSet()
+    val methodSelected = setOf(beanPreparationMethod.random())
+    val roasterSelected = setOf(coffeeRoasters.random())
+    val isDecafSelected = random.nextBoolean()
+
+    return CoffeeScreenViewData(
+        roastDate = roastDate,
+        isButtonEnabled = isButtonEnabled,
+        inputs = listOf(
+            InputVD(
+                label = "Coffee Type(s)",
+                inputList = coffeeBeanTypes,
+                selectedSet = beansSelected,
+                searchText = null,
+                inputType = InputType.BEANS
+            ),
+            InputVD(
+                label = "Coffee Origin(s)",
+                inputList = originCountries,
+                selectedSet = originSelected,
+                searchText = null,
+                inputType = InputType.ORIGIN
+            ),
+            InputVD(
+                label = "Coffee Tasting Notes",
+                inputList = coffeeTastingNotesList,
+                selectedSet = tasteSelected,
+                searchText = "",
+                inputType = InputType.TASTE
+            ),
+            InputVD(
+                label = "Coffee Preparation Method",
+                inputList = beanPreparationMethod,
+                selectedSet = methodSelected,
+                searchText = null,
+                inputType = InputType.METHOD,
+                singleInput = true
+            ),
+            InputVD(
+                label = "Roaster",
+                inputList = coffeeRoasters,
+                selectedSet = roasterSelected,
+                searchText = "",
+                inputType = InputType.ROASTER,
+                singleInput = true
+            ),
+            InputRadioVD(
+                label = "Decaf",
+                option = listOf(
+                    RadioInputViewData(
+                        label = "Caffeinated",
+                        isDecaf = false,
+                    ),
+                    RadioInputViewData(
+                        label = "Decaffeinated",
+                        isDecaf = true,
+                    )
+                ),
+                isDecaf = isDecafSelected,
+            ),
+        )
+    )
+}

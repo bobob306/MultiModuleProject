@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.Card
@@ -208,7 +210,7 @@ private fun CoffeeDetailsScrollableColumn(coffeeDto: CoffeeDto) {
 
 @Composable
 fun CoffeeDetailItem(label: String, value: String) {
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
+    Column(modifier = Modifier.padding(bottom = 4.dp)) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,

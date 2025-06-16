@@ -61,6 +61,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -69,6 +70,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.NavOptions.Builder
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
@@ -85,7 +87,6 @@ fun CoffeeInputScreenRoute(
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()
@@ -111,6 +112,20 @@ fun CoffeeInputScreenRoute(
                 NavigationEvent.NavigateToLogin -> {}
             }
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:parent=pixel_5,orientation=landscape")
+@Composable
+fun CoffeeInputScreenContentPreview() {
+    MaterialTheme {
+        CoffeeInputScreenContent(
+            onShowSnackBar = { _, _ -> },
+            viewData = generateSampleCoffeeScreenViewData(),
+            onIntent = {}
+        )
     }
 }
 
@@ -197,6 +212,7 @@ private fun CoffeeInputScreenContent(
         Column(
             modifier = Modifier
                 .verticalScroll(state = scrollState)
+                .padding(16.dp)
                 .padding(
                     end = if (isScrollable) 16.dp else 0.dp,
                 )
@@ -241,7 +257,7 @@ private fun CoffeeInputScreenContent(
             contentAlignment = Alignment.CenterEnd,
             modifier = Modifier
                 .fillMaxHeight()
-                .padding(top = 4.dp) // Align with content padding
+                .padding(horizontal = 4.dp, vertical = 12.dp) // Align with content padding
         ) {
             BoxWithConstraints { // Use BoxWithConstraints to get the actual track height
                 val trackActualHeightDp = this.maxHeight
