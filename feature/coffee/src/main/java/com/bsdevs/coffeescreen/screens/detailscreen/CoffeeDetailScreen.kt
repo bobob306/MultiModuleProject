@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -40,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,6 +64,7 @@ import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.UUID
 
 @Composable
 @RequiresApi(Build.VERSION_CODES.O)
@@ -88,8 +89,19 @@ fun CoffeeDetailScreenRoute(
                 ErrorScreen()
             }
 
-            is Result.Success<CoffeeDto> -> {
-                CoffeeDetailContent(coffeeDto = (viewData.value as Result.Success<CoffeeDto>).data)
+            is Result.Success<CoffeeDetailsViewData> -> {
+                CoffeeDetailContent(
+                    onShowSnackBar = onShowSnackBar,
+                    coffeeDetailsViewData = (viewData.value as Result.Success<CoffeeDetailsViewData>).data,
+                    onIntent = viewModel::processIntent
+                )
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect { event ->
+            when (event) {
+                NavigationEvent.NavigateHome -> navigateToCoffeeHome(null)
             }
         }
     }
@@ -98,7 +110,11 @@ fun CoffeeDetailScreenRoute(
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
+fun CoffeeDetailContent(
+    onShowSnackBar: suspend (String, String?) -> Unit,
+    coffeeDetailsViewData: CoffeeDetailsViewData,
+    onIntent: (CoffeeDetailsIntent) -> Unit
+) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -116,9 +132,7 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
         ) {
             EspressoShotInputSheetContent(
                 onSave = { details ->
-                    // Handle the saved details (e.g., save to ViewModel, database)
-                    println("Espresso Shot Saved: $details")
-                    currentShotDetails = details
+                    onIntent(CoffeeDetailsIntent.SubmitShot(details))
                     showSheet = false // Dismiss the sheet
                 },
                 onDismiss = {
@@ -143,13 +157,18 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = spacedBy(16.dp)) {
             // Left half: Coffee Details Card
             Card(
-                modifier = contentModifier, // This now applies .fillMaxWidth(0.5f) from above
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.5f), // This now applies .fillMaxWidth(0.5f) from above
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) { // Pass showSheet state and its updater
-                CoffeeDetailsScrollableColumn(coffeeDto, isLandscape)
+                CoffeeDetailsScrollableColumn(coffeeDetailsViewData.coffeeDto, isLandscape)
             }
             // Right half: Empty or for other content
-            SecondHalfContent(onAddShotClicked = { showSheet = true })
+            SecondHalfContent(
+                onAddShotClicked = { showSheet = true },
+                shotList = coffeeDetailsViewData.shotList
+            )
         }
     } else {
         // Portrait mode: Card takes full width
@@ -159,16 +178,23 @@ fun CoffeeDetailContent(coffeeDto: CoffeeDto) {
             verticalArrangement = spacedBy(16.dp)
         ) {
             Card(
-                modifier = contentModifier, // This applies .fillMaxWidth() from above
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.5f), // This applies .fillMaxWidth() from above
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                CoffeeDetailsScrollableColumn(coffeeDto, isLandscape)
+                CoffeeDetailsScrollableColumn(coffeeDetailsViewData.coffeeDto, isLandscape)
             }
             Card(
-                modifier = contentModifier, // This applies .fillMaxWidth() from above
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(), // This applies .fillMaxWidth() from above
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                SecondHalfContent(onAddShotClicked = { showSheet = true })
+                SecondHalfContent(
+                    onAddShotClicked = { showSheet = true },
+                    shotList = coffeeDetailsViewData.shotList
+                )
             }
         }
     }
@@ -453,9 +479,7 @@ fun Double.roundTo(decimalPlaces: Int): Double {
 }
 
 @Composable
-private fun SecondHalfContent(onAddShotClicked: () -> Unit) {
-    // var showSheet by remember { mutableStateOf(false) } // Removed as it's managed by CoffeeDetailContent
-
+private fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotDto>?) {
     Box(
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
@@ -469,6 +493,11 @@ private fun SecondHalfContent(onAddShotClicked: () -> Unit) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+            shotList?.let {
+                shotList.forEach {
+                    Text("${it.date} ${it.weightIn} ${it.weightOut} ${it.time}")
+                }
+            }
         }
         IconButton(
             modifier = Modifier
@@ -482,14 +511,13 @@ private fun SecondHalfContent(onAddShotClicked: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CoffeeDetailsScrollableColumn(coffeeDto: CoffeeDto, isLandscape: Boolean) {
     Column(
         verticalArrangement = Arrangement.Top,
         modifier = Modifier
             .padding(16.dp)
-            .fillMaxHeight(if (!isLandscape) 0.5f else 1f) // Ensure the height wraps content
+            .fillMaxHeight() // Ensure the height wraps content
         // Apply verticalScroll only to the Column, not the Card directly
         // to ensure the Card itself doesn't try to scroll if its content is fixed height.
         // Allow column to take available height within the Card
@@ -578,23 +606,29 @@ private fun CoffeeDetailContentPreview() {
                 .padding(16.dp)
         ) {
             CoffeeDetailContent(
-                coffeeDto = CoffeeDto(
-                    label = "Ethiopian Yirgacheffe",
-                    roastDate = "2023-10-26",
-                    roaster = "Artisan Coffee Roasters",
-                    beanTypes = listOf("Arabica"),
-                    originCountries = listOf("Ethiopia"),
-                    tastingNotes = listOf("Floral", "Citrus", "Berry"),
-                    beanPreparationMethod = listOf("Washed"),
-                    isDecaf = false
-                )
+                onShowSnackBar = { _, _ -> },
+                CoffeeDetailsViewData(
+                    coffeeDto = CoffeeDto(
+                        label = "Ethiopian Yirgacheffe",
+                        roastDate = "2023-10-26",
+                        roaster = "Artisan Coffee Roasters",
+                        beanTypes = listOf("Arabica"),
+                        originCountries = listOf("Ethiopia"),
+                        tastingNotes = listOf("Floral", "Citrus", "Berry"),
+                        beanPreparationMethod = listOf("Washed"),
+                        isDecaf = false
+                    ),
+                    null
+                ),
+                onIntent = {}
             )
         }
     }
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-data class EspressoShotDetails constructor(
+data class EspressoShotDetails(
+    val id: String = UUID.randomUUID().toString(),
     val timeInSeconds: Int = 27,
     val weightInGrams: Double = 17.5,
     val weightOutGrams: Double = 36.0,
