@@ -15,18 +15,20 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesLi
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
+import com.bsdevs.common.result.asResult
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.Query.Direction.DESCENDING
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
@@ -36,14 +38,17 @@ class CoffeeHomeScreenViewModel @Inject constructor(
 ) : ViewModel() {
     private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
-    val viewData: StateFlow<Result<CoffeeHomeScreenViewData>>
-        get() = _viewData.onStart {
+    val viewData: StateFlow<Result<CoffeeHomeScreenViewData>> = _viewData.onStart {
+            runBlocking {
+                start()
+            }
             loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = Result.Loading
         )
+
     suspend fun start() {
         currentUser = try {
             accountService.currentUserId
@@ -52,6 +57,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
             ""
         }
     }
+
     private val _navigationEvent = Channel<NavigationEvent>()
     val navigationEvent = _navigationEvent.receiveAsFlow()
 
@@ -74,6 +80,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
                     is CoffeeHomeScreenViewDatas.CoffeeList -> {
                         it.copy(coffeeList = coffeeListFromNetwork)
                     }
+
                     else -> it
                 }
             }

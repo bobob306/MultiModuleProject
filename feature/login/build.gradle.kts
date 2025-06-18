@@ -48,6 +48,7 @@ dependencies {
     implementation(project(":core:authentication"))
     implementation(project(":core:common"))
     implementation(project(":core:common:uicomponents"))
+    debugImplementation(libs.androidx.compose.ui.ui.tooling)
 
     kapt(libs.hilt.compiler) // Use kapt for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose

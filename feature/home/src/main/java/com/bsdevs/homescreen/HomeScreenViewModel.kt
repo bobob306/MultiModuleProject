@@ -23,8 +23,7 @@ class HomeScreenViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)
-    val viewData: StateFlow<Result<List<NetworkScreenData>>>
-        get() = _viewData.onStart {
+    val viewData: StateFlow<Result<List<NetworkScreenData>>> = _viewData.onStart {
             getScreen()
         }.stateIn(
             scope = viewModelScope,

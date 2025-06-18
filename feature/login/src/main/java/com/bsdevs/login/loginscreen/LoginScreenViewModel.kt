@@ -24,8 +24,7 @@ class LoginScreenViewModel @Inject constructor(
     private val accountService: AccountService
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<LoginViewData>>(value = Result.Loading)
-    val viewData: StateFlow<Result<LoginViewData>>
-        get() = _viewData.onStart {
+    val viewData: StateFlow<Result<LoginViewData>> = _viewData.onStart {
             getInitialViewData()
         }.stateIn(
             scope = viewModelScope,

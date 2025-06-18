@@ -3,18 +3,27 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
@@ -37,25 +46,31 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
-import androidx.navigation.NavOptions.*
+import androidx.navigation.NavOptions.Builder
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
+import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
@@ -72,7 +87,6 @@ fun CoffeeInputScreenRoute(
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()
@@ -98,6 +112,20 @@ fun CoffeeInputScreenRoute(
                 NavigationEvent.NavigateToLogin -> {}
             }
         }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Preview(showBackground = true, device = "spec:parent=pixel_5,orientation=landscape")
+@Composable
+fun CoffeeInputScreenContentPreview() {
+    MaterialTheme {
+        CoffeeInputScreenContent(
+            onShowSnackBar = { _, _ -> },
+            viewData = generateSampleCoffeeScreenViewData(),
+            onIntent = {}
+        )
     }
 }
 
@@ -138,37 +166,144 @@ private fun CoffeeInputScreenContent(
             showSnackBar = false
         }
     }
-    Column(modifier = Modifier.padding(vertical = 16.dp)) {
-        viewData.inputs.forEach { inputViewData ->
-            when (inputViewData) {
-                is InputViewData.InputVD -> {
-                    InputSection(
-                        inputViewData = inputViewData,
-                        onIntent = onIntent // Pass the main onIntent callback
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
 
-                is InputViewData.InputRadioVD -> {
-                    RadioInputRow(inputViewData, onIntent)
-                    Spacer(modifier = Modifier.height(16.dp))
+    val scrollState = rememberScrollState()
+
+    val scrollProgress by remember(scrollState.value, scrollState.maxValue) {
+        derivedStateOf {
+            if (scrollState.maxValue > 0) {
+                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+            } else {
+                0f
+            }
+        }
+    }
+
+    val isScrollable by remember(scrollState.maxValue) {
+        derivedStateOf {
+            scrollState.maxValue > 0
+        }
+    }
+    val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
+        derivedStateOf {
+            if (scrollState.maxValue > 0) {
+                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+            } else {
+                0f
+            }
+        }
+    }
+    val density = LocalDensity.current
+    val visiblePortionFraction by remember(scrollState.maxValue, scrollState.viewportSize) {
+        derivedStateOf {
+            if (scrollState.maxValue > 0 && scrollState.viewportSize > 0) {
+                val viewportSize = scrollState.viewportSize.toFloat()
+                val totalContentHeight = viewportSize + scrollState.maxValue.toFloat()
+                (viewportSize / totalContentHeight).coerceIn(
+                    0.05f,
+                    1f
+                ) // Ensure min 5% height for thumb
+            } else {
+                1f // If not scrollable or viewport not determined, thumb is full height (won't be shown anyway)
+            }
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(state = scrollState)
+                .padding(16.dp)
+                .padding(
+                    end = if (isScrollable) 16.dp else 0.dp,
+                )
+        ) {
+            viewData.inputs.forEach { inputViewData ->
+                when (inputViewData) {
+                    is InputViewData.InputVD -> {
+                        InputSection(
+                            inputViewData = inputViewData,
+                            onIntent = onIntent // Pass the main onIntent callback
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    is InputViewData.InputRadioVD -> {
+                        RadioInputRow(inputViewData, onIntent)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+            }
+            DatePickerSection(viewData.roastDate) { date ->
+                onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            Button(
+                onClick = {
+                    showSnackBar = true
+                    onIntent(CoffeeInputScreenIntent.SubmitCoffee)
+                },
+                enabled = viewData.isButtonEnabled,
+                modifier = Modifier.wrapContentSize()
+            )
+            { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
+            Spacer(modifier = Modifier.weight(0.1f))
+        }
+    }
+    if (isScrollable) {
+        val scrollbarWidth = 8.dp
+        val minThumbVisualHeightDp = 20.dp // Minimum visible height for the thumb in Dp
+
+        Box( // Container for the scrollbar
+            contentAlignment = Alignment.CenterEnd,
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(horizontal = 4.dp, vertical = 12.dp) // Align with content padding
+        ) {
+            BoxWithConstraints { // Use BoxWithConstraints to get the actual track height
+                val trackActualHeightDp = this.maxHeight
+                val trackActualHeightPx = with(density) { trackActualHeightDp.toPx() }
+
+                // Calculate thumb height in Dp, ensuring it's not smaller than minThumbVisualHeightDp
+                val thumbHeightDp = (trackActualHeightDp * visiblePortionFraction)
+                    .coerceAtLeast(minThumbVisualHeightDp)
+                val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
+
+
+                // Calculate the total movable range for the top of the thumb
+                val movableRangePx = trackActualHeightPx - thumbHeightPx
+
+                // Calculate the thumb's Y offset based on how much is scrolled from the top
+                val thumbOffsetYPx = (movableRangePx * scrollProgressFromTop).coerceAtLeast(0f)
+                val thumbOffsetYDp = with(density) { thumbOffsetYPx.toDp() }
+
+
+                // Track
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(scrollbarWidth)
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .clip(RoundedCornerShape(4.dp)) // Clip background
+                ) {
+                    // Thumb
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart) // Thumb starts at top of its calculated offset
+                            .width(scrollbarWidth)
+                            .height(thumbHeightDp) // Use calculated thumb height
+                            .offset(y = thumbOffsetYDp) // Apply calculated offset
+                            .background(
+                                MaterialTheme.colorScheme.primary,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .clip(RoundedCornerShape(4.dp)) // Clip thumb itself
+                    )
                 }
             }
         }
-        DatePickerSection(viewData.roastDate) { date ->
-            onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
-        }
-        Spacer(modifier = Modifier.weight(1f))
-        Button(
-            onClick = {
-                showSnackBar = true
-                onIntent(CoffeeInputScreenIntent.SubmitCoffee)
-            },
-            enabled = viewData.isButtonEnabled,
-            modifier = Modifier.wrapContentSize()
-        )
-        { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
-        Spacer(modifier = Modifier.weight(0.1f))
     }
 }
 
@@ -257,7 +392,12 @@ private fun InputSection(
                                     )
                                 )
                                 searchText?.let { text ->
-                                    onIntent(CoffeeInputScreenIntent.UpdateSearchText(inputType, ""))
+                                    onIntent(
+                                        CoffeeInputScreenIntent.UpdateSearchText(
+                                            inputType,
+                                            ""
+                                        )
+                                    )
                                 }
                                 expanded = true
                             },
@@ -297,7 +437,10 @@ private fun RadioInputRow(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 decafInput.option.forEach { option ->
-                    Row(modifier = Modifier.wrapContentWidth(), verticalAlignment = CenterVertically) {
+                    Row(
+                        modifier = Modifier.wrapContentWidth(),
+                        verticalAlignment = CenterVertically
+                    ) {
                         Text(option.label)
                         RadioButton(
                             selected = if (decafInput.isDecaf == option.isDecaf) true else false,
