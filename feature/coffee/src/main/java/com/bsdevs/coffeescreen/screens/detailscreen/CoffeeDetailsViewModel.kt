@@ -1,6 +1,7 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.os.Build
+import android.os.LocaleList
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
@@ -55,6 +57,7 @@ class CoffeeDetailsViewModel @Inject constructor(
         selectedCoffee = detailsRoute.coffeeId
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun loadDataFromNetwork() {
 
         val currentUser = accountService.currentUserId
@@ -71,10 +74,18 @@ class CoffeeDetailsViewModel @Inject constructor(
                 docs.toObject(ShotDto::class.java)
             }
         }
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val sortedFormattedShots = formattedShots?.sortedByDescending { shotDto ->
+            shotDto.date?.let { dateString ->
+                LocalDate.parse(dateString, formatter)
+            }
+        }
+
+
         _viewData.value = Result.Success(
             data = CoffeeDetailsViewData(
                 coffeeDto = coffeeListFromNetwork,
-                shotList = formattedShots,
+                shotList = sortedFormattedShots,
             )
         )
     }
@@ -141,15 +152,20 @@ class CoffeeDetailsViewModel @Inject constructor(
                         val formattedShots = downloadedShots.map {
                             it.toObject(ShotDto::class.java)
                         }
+                        val dateSortFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                        val sortedFormattedShots = formattedShots.sortedByDescending { shotDto ->
+                            shotDto.date?.let { dateString ->
+                                LocalDate.parse(dateString, dateSortFormatter)
+                            }
+                        }
                         _viewData.update {
                             Result.Success(
                                 data = CoffeeDetailsViewData(
                                     coffeeDto = coffeeLabel.data.coffeeDto,
-                                    shotList = formattedShots,
+                                    shotList = sortedFormattedShots,
                                 ),
                             )
                         }
-                        // Optionally, you can send an event to the UI to indicate success
                     } catch (e: Exception) {
                         println("error uploading shot ${e.message} ${e.cause}")
                         // Handle error, e.g., show a toast or log the error

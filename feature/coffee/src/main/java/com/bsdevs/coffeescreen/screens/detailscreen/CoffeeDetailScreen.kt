@@ -180,7 +180,7 @@ fun CoffeeDetailContent(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.5f), // This applies .fillMaxWidth() from above
+                    .wrapContentHeight(), // This applies .fillMaxWidth() from above
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
                 CoffeeDetailsScrollableColumn(coffeeDetailsViewData.coffeeDto, isLandscape)
@@ -478,6 +478,7 @@ fun Double.roundTo(decimalPlaces: Int): Double {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotDto>?) {
     Box(
@@ -494,8 +495,15 @@ private fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotD
                 fontWeight = FontWeight.Bold
             )
             shotList?.let {
-                shotList.forEach {
-                    Text("${it.date} ${it.weightIn} ${it.weightOut} ${it.time}")
+                LazyVerticalGrid(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    columns = GridCells.Fixed(1)
+                )
+                {
+                    items(count = it.size, itemContent = { index ->
+                        ShotCard(shot = it[index])
+                    }
+                    )
                 }
             }
         }
@@ -511,13 +519,50 @@ private fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotD
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun ShotCard(shot: ShotDto) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                text = "${shot.date}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.wrapContentWidth()
+            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Weight In: ${shot.weightIn} g",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Weight Out: ${shot.weightOut} g",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Time: ${shot.time} s",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun CoffeeDetailsScrollableColumn(coffeeDto: CoffeeDto, isLandscape: Boolean) {
     Column(
         verticalArrangement = Arrangement.Top,
         modifier = Modifier
             .padding(16.dp)
-            .fillMaxHeight() // Ensure the height wraps content
+            .wrapContentHeight() // Ensure the height wraps content
         // Apply verticalScroll only to the Column, not the Card directly
         // to ensure the Card itself doesn't try to scroll if its content is fixed height.
         // Allow column to take available height within the Card
