@@ -1,0 +1,57 @@
+name: Android Auto Release
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+
+    - name: Get Latest Release Tag
+      id: latest_tag
+      run: |
+        latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
+        if [[ -z "$latest_tag" ]]; then
+          echo "tag=v0.0.0" >> $GITHUB_OUTPUT
+        else
+          echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Bump Patch Version
+      id: bump
+      run: |
+        tag=${{ steps.latest_tag.outputs.tag }}
+        IFS='.' read -r major minor patch <<<"${tag#v}"
+        patch=$((patch + 1))
+        new_tag="v${major}.${minor}.${patch}"
+        echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.bump.outputs.new_tag }}
+        name: Release ${{ steps.bump.outputs.new_tag }}
+        draft: false
+        prerelease: false
+        files: app/build/outputs/apk/release/app-release.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
