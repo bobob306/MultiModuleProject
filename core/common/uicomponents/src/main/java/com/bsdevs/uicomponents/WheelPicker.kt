@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -36,12 +37,14 @@ import androidx.compose.ui.unit.sp
 fun HorizontalWheelPicker(
     modifier: Modifier = Modifier,
     wheelPickerWidth: Dp? = null,
-    startNumber: Int,
-    endNumber: Int,
-    initialSelectedItem: Int,
+    startNumber: Float,
+    endNumber: Float,
+    initialSelectedItem: Float,
     lineWidth: Dp = 2.dp,
     selectedLineHeight: Dp = 64.dp,
-    multipleOfFiveLineHeight: Dp = 40.dp,
+    multipleOfOneLineHeight: Dp = 50.dp,
+    multipleOfFiveLineHeight: Dp = 60.dp,
+    multipleOfHalfLineHeight: Dp = 40.dp,
     normalLineHeight: Dp = 30.dp,
     selectedMultipleOfFiveLinePaddingBottom: Dp = 0.dp,
     normalMultipleOfFiveLinePaddingBottom: Dp = 6.dp,
@@ -52,22 +55,22 @@ fun HorizontalWheelPicker(
     unselectedLineColor: Color = Color.LightGray,
     fadeOutLinesCount: Int = 4,
     maxFadeTransparency: Float = 0.7f,
-    onItemSelected: (Int) -> Unit
+    onItemSelected: (Float) -> Unit
 ) {
     val screenWidthDp = LocalContext.current.resources.displayMetrics.run {
         widthPixels / density
     }.dp
-    val totalItems = endNumber - startNumber
+    val totalItems = ((endNumber - startNumber) * 10).toInt() // Multiply by 10 for 1 decimal place
     val effectiveWidth = wheelPickerWidth ?: screenWidthDp
     // Adjust initialSelectedItem to be 0-based index for LazyListState
-    val initialScrollIndex = (initialSelectedItem - startNumber)
+    val initialScrollIndex = ((initialSelectedItem - startNumber) * 10).toInt()
     // Correctly initialize scrollState with the 0-based index
-    var currentSelectedItem by remember { mutableIntStateOf(initialSelectedItem) }
+    var currentSelectedItem by remember { mutableStateOf(initialSelectedItem) }
     val scrollState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
     val visibleItemsInfo by remember { derivedStateOf { scrollState.layoutInfo.visibleItemsInfo } }
     val firstVisibleItemIndex = visibleItemsInfo.firstOrNull()?.index ?: -1
     val lastVisibleItemIndex = visibleItemsInfo.lastOrNull()?.index ?: -1
-    val totalVisibleItems = lastVisibleItemIndex - firstVisibleItemIndex + 1
+    val totalVisibleItems = if (firstVisibleItemIndex != -1) lastVisibleItemIndex - firstVisibleItemIndex + 1 else 0
     val middleIndex = firstVisibleItemIndex + totalVisibleItems / 2
     val bufferIndices = totalVisibleItems / 2
 
@@ -82,21 +85,24 @@ fun HorizontalWheelPicker(
     ) {
         items(totalItems + totalVisibleItems) { index ->
             // Calculate the actual number value based on the index and startNumber
-            val actualNumber = index - bufferIndices + startNumber
+            val actualNumberValue = startNumber + (index - bufferIndices).toFloat() / 10f
 
             if (index == middleIndex) {
-                currentSelectedItem = actualNumber
+                currentSelectedItem = actualNumberValue
             }
 
+            // Check divisibility by 5 for the integer part of the number
             val lineHeight = when {
                 index == middleIndex -> selectedLineHeight
-                actualNumber % 5 == 0 -> multipleOfFiveLineHeight
+                actualNumberValue.toInt() % 5 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> multipleOfFiveLineHeight
+                actualNumberValue.toInt() % 1 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> multipleOfOneLineHeight
+                actualNumberValue % 0.5f == 0f -> multipleOfHalfLineHeight
                 else -> normalLineHeight
             }
 
             val paddingBottom = when {
                 index == middleIndex -> selectedMultipleOfFiveLinePaddingBottom
-                actualNumber % 5 == 0 -> normalMultipleOfFiveLinePaddingBottom
+                actualNumberValue.toInt() % 5 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> normalMultipleOfFiveLinePaddingBottom
                 else -> normalLinePaddingBottom
             }
 
@@ -113,12 +119,12 @@ fun HorizontalWheelPicker(
             VerticalLine(
                 lineWidth = lineWidth,
                 lineHeight = lineHeight,
-                paddingBottom = paddingBottom,
-                roundedCorners = lineRoundedCorners,
-                indexAtCenter = index == middleIndex,
-                lineTransparency = lineTransparency,
-                selectedLineColor = selectedLineColor,
-                unselectedLineColor = unselectedLineColor
+                bottomPadding = paddingBottom,
+                cornerRadius = lineRoundedCorners,
+                isCentre = index == middleIndex,
+                transparency = lineTransparency,
+                focusedLineColour = selectedLineColor,
+                defaultLineColour = unselectedLineColor
             )
 
             Spacer(modifier = Modifier.width(lineSpacing))
@@ -135,33 +141,33 @@ fun HorizontalWheelPicker(
  *
  * @param lineWidth The width of the vertical line.
  * @param lineHeight The height of the vertical line.
- * @param paddingBottom The padding applied to the bottom of the line.
- * @param roundedCorners The corner radius applied to the line, creating rounded corners.
- * @param indexAtCenter A boolean flag indicating if the line is at the center (selected item).
- * @param lineTransparency The transparency level applied to the line.
- * @param selectedLineColor The color of the line if it is the selected item.
- * @param unselectedLineColor The color of the line if it is not the selected item.
+ * @param bottomPadding The padding applied to the bottom of the line.
+ * @param cornerRadius The corner radius applied to the line, creating rounded corners.
+ * @param isCentre A boolean flag indicating if the line is at the center (selected item).
+ * @param transparency The transparency level applied to the line.
+ * @param focusedLineColour The color of the line if it is the selected item.
+ * @param defaultLineColour The color of the line if it is not the selected item.
  *
  */
 @Composable
 private fun VerticalLine(
-    lineWidth: Dp,
     lineHeight: Dp,
-    paddingBottom: Dp,
-    roundedCorners: Dp,
-    indexAtCenter: Boolean,
-    lineTransparency: Float,
-    selectedLineColor: Color,
-    unselectedLineColor: Color
+    lineWidth: Dp,
+    bottomPadding: Dp,
+    cornerRadius: Dp,
+    isCentre: Boolean,
+    transparency: Float,
+    focusedLineColour: Color,
+    defaultLineColour: Color
 ) {
     Box(
         modifier = Modifier
             .width(lineWidth)
             .height(lineHeight)
-            .clip(RoundedCornerShape(roundedCorners))
-            .alpha(lineTransparency)
-            .background(if (indexAtCenter) selectedLineColor else unselectedLineColor)
-            .padding(bottom = paddingBottom)
+            .clip(RoundedCornerShape(cornerRadius))
+            .alpha(transparency)
+            .background(if (isCentre) focusedLineColour else defaultLineColour)
+            .padding(bottom = bottomPadding)
     )
 }
 
@@ -172,39 +178,134 @@ private fun VerticalLine(
  * its index and its position relative to the visible items in the list. The transparency
  * gradually increases towards the edges of the picker, creating a fade-out effect.
  *
- * @param lineIndex The index of the current line being rendered.
- * @param totalLines The total number of lines in the picker.
- * @param bufferIndices The number of extra indices used for rendering outside the visible area.
- * @param firstVisibleItemIndex The index of the first visible item in the list.
- * @param lastVisibleItemIndex The index of the last visible item in the list.
- * @param fadeOutLinesCount The number of lines that should gradually fade out at the edges.
- * @param maxFadeTransparency The maximum transparency level to apply during the fade-out effect.
+ * @param index The index of the current line being rendered.
+ * @param total The total number of lines in the picker.
+ * @param bufferedItemCount The number of extra indices used for rendering outside the visible area.
+ * @param firstVisibleIndex The index of the first visible item in the list.
+ * @param lastVisibleIndex The index of the last visible item in the list.
+ * @param fadeCount The number of lines that should gradually fade out at the edges.
+ * @param fadeTransparency The maximum transparency level to apply during the fade-out effect.
  * @return A `Float` value representing the calculated transparency level for the line.
  *
  */
+
 private fun calculateLineTransparency(
-    lineIndex: Int,
-    totalLines: Int,
-    bufferIndices: Int,
-    firstVisibleItemIndex: Int,
-    lastVisibleItemIndex: Int,
-    fadeOutLinesCount: Int,
-    maxFadeTransparency: Float
+    index: Int,
+    total: Int,
+    bufferedItemCount: Int,
+    firstVisibleIndex: Int,
+    lastVisibleIndex: Int,
+    fadeCount: Int,
+    fadeTransparency: Float
 ): Float {
-    val actualCount = fadeOutLinesCount + 1
-    val transparencyStep = maxFadeTransparency / actualCount
+    val actualCount = fadeCount + 1
+    val transparencyStep = fadeTransparency / actualCount
 
     return when {
-        lineIndex < bufferIndices || lineIndex > (totalLines + bufferIndices) -> 0.0f
-        lineIndex in firstVisibleItemIndex until firstVisibleItemIndex + fadeOutLinesCount -> {
-            transparencyStep * (lineIndex - firstVisibleItemIndex + 1)
+        index < bufferedItemCount || index > (total + bufferedItemCount) -> 0.0f
+        index in firstVisibleIndex until firstVisibleIndex + fadeCount -> {
+            transparencyStep * (index - firstVisibleIndex + 1)
         }
 
-        lineIndex in (lastVisibleItemIndex - fadeOutLinesCount + 1)..lastVisibleItemIndex -> {
-            transparencyStep * (lastVisibleItemIndex - lineIndex + 1)
+        index in (lastVisibleIndex - fadeCount + 1)..lastVisibleIndex -> {
+            transparencyStep * (lastVisibleIndex - index + 1)
         }
 
         else -> 1.0f
+    }
+}
+
+@Composable
+fun HorizontalWheelPicker(
+    modifier: Modifier = Modifier,
+    pickerWidth: Dp? = null,
+    startNumber: Int,
+    endNumber: Int,
+    initialSelectedItem: Int,
+    lineThickness: Dp = 2.dp,
+    focusedIndicatorHeight: Dp = 64.dp,
+    ofFiveLineHeight: Dp = 40.dp,
+    normalLineHeight: Dp = 30.dp,
+    focusedMultipleOfFiveLinePaddingBottom: Dp = 0.dp,
+    unfocusedMultipleOfFiveLinePaddingBottom: Dp = 6.dp,
+    unfocusedLinePaddingBottom: Dp = 8.dp,
+    interItemSpace: Dp = 8.dp,
+    lineRoundedCorners: Dp = 2.dp,
+    focusedLineColour: Color = Color(0xFF00D1FF),
+    unfocusedLineColour: Color = Color.LightGray,
+    fadeOutCount: Int = 4,
+    maxFadeAlpha: Float = 0.7f,
+    onItemSelected: (Int) -> Unit
+) {
+    val screenWidthDp = LocalContext.current.resources.displayMetrics.run {
+        widthPixels / density
+    }.dp
+    val totalItems = endNumber - startNumber
+    val effectiveWidth = pickerWidth ?: screenWidthDp
+    // Adjust initialSelectedItem to be 0-based index for LazyListState
+    val initialScrollIndex = (initialSelectedItem - startNumber)
+    // Correctly initialize scrollState with the 0-based index
+    var currentSelectedItem by remember { mutableIntStateOf(initialSelectedItem) }
+    val scrollState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
+    val visibleItemsInfo by remember { derivedStateOf { scrollState.layoutInfo.visibleItemsInfo } }
+    val firstVisibleItemIndex = visibleItemsInfo.firstOrNull()?.index ?: -1
+    val lastVisibleItemIndex = visibleItemsInfo.lastOrNull()?.index ?: -1
+    val totalVisibleItems = lastVisibleItemIndex - firstVisibleItemIndex + 1
+    val middleIndex = firstVisibleItemIndex + totalVisibleItems / 2
+    val bufferedItemCount = totalVisibleItems / 2
+
+    LaunchedEffect(initialScrollIndex, currentSelectedItem) {
+        onItemSelected(currentSelectedItem)
+    }
+
+    LazyRow(
+        modifier = modifier.width(effectiveWidth),
+        state = scrollState,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items(totalItems + totalVisibleItems) { index ->
+            // Calculate the actual number value based on the index and startNumber
+            val actualNumber = index - bufferedItemCount + startNumber
+
+            if (index == middleIndex) {
+                currentSelectedItem = actualNumber
+            }
+
+            val lineHeight = when {
+                index == middleIndex -> focusedIndicatorHeight
+                actualNumber % 5 == 0 -> ofFiveLineHeight
+                else -> normalLineHeight
+            }
+
+            val paddingBottom = when {
+                index == middleIndex -> focusedMultipleOfFiveLinePaddingBottom
+                actualNumber % 5 == 0 -> unfocusedMultipleOfFiveLinePaddingBottom
+                else -> unfocusedLinePaddingBottom
+            }
+
+            val lineTransparency = calculateLineTransparency(
+                index,
+                totalItems,
+                bufferedItemCount, // This buffer is for visual spacing, not data indexing
+                firstVisibleItemIndex,
+                lastVisibleItemIndex,
+                fadeOutCount,
+                maxFadeAlpha
+            )
+
+            VerticalLine(
+                lineWidth = lineThickness,
+                lineHeight = lineHeight,
+                bottomPadding = paddingBottom,
+                cornerRadius = lineRoundedCorners,
+                isCentre = index == middleIndex,
+                transparency = lineTransparency,
+                focusedLineColour = focusedLineColour,
+                defaultLineColour = unfocusedLineColour
+            )
+
+            Spacer(modifier = Modifier.width(interItemSpace))
+        }
     }
 }
 
@@ -215,15 +316,26 @@ private fun VerticalLinePreview() {
         Column(
             Modifier.wrapContentSize(), Arrangement.Center, Alignment.CenterHorizontally
         ) {
-            var selectedItem by remember { mutableIntStateOf(27) }
-            Text(text = selectedItem.toString(), fontSize = 46.sp)
+            var selectedItem by remember { mutableStateOf(33.0f) }
+            Text(text = String.format("%.1f", selectedItem), fontSize = 46.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalWheelPicker(
+                startNumber = 30.0f,
+                endNumber = 40.0f,
+                initialSelectedItem = selectedItem,
+                onItemSelected = { item: Float ->
+                    selectedItem = item
+                }
+            )
+            var selectedItem2 by remember { mutableIntStateOf(27) }
+            Text(text = selectedItem2.toString(), fontSize = 46.sp)
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalWheelPicker(
                 startNumber = 20,
                 endNumber = 60,
-                initialSelectedItem = selectedItem,
-                onItemSelected = { item ->
-                    selectedItem = item
+                initialSelectedItem = selectedItem2,
+                onItemSelected = { item: Int ->
+                    selectedItem2 = item
                 }
             )
         }
