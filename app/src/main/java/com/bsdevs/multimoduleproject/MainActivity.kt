@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.mandatorySystemGesturesPadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.systemGesturesPadding
+import androidx.compose.foundation.layout.waterfall
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration.Short
@@ -36,8 +38,10 @@ class MainActivity : ComponentActivity() {
             val snackbarHostState = remember { SnackbarHostState() }
             val scope = rememberCoroutineScope()
             val paddingValues = WindowInsets.navigationBars.asPaddingValues()
+            val otherPadding = WindowInsets.systemBars.asPaddingValues()
+            val thisPadding = WindowInsets.safeContent.asPaddingValues()
             Scaffold(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(otherPadding).padding(paddingValues),
                 snackbarHost = { SnackbarHost(snackbarHostState) },
             ) { it
                 MMPNavHost(
