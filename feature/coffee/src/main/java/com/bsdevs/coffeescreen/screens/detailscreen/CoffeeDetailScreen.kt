@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -41,7 +44,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,7 +62,6 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
-import com.bsdevs.uicomponents.HorizontalWheelPicker
 import com.bsdevs.uicomponents.WheelInput
 import java.text.DecimalFormat
 import java.time.LocalDate
@@ -220,6 +221,7 @@ fun EspressoShotInputSheetContent(
     // Main container for the sheet content
     Column(
         modifier = Modifier
+            .verticalScroll(rememberScrollState())
             .fillMaxWidth()
             .padding(top = 16.dp, bottom = 16.dp), // Vertical padding for the whole sheet
         horizontalAlignment = Alignment.CenterHorizontally
