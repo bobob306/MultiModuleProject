@@ -4,14 +4,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,21 +39,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.text.DecimalFormat
 
 @Composable
 fun HorizontalWheelPicker(
+    isDecimal: Boolean,
     modifier: Modifier = Modifier,
     wheelPickerWidth: Dp? = null,
-    startNumber: Float,
-    endNumber: Float,
-    initialSelectedItem: Float,
+    startNumber: Int,
+    endNumber: Int,
+    initialSelectedItem: Int,
     lineWidth: Dp = 2.dp,
     selectedLineHeight: Dp = 64.dp,
-    multipleOfOneLineHeight: Dp = 50.dp,
-    multipleOfFiveLineHeight: Dp = 60.dp,
-    multipleOfHalfLineHeight: Dp = 40.dp,
+    multipleOfOneLineHeight: Dp = 35.dp,
+    multipleOfFiveLineHeight: Dp = 40.dp,
     normalLineHeight: Dp = 30.dp,
     selectedMultipleOfFiveLinePaddingBottom: Dp = 0.dp,
     normalMultipleOfFiveLinePaddingBottom: Dp = 6.dp,
@@ -55,79 +66,104 @@ fun HorizontalWheelPicker(
     unselectedLineColor: Color = Color.LightGray,
     fadeOutLinesCount: Int = 4,
     maxFadeTransparency: Float = 0.7f,
-    onItemSelected: (Float) -> Unit
+    onItemSelected: (Int) -> Unit,
 ) {
+    val isDecimal = isDecimal
     val screenWidthDp = LocalContext.current.resources.displayMetrics.run {
         widthPixels / density
     }.dp
-    val totalItems = ((endNumber - startNumber) * 10).toInt() // Multiply by 10 for 1 decimal place
+    val totalItems = (endNumber - startNumber)
     val effectiveWidth = wheelPickerWidth ?: screenWidthDp
     // Adjust initialSelectedItem to be 0-based index for LazyListState
-    val initialScrollIndex = ((initialSelectedItem - startNumber) * 10).toInt()
+    val initialScrollIndex = (initialSelectedItem - startNumber)
     // Correctly initialize scrollState with the 0-based index
     var currentSelectedItem by remember { mutableStateOf(initialSelectedItem) }
     val scrollState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
     val visibleItemsInfo by remember { derivedStateOf { scrollState.layoutInfo.visibleItemsInfo } }
     val firstVisibleItemIndex = visibleItemsInfo.firstOrNull()?.index ?: -1
     val lastVisibleItemIndex = visibleItemsInfo.lastOrNull()?.index ?: -1
-    val totalVisibleItems = if (firstVisibleItemIndex != -1) lastVisibleItemIndex - firstVisibleItemIndex + 1 else 0
+    val totalVisibleItems =
+        if (firstVisibleItemIndex != -1) lastVisibleItemIndex - firstVisibleItemIndex + 1 else 0
     val middleIndex = firstVisibleItemIndex + totalVisibleItems / 2
     val bufferIndices = totalVisibleItems / 2
 
-    LaunchedEffect(initialScrollIndex, currentSelectedItem) {
-        onItemSelected(currentSelectedItem)
+    LaunchedEffect(scrollState.isScrollInProgress, currentSelectedItem) {
+        if (!scrollState.isScrollInProgress) {
+            onItemSelected(currentSelectedItem)
+        }
     }
+    Row(modifier = modifier.fillMaxWidth()) {
+        IconButton(
+            modifier = Modifier.weight(0.1f), onClick = {
+                if (currentSelectedItem > startNumber) {
+                    currentSelectedItem--
+                    scrollState.requestScrollToItem(currentSelectedItem - startNumber)
+                }
+            }) {
+            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Decrease")
+        }
+        LazyRow(
+            modifier = modifier.weight(0.8f),
+            state = scrollState,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items(totalItems + totalVisibleItems) { index ->
+                // Calculate the actual number value based on the index and startNumber
+                val actualNumberValue = startNumber + (index - bufferIndices)
 
-    LazyRow(
-        modifier = modifier.width(effectiveWidth),
-        state = scrollState,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        items(totalItems + totalVisibleItems) { index ->
-            // Calculate the actual number value based on the index and startNumber
-            val actualNumberValue = startNumber + (index - bufferIndices).toFloat() / 10f
+                if (index == middleIndex) {
+                    currentSelectedItem = actualNumberValue
+                }
 
-            if (index == middleIndex) {
-                currentSelectedItem = actualNumberValue
+                // Check divisibility by 5 for the integer part of the number
+                val lineHeight = when {
+                    index == middleIndex -> selectedLineHeight
+                    actualNumberValue % 10 == 0 -> multipleOfFiveLineHeight
+
+                    actualNumberValue % 5 == 0 -> multipleOfOneLineHeight
+
+                    else -> normalLineHeight
+                }
+
+                val paddingBottom = when {
+                    index == middleIndex -> selectedMultipleOfFiveLinePaddingBottom
+                    actualNumberValue % 10 == 0 -> normalMultipleOfFiveLinePaddingBottom
+
+                    else -> normalLinePaddingBottom
+                }
+
+                val lineTransparency = calculateLineTransparency(
+                    index,
+                    totalItems,
+                    bufferIndices, // This buffer is for visual spacing, not data indexing
+                    firstVisibleItemIndex,
+                    lastVisibleItemIndex,
+                    fadeOutLinesCount,
+                    maxFadeTransparency
+                )
+
+                VerticalLine(
+                    lineWidth = lineWidth,
+                    lineHeight = lineHeight,
+                    bottomPadding = paddingBottom,
+                    cornerRadius = lineRoundedCorners,
+                    isCentre = index == middleIndex,
+                    transparency = lineTransparency,
+                    focusedLineColour = selectedLineColor,
+                    defaultLineColour = unselectedLineColor
+                )
+
+                Spacer(modifier = Modifier.width(lineSpacing))
             }
-
-            // Check divisibility by 5 for the integer part of the number
-            val lineHeight = when {
-                index == middleIndex -> selectedLineHeight
-                actualNumberValue.toInt() % 5 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> multipleOfFiveLineHeight
-                actualNumberValue.toInt() % 1 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> multipleOfOneLineHeight
-                actualNumberValue % 0.5f == 0f -> multipleOfHalfLineHeight
-                else -> normalLineHeight
-            }
-
-            val paddingBottom = when {
-                index == middleIndex -> selectedMultipleOfFiveLinePaddingBottom
-                actualNumberValue.toInt() % 5 == 0 && actualNumberValue == actualNumberValue.toInt().toFloat() -> normalMultipleOfFiveLinePaddingBottom
-                else -> normalLinePaddingBottom
-            }
-
-            val lineTransparency = calculateLineTransparency(
-                index,
-                totalItems,
-                bufferIndices, // This buffer is for visual spacing, not data indexing
-                firstVisibleItemIndex,
-                lastVisibleItemIndex,
-                fadeOutLinesCount,
-                maxFadeTransparency
-            )
-
-            VerticalLine(
-                lineWidth = lineWidth,
-                lineHeight = lineHeight,
-                bottomPadding = paddingBottom,
-                cornerRadius = lineRoundedCorners,
-                isCentre = index == middleIndex,
-                transparency = lineTransparency,
-                focusedLineColour = selectedLineColor,
-                defaultLineColour = unselectedLineColor
-            )
-
-            Spacer(modifier = Modifier.width(lineSpacing))
+        }
+        IconButton(
+            modifier = Modifier.weight(0.1f), onClick = {
+                if (currentSelectedItem < endNumber) {
+                    currentSelectedItem++
+                    scrollState.requestScrollToItem(currentSelectedItem - startNumber)
+                }
+            }) {
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Increase")
         }
     }
 }
@@ -258,54 +294,112 @@ fun HorizontalWheelPicker(
         onItemSelected(currentSelectedItem)
     }
 
-    LazyRow(
-        modifier = modifier.width(effectiveWidth),
-        state = scrollState,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        items(totalItems + totalVisibleItems) { index ->
-            // Calculate the actual number value based on the index and startNumber
-            val actualNumber = index - bufferedItemCount + startNumber
-
-            if (index == middleIndex) {
-                currentSelectedItem = actualNumber
-            }
-
-            val lineHeight = when {
-                index == middleIndex -> focusedIndicatorHeight
-                actualNumber % 5 == 0 -> ofFiveLineHeight
-                else -> normalLineHeight
-            }
-
-            val paddingBottom = when {
-                index == middleIndex -> focusedMultipleOfFiveLinePaddingBottom
-                actualNumber % 5 == 0 -> unfocusedMultipleOfFiveLinePaddingBottom
-                else -> unfocusedLinePaddingBottom
-            }
-
-            val lineTransparency = calculateLineTransparency(
-                index,
-                totalItems,
-                bufferedItemCount, // This buffer is for visual spacing, not data indexing
-                firstVisibleItemIndex,
-                lastVisibleItemIndex,
-                fadeOutCount,
-                maxFadeAlpha
-            )
-
-            VerticalLine(
-                lineWidth = lineThickness,
-                lineHeight = lineHeight,
-                bottomPadding = paddingBottom,
-                cornerRadius = lineRoundedCorners,
-                isCentre = index == middleIndex,
-                transparency = lineTransparency,
-                focusedLineColour = focusedLineColour,
-                defaultLineColour = unfocusedLineColour
-            )
-
-            Spacer(modifier = Modifier.width(interItemSpace))
+    Row(modifier = modifier.fillMaxWidth()) {
+        IconButton(
+            modifier = Modifier.weight(0.1f), onClick = {
+                if (currentSelectedItem > startNumber) {
+                    currentSelectedItem--
+                    scrollState.requestScrollToItem(currentSelectedItem - startNumber)
+                }
+            }) {
+            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Decrease")
         }
+        LazyRow(
+            modifier = modifier.weight(0.8f),
+            state = scrollState,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            items(totalItems + totalVisibleItems) { index ->
+                // Calculate the actual number value based on the index and startNumber
+                val actualNumber = index - bufferedItemCount + startNumber
+
+                if (index == middleIndex) {
+                    currentSelectedItem = actualNumber
+                }
+
+                val lineHeight = when {
+                    index == middleIndex -> focusedIndicatorHeight
+                    actualNumber % 5 == 0 -> ofFiveLineHeight
+                    else -> normalLineHeight
+                }
+
+                val paddingBottom = when {
+                    index == middleIndex -> focusedMultipleOfFiveLinePaddingBottom
+                    actualNumber % 5 == 0 -> unfocusedMultipleOfFiveLinePaddingBottom
+                    else -> unfocusedLinePaddingBottom
+                }
+
+                val lineTransparency = calculateLineTransparency(
+                    index,
+                    totalItems,
+                    bufferedItemCount, // This buffer is for visual spacing, not data indexing
+                    firstVisibleItemIndex,
+                    lastVisibleItemIndex,
+                    fadeOutCount,
+                    maxFadeAlpha
+                )
+
+                VerticalLine(
+                    lineWidth = lineThickness,
+                    lineHeight = lineHeight,
+                    bottomPadding = paddingBottom,
+                    cornerRadius = lineRoundedCorners,
+                    isCentre = index == middleIndex,
+                    transparency = lineTransparency,
+                    focusedLineColour = focusedLineColour,
+                    defaultLineColour = unfocusedLineColour
+                )
+
+                Spacer(modifier = Modifier.width(interItemSpace))
+            }
+        }
+        IconButton(
+            modifier = Modifier.weight(0.1f), onClick = {
+                if (currentSelectedItem < endNumber) {
+                    currentSelectedItem++
+                    scrollState.requestScrollToItem(currentSelectedItem - startNumber)
+                }
+            }) {
+            Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Increase")
+        }
+    }
+}
+
+@Composable
+fun WheelInput(
+    isDecimal: Boolean?,
+    startNumber: Int,
+    endNumber: Int,
+    initialSelectedItem: Int,
+    onItemSelected: (Int) -> Unit,
+    label: String,
+) {
+    Column(Modifier
+        .wrapContentHeight()
+        .wrapContentWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        var selectedItem by remember { mutableIntStateOf(initialSelectedItem) }
+        val df = DecimalFormat("#.#")
+        val text = if (isDecimal == true) {
+            df.format(selectedItem.toDouble() / 10.0)
+        } else selectedItem.toString()
+        Row(horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, modifier = Modifier.padding(end = 8.dp))
+            Text(text = text)
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        HorizontalWheelPicker(
+            startNumber = startNumber,
+            endNumber = endNumber,
+            initialSelectedItem = selectedItem,
+            onItemSelected = { item: Int ->
+                selectedItem = item
+                onItemSelected(item)
+            },
+            isDecimal = isDecimal ?: false
+        )
     }
 }
 
@@ -316,17 +410,18 @@ private fun VerticalLinePreview() {
         Column(
             Modifier.wrapContentSize(), Arrangement.Center, Alignment.CenterHorizontally
         ) {
-            var selectedItem by remember { mutableStateOf(33.0f) }
-            Text(text = String.format("%.1f", selectedItem), fontSize = 46.sp)
+            var selectedItem by remember { mutableIntStateOf(330) }
+            val df = DecimalFormat("#.#")
+            Text(text = df.format(selectedItem.toDouble() / 10.0), fontSize = 46.sp)
             Spacer(modifier = Modifier.height(8.dp))
             HorizontalWheelPicker(
-                startNumber = 30.0f,
-                endNumber = 40.0f,
+                isDecimal = true,
+                startNumber = 300,
+                endNumber = 400,
                 initialSelectedItem = selectedItem,
-                onItemSelected = { item: Float ->
+                onItemSelected = { item: Int ->
                     selectedItem = item
-                }
-            )
+                })
             var selectedItem2 by remember { mutableIntStateOf(27) }
             Text(text = selectedItem2.toString(), fontSize = 46.sp)
             Spacer(modifier = Modifier.height(8.dp))
@@ -336,8 +431,7 @@ private fun VerticalLinePreview() {
                 initialSelectedItem = selectedItem2,
                 onItemSelected = { item: Int ->
                     selectedItem2 = item
-                }
-            )
+                })
         }
     }
 }
