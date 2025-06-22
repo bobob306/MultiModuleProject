@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -41,7 +44,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +62,7 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
+import com.bsdevs.uicomponents.WheelInput
 import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -208,8 +211,8 @@ fun EspressoShotInputSheetContent(
     onDismiss: () -> Unit
 ) {
     var timeInSeconds by remember { mutableIntStateOf(initialDetails.timeInSeconds) }
-    var weightInGrams by remember { mutableDoubleStateOf(initialDetails.weightInGrams) }
-    var weightOutGrams by remember { mutableDoubleStateOf(initialDetails.weightOutGrams) }
+    var weightInGrams by remember { mutableIntStateOf(initialDetails.weightInGrams) }
+    var weightOutGrams by remember { mutableIntStateOf(initialDetails.weightOutGrams) }
     var shotDate by remember { mutableStateOf(initialDetails.date) }
 
     val configuration = LocalConfiguration.current
@@ -218,6 +221,7 @@ fun EspressoShotInputSheetContent(
     // Main container for the sheet content
     Column(
         modifier = Modifier
+            .verticalScroll(rememberScrollState())
             .fillMaxWidth()
             .padding(top = 16.dp, bottom = 16.dp), // Vertical padding for the whole sheet
         horizontalAlignment = Alignment.CenterHorizontally
@@ -328,36 +332,62 @@ private fun SheetHeader() {
 private fun InputFields(
     timeInSeconds: Int,
     onTimeChange: (Int) -> Unit,
-    weightInGrams: Double,
-    onWeightInChange: (Double) -> Unit,
-    weightOutGrams: Double,
-    onWeightOutChange: (Double) -> Unit,
+    weightInGrams: Int,
+    onWeightInChange: (Int) -> Unit,
+    weightOutGrams: Int,
+    onWeightOutChange: (Int) -> Unit,
     shotDate: LocalDate,
     onShotDateChange: (LocalDate) -> Unit
 ) {
     val decimalFormat = remember { DecimalFormat("#.#") }
 
-    NumberInputRow(
+    WheelInputRow(
         label = "Time (seconds)",
-        value = timeInSeconds.toString(),
-        onDecrement = { if (timeInSeconds > 0) onTimeChange(timeInSeconds - 1) },
-        onIncrement = { onTimeChange(timeInSeconds + 1) }
+        initialNumber = timeInSeconds,
+        rangeStart = 10,
+        rangeEnd = 60,
+        onValueChange = { onTimeChange.invoke(it) }
     )
     Spacer(modifier = Modifier.height(16.dp))
-    NumberInputRow(
+    WheelInputRow(
         label = "Weight In (grams)",
-        value = decimalFormat.format(weightInGrams),
-        onDecrement = { if (weightInGrams > 0.1) onWeightInChange((weightInGrams - 0.1).roundTo(1)) },
-        onIncrement = { onWeightInChange((weightInGrams + 0.1).roundTo(1)) }
+        initialNumber = weightInGrams,
+        rangeStart = 70,
+        rangeEnd = 250,
+        onValueChange = { onWeightInChange.invoke(it) },
+        isDecimal = true,
     )
     Spacer(modifier = Modifier.height(16.dp))
-    NumberInputRow(
+    WheelInputRow(
         label = "Weight Out (grams)",
-        value = decimalFormat.format(weightOutGrams),
-        onDecrement = { if (weightOutGrams > 0.1) onWeightOutChange((weightOutGrams - 0.1).roundTo(1)) },
-        onIncrement = { onWeightOutChange((weightOutGrams + 0.1).roundTo(1)) }
+        initialNumber = weightOutGrams,
+        rangeStart = 140,
+        rangeEnd = 650,
+        onValueChange = { onWeightOutChange.invoke(it) },
+        isDecimal = true,
     )
     Spacer(modifier = Modifier.height(16.dp))
+//    NumberInputRow(
+//        label = "Time (seconds)",
+//        value = timeInSeconds.toString(),
+//        onDecrement = { if (timeInSeconds > 0) onTimeChange(timeInSeconds - 1) },
+//        onIncrement = { onTimeChange(timeInSeconds + 1) }
+//    )
+//    Spacer(modifier = Modifier.height(16.dp))
+//    NumberInputRow(
+//        label = "Weight In (grams)",
+//        value = decimalFormat.format(weightInGrams),
+//        onDecrement = { if (weightInGrams > 0.1) onWeightInChange((weightInGrams - 0.1).roundTo(1)) },
+//        onIncrement = { onWeightInChange((weightInGrams + 0.1).roundTo(1)) }
+//    )
+//    Spacer(modifier = Modifier.height(16.dp))
+//    NumberInputRow(
+//        label = "Weight Out (grams)",
+//        value = decimalFormat.format(weightOutGrams),
+//        onDecrement = { if (weightOutGrams > 0.1) onWeightOutChange((weightOutGrams - 0.1).roundTo(1)) },
+//        onIncrement = { onWeightOutChange((weightOutGrams + 0.1).roundTo(1)) }
+//    )
+//    Spacer(modifier = Modifier.height(16.dp))
     DateInputRow(
         label = "Date",
         date = shotDate,
@@ -405,6 +435,63 @@ private fun ActionButtons(
     }
 }
 
+@Composable
+fun WheelInputRow(
+    label: String,
+    initialNumber: Int,
+    isDecimal: Boolean? = null,
+    rangeStart: Int,
+    rangeEnd: Int,
+    onValueChange: (Int) -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        WheelInput(
+            isDecimal = isDecimal ?: false,
+            initialSelectedItem = initialNumber,
+            startNumber = rangeStart,
+            endNumber = rangeEnd,
+            onItemSelected = onValueChange,
+            label = label,
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewWheelInputRow() {
+    MaterialTheme() {
+        Column {
+            WheelInputRow(
+                label = "Weight In (grams)",
+                initialNumber = 175,
+                rangeStart = 70,
+                rangeEnd = 250,
+                onValueChange = {},
+                isDecimal = true,
+            )
+            WheelInputRow(
+                label = "Weight Out (grams)",
+                initialNumber = 360,
+                rangeStart = 140,
+                rangeEnd = 650,
+                onValueChange = {},
+                isDecimal = true,
+            )
+            WheelInputRow(
+                label = "Time (seconds)",
+                initialNumber = 25,
+                rangeStart = 10,
+                rangeEnd = 60,
+                onValueChange = {},
+            )
+        }
+    }
+}
+
 
 @Composable
 fun NumberInputRow(
@@ -412,7 +499,8 @@ fun NumberInputRow(
     value: String,
     onDecrement: () -> Unit,
     onIncrement: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDecimal: Boolean? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -531,13 +619,23 @@ fun ShotCard(shot: ShotDto) {
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
                 text = "${shot.date}",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.wrapContentWidth()
             )
-            Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+            ) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Weight In: ${shot.weightIn} g",
@@ -639,9 +737,9 @@ fun CoffeeDetailItem(label: String, value: String) {
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
-@Preview(showBackground = true, device = "spec:parent=pixel_2")
-@Preview(showBackground = true, device = "spec:parent=pixel_2", fontScale = 2f)
-@Preview(showBackground = true, device = "spec:parent=pixel_2,orientation=landscape")
+@Preview(showBackground = true)
+@Preview(showBackground = true, fontScale = 2f)
+@Preview(showBackground = true, device = "spec:parent=resizable,orientation=landscape")
 @Composable
 private fun CoffeeDetailContentPreview() {
     MaterialTheme {
@@ -675,7 +773,7 @@ private fun CoffeeDetailContentPreview() {
 data class EspressoShotDetails(
     val id: String = UUID.randomUUID().toString(),
     val timeInSeconds: Int = 27,
-    val weightInGrams: Double = 17.5,
-    val weightOutGrams: Double = 36.0,
+    val weightInGrams: Int = 175,
+    val weightOutGrams: Int = 360,
     @SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
 )

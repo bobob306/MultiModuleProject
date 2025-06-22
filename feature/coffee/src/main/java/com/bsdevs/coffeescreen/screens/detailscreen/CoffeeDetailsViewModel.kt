@@ -134,8 +134,8 @@ class CoffeeDetailsViewModel @Inject constructor(
                         val shotDto = ShotDto(
                             id = intent.shot.id,
                             date = formattedDate,
-                            weightIn = intent.shot.weightInGrams,
-                            weightOut = intent.shot.weightOutGrams,
+                            weightIn = intent.shot.weightInGrams.toDouble()/10,
+                            weightOut = intent.shot.weightOutGrams.toDouble()/10,
                             time = intent.shot.timeInSeconds
                         )
                         val currentUser = accountService.currentUserId
