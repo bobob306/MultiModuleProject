@@ -540,7 +540,7 @@ fun DateInputRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(text = label, modifier = modifier.padding(start = 16.dp), style = MaterialTheme.typography.bodyLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDecrement) {
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Decrement $label")
