@@ -46,6 +46,6 @@ dependencies {
     implementation(libs.material)
     implementation(platform(libs.androidx.compose.bom)) // Or latest
     implementation(libs.androidx.material3)
-    implementation(libs.ui.tooling.preview.android) // Or latest
+    implementation(libs.ui.tooling.preview.android)
     debugImplementation(libs.androidx.compose.ui.ui.tooling)
 }
