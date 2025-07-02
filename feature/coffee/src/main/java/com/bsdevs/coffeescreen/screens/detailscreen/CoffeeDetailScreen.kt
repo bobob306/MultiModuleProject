@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -62,6 +62,7 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
+import com.bsdevs.uicomponents.StarRating
 import com.bsdevs.uicomponents.WheelInput
 import java.text.DecimalFormat
 import java.time.LocalDate
@@ -214,6 +215,7 @@ fun EspressoShotInputSheetContent(
     var weightInGrams by remember { mutableIntStateOf(initialDetails.weightInGrams) }
     var weightOutGrams by remember { mutableIntStateOf(initialDetails.weightOutGrams) }
     var shotDate by remember { mutableStateOf(initialDetails.date) }
+    var rating by remember { mutableIntStateOf(initialDetails.rating) }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -253,7 +255,9 @@ fun EspressoShotInputSheetContent(
                         weightOutGrams = weightOutGrams,
                         onWeightOutChange = { weightOutGrams = it },
                         shotDate = shotDate,
-                        onShotDateChange = { shotDate = it }
+                        onShotDateChange = { shotDate = it },
+                        rating = rating,
+                        onRatingChange = { rating = it }
                     )
                 }
 
@@ -296,7 +300,9 @@ fun EspressoShotInputSheetContent(
                     weightOutGrams = weightOutGrams,
                     onWeightOutChange = { weightOutGrams = it },
                     shotDate = shotDate,
-                    onShotDateChange = { shotDate = it }
+                    onShotDateChange = { shotDate = it },
+                    rating = rating,
+                    onRatingChange = { rating = it }
                 )
                 Spacer(modifier = Modifier.height(24.dp))
                 ActionButtons(
@@ -306,7 +312,8 @@ fun EspressoShotInputSheetContent(
                                 timeInSeconds = timeInSeconds,
                                 weightInGrams = weightInGrams,
                                 weightOutGrams = weightOutGrams,
-                                date = shotDate
+                                date = shotDate,
+                                rating = rating,
                             )
                         )
                     },
@@ -337,7 +344,9 @@ private fun InputFields(
     weightOutGrams: Int,
     onWeightOutChange: (Int) -> Unit,
     shotDate: LocalDate,
-    onShotDateChange: (LocalDate) -> Unit
+    onShotDateChange: (LocalDate) -> Unit,
+    rating: Int,
+    onRatingChange: (Int) -> Unit
 ) {
     val decimalFormat = remember { DecimalFormat("#.#") }
 
@@ -394,6 +403,8 @@ private fun InputFields(
         onDecrement = { onShotDateChange(shotDate.minusDays(1)) },
         onIncrement = { onShotDateChange(shotDate.plusDays(1)) }
     )
+    Spacer(modifier = Modifier.height(16.dp))
+    StarRating(initialRating = rating, onRatingChanged = { onRatingChange(it) })
 }
 
 @Composable
@@ -540,7 +551,11 @@ fun DateInputRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, modifier = modifier.padding(start = 16.dp), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = label,
+            modifier = modifier.padding(start = 16.dp),
+            style = MaterialTheme.typography.bodyLarge
+        )
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDecrement) {
                 Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Decrement $label")
@@ -626,11 +641,26 @@ fun ShotCard(shot: ShotDto) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "${shot.date}",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.wrapContentWidth()
-            )
+            Column {
+                Text(
+                    text = "${shot.date}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.wrapContentWidth()
+                )
+                shot.rating?.let {
+                    Row {
+                        Text(
+                            text = "${shot.rating}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = "Rating",
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
             Column(
                 modifier = Modifier
                     .padding(horizontal = 16.dp)
@@ -759,7 +789,8 @@ private fun CoffeeDetailContentPreview() {
                         originCountries = listOf("Ethiopia"),
                         tastingNotes = listOf("Floral", "Citrus", "Berry"),
                         beanPreparationMethod = listOf("Washed"),
-                        isDecaf = false
+                        isDecaf = false,
+                        rating = 3,
                     ),
                     null
                 ),
@@ -775,5 +806,6 @@ data class EspressoShotDetails(
     val timeInSeconds: Int = 27,
     val weightInGrams: Int = 175,
     val weightOutGrams: Int = 360,
+    val rating: Int = 0,
     @SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
 )

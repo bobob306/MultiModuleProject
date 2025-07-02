@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
             val otherPadding = WindowInsets.systemBars.asPaddingValues()
             val thisPadding = WindowInsets.safeContent.asPaddingValues()
             Scaffold(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier.fillMaxSize().padding(otherPadding),
                 snackbarHost = { SnackbarHost(snackbarHostState) },
             ) { it
                 MMPNavHost(

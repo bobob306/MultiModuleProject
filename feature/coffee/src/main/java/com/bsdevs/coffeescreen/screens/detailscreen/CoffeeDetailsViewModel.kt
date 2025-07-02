@@ -1,7 +1,6 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.os.Build
-import android.os.LocaleList
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -136,7 +135,8 @@ class CoffeeDetailsViewModel @Inject constructor(
                             date = formattedDate,
                             weightIn = intent.shot.weightInGrams.toDouble()/10,
                             weightOut = intent.shot.weightOutGrams.toDouble()/10,
-                            time = intent.shot.timeInSeconds
+                            time = intent.shot.timeInSeconds,
+                            rating = intent.shot.rating,
                         )
                         val currentUser = accountService.currentUserId
                         val database = FirebaseFirestore.getInstance().collection("coffeeUploads")
@@ -186,6 +186,7 @@ data class ShotDto(
     val weightIn: Double? = null,
     val weightOut: Double? = null,
     val time: Int? = null,
+    val rating: Int? = null,
 )
 
 sealed class CoffeeDetailsIntent {
