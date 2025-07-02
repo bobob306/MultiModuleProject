@@ -24,7 +24,7 @@ internal fun CoffeeDetailsFirstHalf(coffeeDto: CoffeeDto, isLandscape: Boolean) 
     Column(
         verticalArrangement = Arrangement.Top,
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
             .wrapContentHeight() // Ensure the height wraps content
         // Apply verticalScroll only to the Column, not the Card directly
         // to ensure the Card itself doesn't try to scroll if its content is fixed height.
@@ -33,7 +33,8 @@ internal fun CoffeeDetailsFirstHalf(coffeeDto: CoffeeDto, isLandscape: Boolean) 
         Text(
             text = coffeeDto.label ?: "Unnamed Coffee",
             style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 8.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         CoffeeDetailGrid(coffeeDto)
@@ -41,29 +42,9 @@ internal fun CoffeeDetailsFirstHalf(coffeeDto: CoffeeDto, isLandscape: Boolean) 
 }
 
 @Composable
-internal fun CoffeeDetailItem(label: String, value: String) {
-    Column(
-        modifier = Modifier
-            .padding(bottom = 4.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
 internal fun CoffeeDetailGrid(coffeeDto: CoffeeDto) {
     LazyVerticalGrid(
-        horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth(),
         columns = GridCells.Fixed(2),
@@ -103,5 +84,25 @@ internal fun CoffeeDetailGrid(coffeeDto: CoffeeDto) {
                 CoffeeDetailItem(label = "Decaf", value = if (it) "Yes" else "No")
             }
         }
+    }
+}
+
+@Composable
+internal fun CoffeeDetailItem(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .padding(start = 8.dp, bottom = 4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

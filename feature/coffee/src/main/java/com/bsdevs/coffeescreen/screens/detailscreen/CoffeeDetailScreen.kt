@@ -47,7 +47,6 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Composable
-@RequiresApi(Build.VERSION_CODES.O)
 fun CoffeeDetailScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
