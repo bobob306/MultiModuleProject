@@ -56,7 +56,6 @@ class CoffeeDetailsViewModel @Inject constructor(
         selectedCoffee = detailsRoute.coffeeId
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun loadDataFromNetwork() {
 
         val currentUser = accountService.currentUserId
@@ -109,7 +108,6 @@ class CoffeeDetailsViewModel @Inject constructor(
         )
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun processIntent(intent: CoffeeDetailsIntent) {
         when (intent) {
             CoffeeDetailsIntent.NavigateHome -> {
