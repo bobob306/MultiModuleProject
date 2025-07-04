@@ -1,7 +1,5 @@
 package com.bsdevs.coffeescreen.screens.inputscreen
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -76,7 +74,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CoffeeInputScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -115,7 +112,6 @@ fun CoffeeInputScreenRoute(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Preview(showBackground = true, device = "spec:parent=pixel_5,orientation=landscape")
 @Composable
@@ -139,7 +135,6 @@ internal fun ErrorScreen() {
     Text("Error")
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun CoffeeInputScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -168,16 +163,6 @@ private fun CoffeeInputScreenContent(
     }
 
     val scrollState = rememberScrollState()
-
-    val scrollProgress by remember(scrollState.value, scrollState.maxValue) {
-        derivedStateOf {
-            if (scrollState.maxValue > 0) {
-                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-            } else {
-                0f
-            }
-        }
-    }
 
     val isScrollable by remember(scrollState.maxValue) {
         derivedStateOf {
@@ -454,7 +439,6 @@ private fun RadioInputRow(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDate) -> Unit) {

@@ -1,18 +1,24 @@
 package com.bsdevs.coffeescreen.screens.detailscreen.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Star
@@ -23,14 +29,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
 
 @Composable
 internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotDto>?) {
+
     Box(
         modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
     ) {
@@ -42,15 +55,119 @@ internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<Shot
                 fontWeight = FontWeight.Bold
             )
             shotList?.let {
-                LazyVerticalGrid(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    columns = GridCells.Fixed(1)
-                )
-                {
-                    items(count = it.size, itemContent = { index ->
-                        ShotCard(shot = it[index])
+                val scrollState = rememberScrollState()
+                val isScrollable by remember(scrollState.maxValue) {
+                    derivedStateOf {
+                        scrollState.maxValue > 0
                     }
+                }
+                val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
+                    derivedStateOf {
+                        if (scrollState.maxValue > 0) {
+                            scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+                        } else {
+                            0f
+                        }
+                    }
+                }
+                val density = LocalDensity.current
+                val visiblePortionFraction by remember(
+                    scrollState.maxValue,
+                    scrollState.viewportSize
+                ) {
+                    derivedStateOf {
+                        if (scrollState.maxValue > 0 && scrollState.viewportSize > 0) {
+                            val viewportSize = scrollState.viewportSize.toFloat()
+                            val totalContentHeight = viewportSize + scrollState.maxValue.toFloat()
+                            (viewportSize / totalContentHeight).coerceIn(
+                                0.05f,
+                                1f
+                            ) // Ensure min 5% height for thumb
+                        } else {
+                            1f // If not scrollable or viewport not determined, thumb is full height (won't be shown anyway)
+                        }
+                    }
+                }
+                Box(
+                    contentAlignment = Alignment.CenterEnd,
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(
+                            horizontal = 4.dp,
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(scrollState)
+                            .padding(end = if (isScrollable) 16.dp else 0.dp),
                     )
+                    {
+                        it.forEach { shot ->
+                            ShotCard(shot = shot)
+                        }
+                    }
+                    if (isScrollable) {
+                        Box( // Container for the scrollbar
+                            contentAlignment = Alignment.CenterEnd,
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .padding(
+                                    8.dp,
+                                ) // Align with content padding
+                        ) {
+                            val scrollbarWidth = 8.dp
+                            val minThumbVisualHeightDp =
+                                20.dp // Minimum visible height for the thumb in Dp
+
+                            BoxWithConstraints { // Use BoxWithConstraints to get the actual track height
+                                val trackActualHeightDp = this.maxHeight
+                                val trackActualHeightPx =
+                                    with(density) { trackActualHeightDp.toPx() }
+
+                                // Calculate thumb height in Dp, ensuring it's not smaller than minThumbVisualHeightDp
+                                val thumbHeightDp = (trackActualHeightDp * visiblePortionFraction)
+                                    .coerceAtLeast(minThumbVisualHeightDp)
+                                val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
+
+
+                                // Calculate the total movable range for the top of the thumb
+                                val movableRangePx = trackActualHeightPx - thumbHeightPx
+
+                                // Calculate the thumb's Y offset based on how much is scrolled from the top
+                                val thumbOffsetYPx =
+                                    (movableRangePx * scrollProgressFromTop).coerceAtLeast(0f)
+                                val thumbOffsetYDp = with(density) { thumbOffsetYPx.toDp() }
+
+
+                                // Track
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .width(scrollbarWidth)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .clip(RoundedCornerShape(4.dp)) // Clip background
+                                ) {
+                                    // Thumb
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.TopStart) // Thumb starts at top of its calculated offset
+                                            .width(scrollbarWidth)
+                                            .height(thumbHeightDp) // Use calculated thumb height
+                                            .offset(y = thumbOffsetYDp) // Apply calculated offset
+                                            .background(
+                                                MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .clip(RoundedCornerShape(4.dp)) // Clip thumb itself
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
