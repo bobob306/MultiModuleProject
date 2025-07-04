@@ -2,8 +2,6 @@ package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Column
@@ -20,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
+import androidx.window.core.layout.WindowWidthSizeClass
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.components.CoffeeDetailsFirstHalf
 import com.bsdevs.coffeescreen.screens.detailscreen.components.EspressoShotInputSheetContent
@@ -94,7 +94,10 @@ fun CoffeeDetailContent(
     onIntent: (CoffeeDetailsIntent) -> Unit
 ) {
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val window = currentWindowAdaptiveInfo()
+    val isLandscape =
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true // Good for input forms
@@ -120,10 +123,14 @@ fun CoffeeDetailContent(
     }
     if (isLandscape) {
         // Landscape mode:
-        CoffeeDetailLandscapeMode(coffeeDetailsViewData, onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+        CoffeeDetailLandscapeMode(
+            coffeeDetailsViewData,
+            onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
     } else {
         // Portrait mode:
-        CoffeeDetailPortraitMode(coffeeDetailsViewData, onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+        CoffeeDetailPortraitMode(
+            coffeeDetailsViewData,
+            onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
     }
 }
 

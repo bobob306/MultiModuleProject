@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:authentication"))
     implementation(project(":core:common:uicomponents"))
+    implementation(libs.androidx.adaptive.android)
     debugImplementation(libs.androidx.compose.ui.ui.tooling)
 
     kapt(libs.hilt.compiler) // Use kapt for Hilt
