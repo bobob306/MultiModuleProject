@@ -30,6 +30,7 @@ import javax.inject.Inject
 data class CoffeeDetailsViewData(
     val coffeeDto: CoffeeDto,
     val shotList: List<ShotDto>?,
+    val showSheet: Boolean = false,
 )
 
 @HiltViewModel
@@ -116,6 +117,22 @@ class CoffeeDetailsViewModel @Inject constructor(
                     _navigationEvent.send(NavigationEvent.NavigateHome)
                 }
             }
+            is CoffeeDetailsIntent.ShowSheet -> {
+                _viewData.update {
+                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
+                    Result.Success(
+                        data.data.copy(showSheet = true)
+                    )
+                }
+            }
+            is CoffeeDetailsIntent.HideSheet -> {
+                _viewData.update {
+                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
+                    Result.Success(
+                        data.data.copy(showSheet = false)
+                    )
+                }
+            }
 
             is CoffeeDetailsIntent.SubmitShot -> {
                 viewModelScope.launch {
@@ -190,6 +207,8 @@ data class ShotDto(
 sealed class CoffeeDetailsIntent {
     object NavigateHome : CoffeeDetailsIntent()
     data class SubmitShot(val shot: EspressoShotDetails) : CoffeeDetailsIntent()
+    object ShowSheet: CoffeeDetailsIntent()
+    object HideSheet: CoffeeDetailsIntent()
 }
 
 sealed class NavigationEvent {

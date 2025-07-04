@@ -102,29 +102,29 @@ fun CoffeeDetailContent(
     var showSheet by remember { mutableStateOf(false) }
     var currentShotDetails by remember { mutableStateOf<EspressoShotDetails?>(null) }
 
-    if (showSheet) {
+    if (coffeeDetailsViewData.showSheet) {
         ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
+            onDismissRequest = { onIntent(CoffeeDetailsIntent.HideSheet) },
             sheetState = sheetState,
             // You can customize windowInsets, dragHandle, etc.
         ) {
             EspressoShotInputSheetContent(
                 onSave = { details ->
                     onIntent(CoffeeDetailsIntent.SubmitShot(details))
-                    showSheet = false // Dismiss the sheet
+                    onIntent(CoffeeDetailsIntent.HideSheet)
                 },
                 onDismiss = {
-                    showSheet = false
+                    onIntent(CoffeeDetailsIntent.HideSheet)
                 }
             )
         }
     }
     if (isLandscape) {
         // Landscape mode:
-        CoffeeDetailLandscapeMode(coffeeDetailsViewData, onAddShotClicked = { showSheet = true })
+        CoffeeDetailLandscapeMode(coffeeDetailsViewData, onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
     } else {
         // Portrait mode:
-        CoffeeDetailPortraitMode(coffeeDetailsViewData, onAddShotClicked = { showSheet = true })
+        CoffeeDetailPortraitMode(coffeeDetailsViewData, onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
     }
 }
 
