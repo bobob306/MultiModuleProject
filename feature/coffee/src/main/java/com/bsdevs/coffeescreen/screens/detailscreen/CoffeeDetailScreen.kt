@@ -111,7 +111,6 @@ fun CoffeeDetailContent(
             EspressoShotInputSheetContent(
                 onSave = { details ->
                     onIntent(CoffeeDetailsIntent.SubmitShot(details))
-                    onIntent(CoffeeDetailsIntent.HideSheet)
                 },
                 onDismiss = {
                     onIntent(CoffeeDetailsIntent.HideSheet)

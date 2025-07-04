@@ -178,6 +178,7 @@ class CoffeeDetailsViewModel @Inject constructor(
                                 data = CoffeeDetailsViewData(
                                     coffeeDto = coffeeLabel.data.coffeeDto,
                                     shotList = sortedFormattedShots,
+                                    showSheet = false
                                 ),
                             )
                         }

@@ -82,94 +82,156 @@ internal fun EspressoShotInputSheetContent(
         Spacer(modifier = Modifier.height(16.dp)) // Space between header and the rest of the content
 
         if (isLandscape) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp), // Horizontal padding for the content row
-                verticalAlignment = Alignment.Top
-            ) {
-                // Input Fields Column
-                Column(
-                    modifier = Modifier
-                        .weight(1f) // Takes available space
-                        .padding(end = 8.dp), // Padding between inputs and buttons
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    InputFields(
-                        timeInSeconds = timeInSeconds,
-                        onTimeChange = { timeInSeconds = it },
-                        weightInGrams = weightInGrams,
-                        onWeightInChange = { weightInGrams = it },
-                        weightOutGrams = weightOutGrams,
-                        onWeightOutChange = { weightOutGrams = it },
-                        shotDate = shotDate,
-                        onShotDateChange = { shotDate = it },
-                        rating = rating,
-                        onRatingChange = { rating = it }
-                    )
-                }
-
-                // Action Buttons Column
-                Column(
-                    modifier = Modifier
-                        .padding(start = 8.dp) // Padding between inputs and buttons
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    ActionButtons(
-                        onSave = {
-                            onSave(
-                                EspressoShotDetails(
-                                    timeInSeconds = timeInSeconds,
-                                    weightInGrams = weightInGrams,
-                                    weightOutGrams = weightOutGrams,
-                                    date = shotDate
-                                )
-                            )
-                        },
-                        onDismiss = onDismiss,
-                        isLandscape = true
-                    )
-                }
-            }
+            BottomSheetLandscapeMode(
+                timeInSeconds = timeInSeconds,
+                onTimeChange = { timeInSeconds = it },
+                weightInGrams = weightInGrams,
+                onWeightInChange = { weightInGrams = it },
+                weightOutGrams = weightOutGrams,
+                onWeightOutChange = { weightOutGrams = it },
+                shotDate = shotDate,
+                onShotDateChange = { shotDate = it },
+                rating = rating,
+                onRatingChange = { rating = it },
+                onSave = onSave,
+                onDismiss = onDismiss,
+            )
         } else { // Portrait Mode
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp) // Horizontal padding for the content column
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                InputFields(
-                    timeInSeconds = timeInSeconds,
-                    onTimeChange = { timeInSeconds = it },
-                    weightInGrams = weightInGrams,
-                    onWeightInChange = { weightInGrams = it },
-                    weightOutGrams = weightOutGrams,
-                    onWeightOutChange = { weightOutGrams = it },
-                    shotDate = shotDate,
-                    onShotDateChange = { shotDate = it },
-                    rating = rating,
-                    onRatingChange = { rating = it }
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                ActionButtons(
-                    onSave = {
-                        onSave(
-                            EspressoShotDetails(
-                                timeInSeconds = timeInSeconds,
-                                weightInGrams = weightInGrams,
-                                weightOutGrams = weightOutGrams,
-                                date = shotDate,
-                                rating = rating,
-                            )
-                        )
-                    },
-                    onDismiss = onDismiss,
-                    isLandscape = false
-                )
-            }
+            BottomSheetPortraitMode(
+                timeInSeconds = timeInSeconds,
+                onTimeChange = { timeInSeconds = it },
+                weightInGrams = weightInGrams,
+                onWeightInChange = { weightInGrams = it },
+                weightOutGrams = weightOutGrams,
+                onWeightOutChange = { weightOutGrams = it },
+                shotDate = shotDate,
+                onShotDateChange = { shotDate = it },
+                rating = rating,
+                onRatingChange = { rating = it },
+                onSave = onSave,
+                onDismiss = onDismiss,
+            )
         }
+    }
+}
+
+@Composable
+private fun BottomSheetLandscapeMode(
+    timeInSeconds: Int,
+    onTimeChange: (Int) -> Unit,
+    weightInGrams: Int,
+    onWeightInChange: (Int) -> Unit,
+    weightOutGrams: Int,
+    onWeightOutChange: (Int) -> Unit,
+    shotDate: LocalDate,
+    onShotDateChange: (LocalDate) -> Unit,
+    rating: Int,
+    onRatingChange: (Int) -> Unit,
+    onSave: (EspressoShotDetails) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp), // Horizontal padding for the content row
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Input Fields Column
+        Column(
+            modifier = Modifier
+                .weight(1f) // Takes available space
+                .padding(end = 8.dp), // Padding between inputs and buttons
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            InputFields(
+                timeInSeconds = timeInSeconds,
+                onTimeChange = onTimeChange,
+                weightInGrams = weightInGrams,
+                onWeightInChange = onWeightInChange,
+                weightOutGrams = weightOutGrams,
+                onWeightOutChange = onWeightOutChange,
+                shotDate = shotDate,
+                onShotDateChange = onShotDateChange,
+                rating = rating,
+                onRatingChange = onRatingChange,
+            )
+        }
+
+        // Action Buttons Column
+        Column(
+            modifier = Modifier
+                .padding(start = 8.dp) // Padding between inputs and buttons
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            ActionButtons(
+                onSave = {
+                    onSave(
+                        EspressoShotDetails(
+                            timeInSeconds = timeInSeconds,
+                            weightInGrams = weightInGrams,
+                            weightOutGrams = weightOutGrams,
+                            date = shotDate
+                        )
+                    )
+                },
+                onDismiss = onDismiss,
+                isLandscape = true
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomSheetPortraitMode(
+    timeInSeconds: Int,
+    onTimeChange: (Int) -> Unit,
+    weightInGrams: Int,
+    onWeightInChange: (Int) -> Unit,
+    weightOutGrams: Int,
+    onWeightOutChange: (Int) -> Unit,
+    shotDate: LocalDate,
+    onShotDateChange: (LocalDate) -> Unit,
+    rating: Int,
+    onRatingChange: (Int) -> Unit,
+    onSave: (EspressoShotDetails) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 16.dp) // Horizontal padding for the content column
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        InputFields(
+            timeInSeconds = timeInSeconds,
+            onTimeChange = onTimeChange,
+            weightInGrams = weightInGrams,
+            onWeightInChange = onWeightInChange,
+            weightOutGrams = weightOutGrams,
+            onWeightOutChange = onWeightOutChange,
+            shotDate = shotDate,
+            onShotDateChange = onShotDateChange,
+            rating = rating,
+            onRatingChange = onRatingChange,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        ActionButtons(
+            onSave = {
+                onSave(
+                    EspressoShotDetails(
+                        timeInSeconds = timeInSeconds,
+                        weightInGrams = weightInGrams,
+                        weightOutGrams = weightOutGrams,
+                        date = shotDate,
+                        rating = rating,
+                    )
+                )
+            },
+            onDismiss = onDismiss,
+            isLandscape = false
+        )
     }
 }
 
