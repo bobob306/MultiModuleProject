@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,11 +59,11 @@ internal fun EspressoShotInputSheetContent(
     onSave: (EspressoShotDetails) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var timeInSeconds by remember { mutableIntStateOf(initialDetails.timeInSeconds) }
-    var weightInGrams by remember { mutableIntStateOf(initialDetails.weightInGrams) }
-    var weightOutGrams by remember { mutableIntStateOf(initialDetails.weightOutGrams) }
-    var shotDate by remember { mutableStateOf(initialDetails.date) }
-    var rating by remember { mutableIntStateOf(initialDetails.rating) }
+    var timeInSeconds by rememberSaveable { mutableIntStateOf(initialDetails.timeInSeconds) }
+    var weightInGrams by rememberSaveable { mutableIntStateOf(initialDetails.weightInGrams) }
+    var weightOutGrams by rememberSaveable { mutableIntStateOf(initialDetails.weightOutGrams) }
+    var shotDate by rememberSaveable { mutableStateOf(initialDetails.date) }
+    var rating by rememberSaveable { mutableIntStateOf(initialDetails.rating) }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
