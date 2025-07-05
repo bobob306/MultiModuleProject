@@ -77,7 +77,7 @@ fun HorizontalWheelPicker(
     // Adjust initialSelectedItem to be 0-based index for LazyListState
     val initialScrollIndex = (initialSelectedItem - startNumber)
     // Correctly initialize scrollState with the 0-based index
-    var currentSelectedItem by remember { mutableStateOf(initialSelectedItem) }
+    var currentSelectedItem by remember { mutableIntStateOf(initialSelectedItem) }
     val scrollState = rememberLazyListState(initialFirstVisibleItemIndex = initialScrollIndex)
     val visibleItemsInfo by remember { derivedStateOf { scrollState.layoutInfo.visibleItemsInfo } }
     val firstVisibleItemIndex = visibleItemsInfo.firstOrNull()?.index ?: -1
@@ -87,10 +87,8 @@ fun HorizontalWheelPicker(
     val middleIndex = firstVisibleItemIndex + totalVisibleItems / 2
     val bufferIndices = totalVisibleItems / 2
 
-    LaunchedEffect(scrollState.isScrollInProgress, currentSelectedItem) {
-        if (!scrollState.isScrollInProgress) {
-            onItemSelected(currentSelectedItem)
-        }
+    LaunchedEffect(initialScrollIndex, currentSelectedItem) {
+        onItemSelected(currentSelectedItem)
     }
     Row(modifier = modifier.fillMaxWidth()) {
         IconButton(

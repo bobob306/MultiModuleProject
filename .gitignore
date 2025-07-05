@@ -423,3 +423,7 @@ local.properties
 /feature/homescreen/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i
 /feature/homescreen/build/kotlin/compileDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len
 /feature/homescreen/build/kotlin/kaptGenerateStubsDebugKotlin/cacheable/caches-jvm/jvm/kotlin/supertypes.tab_i.len
+/.idea
+.idea/deploymentTargetSelector.xml
+.idea/deploymentTargetSelector.xml
+.idea/deploymentTargetSelector.xml

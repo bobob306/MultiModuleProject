@@ -22,6 +22,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
+import androidx.window.core.layout.WindowWidthSizeClass
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
@@ -96,7 +98,10 @@ fun CoffeeHomeScreenContent(
         .filterIsInstance<CoffeeHomeScreenViewDatas.CoffeeList>()
         .firstOrNull()?.coffeeList
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val window = currentWindowAdaptiveInfo()
+    val isLandscape =
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column {
             Text("Coffee Home Screen")

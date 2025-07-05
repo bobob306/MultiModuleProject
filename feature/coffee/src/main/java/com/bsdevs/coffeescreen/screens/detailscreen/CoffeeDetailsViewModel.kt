@@ -1,7 +1,6 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.os.Build
-import android.os.LocaleList
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -31,6 +30,7 @@ import javax.inject.Inject
 data class CoffeeDetailsViewData(
     val coffeeDto: CoffeeDto,
     val shotList: List<ShotDto>?,
+    val showSheet: Boolean = false,
 )
 
 @HiltViewModel
@@ -57,7 +57,6 @@ class CoffeeDetailsViewModel @Inject constructor(
         selectedCoffee = detailsRoute.coffeeId
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private suspend fun loadDataFromNetwork() {
 
         val currentUser = accountService.currentUserId
@@ -110,13 +109,28 @@ class CoffeeDetailsViewModel @Inject constructor(
         )
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun processIntent(intent: CoffeeDetailsIntent) {
         when (intent) {
             CoffeeDetailsIntent.NavigateHome -> {
                 // Handle navigation to the home screen
                 viewModelScope.launch {
                     _navigationEvent.send(NavigationEvent.NavigateHome)
+                }
+            }
+            is CoffeeDetailsIntent.ShowSheet -> {
+                _viewData.update {
+                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
+                    Result.Success(
+                        data.data.copy(showSheet = true)
+                    )
+                }
+            }
+            is CoffeeDetailsIntent.HideSheet -> {
+                _viewData.update {
+                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
+                    Result.Success(
+                        data.data.copy(showSheet = false)
+                    )
                 }
             }
 
@@ -136,7 +150,8 @@ class CoffeeDetailsViewModel @Inject constructor(
                             date = formattedDate,
                             weightIn = intent.shot.weightInGrams.toDouble()/10,
                             weightOut = intent.shot.weightOutGrams.toDouble()/10,
-                            time = intent.shot.timeInSeconds
+                            time = intent.shot.timeInSeconds,
+                            rating = intent.shot.rating,
                         )
                         val currentUser = accountService.currentUserId
                         val database = FirebaseFirestore.getInstance().collection("coffeeUploads")
@@ -163,6 +178,7 @@ class CoffeeDetailsViewModel @Inject constructor(
                                 data = CoffeeDetailsViewData(
                                     coffeeDto = coffeeLabel.data.coffeeDto,
                                     shotList = sortedFormattedShots,
+                                    showSheet = false
                                 ),
                             )
                         }
@@ -186,11 +202,14 @@ data class ShotDto(
     val weightIn: Double? = null,
     val weightOut: Double? = null,
     val time: Int? = null,
+    val rating: Int? = null,
 )
 
 sealed class CoffeeDetailsIntent {
     object NavigateHome : CoffeeDetailsIntent()
     data class SubmitShot(val shot: EspressoShotDetails) : CoffeeDetailsIntent()
+    object ShowSheet: CoffeeDetailsIntent()
+    object HideSheet: CoffeeDetailsIntent()
 }
 
 sealed class NavigationEvent {

@@ -25,4 +25,5 @@ data class CoffeeDto(
     val label: String? = null,
     val userId: String? = null,
     val id: String? =  null,
+    val rating: Int? = null,
 ) : Parcelable
