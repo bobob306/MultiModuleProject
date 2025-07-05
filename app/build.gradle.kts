@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.internal.Kapt3GradleSubplugin.Companion.findKaptConfiguration
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -24,8 +22,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("SIGN_STORE_FILE") ?: project.findProperty("storeFile") ?: "keystore.jks")
+            storePassword = System.getenv("SIGN_STORE_PASSWORD") ?: project.findProperty("storePassword") as String?
+            keyAlias = System.getenv("SIGN_KEY_ALIAS") ?: project.findProperty("keyAlias") as String?
+            keyPassword = System.getenv("SIGN_KEY_PASSWORD") ?: project.findProperty("keyPassword") as String?
+        }
+    }
+
     buildTypes {
+
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
