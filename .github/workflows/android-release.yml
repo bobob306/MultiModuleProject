@@ -23,15 +23,14 @@ jobs:
     - name: Build Release APK
       run: ./gradlew assembleRelease
 
-    - name: Get Latest Release Tag
+    - name: Get Latest Tag or Use Default
       id: latest_tag
       run: |
         latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
-          if [[ -z "$latest_tag" ]]; then
-          echo "tag=v0.0.6" >> $GITHUB_OUTPUT
-        else
-           echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+        if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          latest_tag="v0.0.6"
         fi
+        echo "tag=$latest_tag" >> $GITHUB_OUTPUT
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
@@ -43,6 +42,9 @@ jobs:
         patch=$((patch + 1))
         new_tag="v${major}.${minor}.${patch}"
         echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+    - name: List APK files
+      run: ls -lah app/build/outputs/apk/release/
 
     - name: Create GitHub Release
       id: create_release
