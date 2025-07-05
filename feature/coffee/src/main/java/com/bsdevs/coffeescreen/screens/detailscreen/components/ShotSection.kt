@@ -1,5 +1,6 @@
 package com.bsdevs.coffeescreen.screens.detailscreen.components
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,33 +62,7 @@ internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<Shot
                         scrollState.maxValue > 0
                     }
                 }
-                val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
-                    derivedStateOf {
-                        if (scrollState.maxValue > 0) {
-                            scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-                        } else {
-                            0f
-                        }
-                    }
-                }
-                val density = LocalDensity.current
-                val visiblePortionFraction by remember(
-                    scrollState.maxValue,
-                    scrollState.viewportSize
-                ) {
-                    derivedStateOf {
-                        if (scrollState.maxValue > 0 && scrollState.viewportSize > 0) {
-                            val viewportSize = scrollState.viewportSize.toFloat()
-                            val totalContentHeight = viewportSize + scrollState.maxValue.toFloat()
-                            (viewportSize / totalContentHeight).coerceIn(
-                                0.05f,
-                                1f
-                            ) // Ensure min 5% height for thumb
-                        } else {
-                            1f // If not scrollable or viewport not determined, thumb is full height (won't be shown anyway)
-                        }
-                    }
-                }
+
                 Box(
                     contentAlignment = Alignment.CenterEnd,
                     modifier = Modifier
@@ -108,65 +83,7 @@ internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<Shot
                         }
                     }
                     if (isScrollable) {
-                        Box( // Container for the scrollbar
-                            contentAlignment = Alignment.CenterEnd,
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(
-                                    8.dp,
-                                ) // Align with content padding
-                        ) {
-                            val scrollbarWidth = 8.dp
-                            val minThumbVisualHeightDp =
-                                20.dp // Minimum visible height for the thumb in Dp
-
-                            BoxWithConstraints { // Use BoxWithConstraints to get the actual track height
-                                val trackActualHeightDp = this.maxHeight
-                                val trackActualHeightPx =
-                                    with(density) { trackActualHeightDp.toPx() }
-
-                                // Calculate thumb height in Dp, ensuring it's not smaller than minThumbVisualHeightDp
-                                val thumbHeightDp = (trackActualHeightDp * visiblePortionFraction)
-                                    .coerceAtLeast(minThumbVisualHeightDp)
-                                val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
-
-
-                                // Calculate the total movable range for the top of the thumb
-                                val movableRangePx = trackActualHeightPx - thumbHeightPx
-
-                                // Calculate the thumb's Y offset based on how much is scrolled from the top
-                                val thumbOffsetYPx =
-                                    (movableRangePx * scrollProgressFromTop).coerceAtLeast(0f)
-                                val thumbOffsetYDp = with(density) { thumbOffsetYPx.toDp() }
-
-
-                                // Track
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(scrollbarWidth)
-                                        .background(
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                        .clip(RoundedCornerShape(4.dp)) // Clip background
-                                ) {
-                                    // Thumb
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopStart) // Thumb starts at top of its calculated offset
-                                            .width(scrollbarWidth)
-                                            .height(thumbHeightDp) // Use calculated thumb height
-                                            .offset(y = thumbOffsetYDp) // Apply calculated offset
-                                            .background(
-                                                MaterialTheme.colorScheme.primary,
-                                                shape = RoundedCornerShape(4.dp)
-                                            )
-                                            .clip(RoundedCornerShape(4.dp)) // Clip thumb itself
-                                    )
-                                }
-                            }
-                        }
+                        ScrollBar(scrollState)
                     }
                 }
             }
@@ -179,6 +96,96 @@ internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<Shot
             Icon(
                 Icons.Default.AddCircle, contentDescription = "Add New Shot", Modifier.size(32.dp)
             )
+        }
+    }
+}
+
+@Composable
+internal fun ScrollBar(scrollState: ScrollState) {
+    val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
+        derivedStateOf {
+            if (scrollState.maxValue > 0) {
+                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+            } else {
+                0f
+            }
+        }
+    }
+    val density = LocalDensity.current
+    val visiblePortionFraction by remember(
+        scrollState.maxValue,
+        scrollState.viewportSize
+    ) {
+        derivedStateOf {
+            if (scrollState.maxValue > 0 && scrollState.viewportSize > 0) {
+                val viewportSize = scrollState.viewportSize.toFloat()
+                val totalContentHeight = viewportSize + scrollState.maxValue.toFloat()
+                (viewportSize / totalContentHeight).coerceIn(
+                    0.05f,
+                    1f
+                ) // Ensure min 5% height for thumb
+            } else {
+                1f // If not scrollable or viewport not determined, thumb is full height (won't be shown anyway)
+            }
+        }
+    }
+    Box( // Container for the scrollbar
+        contentAlignment = Alignment.CenterEnd,
+        modifier = Modifier
+            .fillMaxHeight()
+            .padding(
+                8.dp,
+            ) // Align with content padding
+    ) {
+        val scrollbarWidth = 8.dp
+        val minThumbVisualHeightDp =
+            20.dp // Minimum visible height for the thumb in Dp
+
+        BoxWithConstraints { // Use BoxWithConstraints to get the actual track height
+            val trackActualHeightDp = this.maxHeight
+            val trackActualHeightPx =
+                with(density) { trackActualHeightDp.toPx() }
+
+            // Calculate thumb height in Dp, ensuring it's not smaller than minThumbVisualHeightDp
+            val thumbHeightDp = (trackActualHeightDp * visiblePortionFraction)
+                .coerceAtLeast(minThumbVisualHeightDp)
+            val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
+
+
+            // Calculate the total movable range for the top of the thumb
+            val movableRangePx = trackActualHeightPx - thumbHeightPx
+
+            // Calculate the thumb's Y offset based on how much is scrolled from the top
+            val thumbOffsetYPx =
+                (movableRangePx * scrollProgressFromTop).coerceAtLeast(0f)
+            val thumbOffsetYDp = with(density) { thumbOffsetYPx.toDp() }
+
+
+            // Track
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(scrollbarWidth)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .clip(RoundedCornerShape(4.dp)) // Clip background
+            ) {
+                // Thumb
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart) // Thumb starts at top of its calculated offset
+                        .width(scrollbarWidth)
+                        .height(thumbHeightDp) // Use calculated thumb height
+                        .offset(y = thumbOffsetYDp) // Apply calculated offset
+                        .background(
+                            MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .clip(RoundedCornerShape(4.dp)) // Clip thumb itself
+                )
+            }
         }
     }
 }
