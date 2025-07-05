@@ -36,7 +36,7 @@ jobs:
       run: |
         latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
         if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          latest_tag="v0.0.8"
+          latest_tag="v0.0.9"
         fi
         echo "tag=$latest_tag" >> $GITHUB_OUTPUT
       env:
@@ -62,6 +62,6 @@ jobs:
         name: Release ${{ steps.bump.outputs.new_tag }}
         draft: false
         prerelease: false
-        files: app/build/outputs/apk/release/app-release.apk
+        files: app/build/outputs/apk/release/app-release-unsigned.apk
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
