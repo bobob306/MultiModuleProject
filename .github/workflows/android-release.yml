@@ -7,61 +7,66 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Ensure APK exists (create dummy if missing)
-      run: |
-        if [ ! -f app/build/outputs/apk/release/app-release.apk ]; then
-          echo "WARNING: APK not found. Creating dummy file."
-          mkdir -p app/build/outputs/apk/release
-          echo "This is a dummy APK." > app/build/outputs/apk/release/app-release.apk
-        fi
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      # Decode keystore from GitHub secret
+      - name: Decode Keystore
+        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
 
-    - name: Build Release APK
-      run: ./gradlew assembleRelease
+      # Build signed release APK with env vars for signing config
+      - name: Build Signed Release APK
+        env:
+          SIGN_STORE_FILE: /tmp/release.keystore
+          SIGN_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          SIGN_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGN_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
 
-    - name: Get Latest Tag or Use Default
-      id: latest_tag
-      run: |
-        latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
-        if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          latest_tag="v0.0.9"
-        fi
-        echo "tag=$latest_tag" >> $GITHUB_OUTPUT
-      env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      - name: List APK files (debugging)
+        run: ls -lah app/build/outputs/apk/release/
 
-    - name: Bump Patch Version
-      id: bump
-      run: |
-        tag=${{ steps.latest_tag.outputs.tag }}
-        IFS='.' read -r major minor patch <<<"${tag#v}"
-        patch=$((patch + 1))
-        new_tag="v${major}.${minor}.${patch}"
-        echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+      # Get latest release tag or use default
+      - name: Get Latest Tag or Use Default
+        id: latest_tag
+        run: |
+          latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
+          if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            latest_tag="v0.0.6"
+          fi
+          echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: List APK files
-      run: ls -lah app/build/outputs/apk/release/
+      # Bump patch version for new tag
+      - name: Bump Patch Version
+        id: bump
+        run: |
+          tag=${{ steps.latest_tag.outputs.tag }}
+          IFS='.' read -r major minor patch <<<"${tag#v}"
+          patch=$((patch + 1))
+          new_tag="v${major}.${minor}.${patch}"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
 
-    - name: Create GitHub Release
-      id: create_release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ steps.bump.outputs.new_tag }}
-        name: Release ${{ steps.bump.outputs.new_tag }}
-        draft: false
-        prerelease: false
-        files: app/build/outputs/apk/release/app-release-unsigned.apk
-      env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+      # Create GitHub Release and upload APK
+      - name: Upload Release APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.new_tag }}
+          name: Release ${{ steps.bump.outputs.new_tag }}
+          draft: false
+          prerelease: false
+          files: app/build/outputs/apk/release/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
