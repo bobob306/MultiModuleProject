@@ -24,7 +24,7 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(System.getenv("SIGN_STORE_FILE") ?: project.findProperty("storeFile") ?: "keystore.jks")
+            storeFile = file(System.getenv("SIGN_STORE_FILE") ?: project.findProperty("storeFile") ?: "defaultKeystore")
             storePassword = System.getenv("SIGN_STORE_PASSWORD") ?: project.findProperty("storePassword") as String?
             keyAlias = System.getenv("SIGN_KEY_ALIAS") ?: project.findProperty("keyAlias") as String?
             keyPassword = System.getenv("SIGN_KEY_PASSWORD") ?: project.findProperty("keyPassword") as String?
