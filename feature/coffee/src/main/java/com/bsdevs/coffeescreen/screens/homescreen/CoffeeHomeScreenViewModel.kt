@@ -39,9 +39,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
     val viewData: StateFlow<Result<CoffeeHomeScreenViewData>> = _viewData.onStart {
-            runBlocking {
-                start()
-            }
+            start()
             loadDataFromNetwork()
         }.stateIn(
             scope = viewModelScope,
