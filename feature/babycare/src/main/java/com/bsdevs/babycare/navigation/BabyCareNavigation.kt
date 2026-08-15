@@ -32,14 +32,22 @@ fun NavController.navigateToFeeding(navOptions: NavOptions? = null) =
     navigate(route = FeedingRoute, navOptions = navOptions)
 
 fun NavGraphBuilder.babyCareSection(
+    navController: NavController,
     onShowSnackBar: suspend (String, String?) -> Unit,
 ) {
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
-            BabyCareHomeScreenRoute(onShowSnackBar)
+            BabyCareHomeScreenRoute(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateToNappyChange = { navController.navigateToNappyChange() },
+                onNavigateToFeeding = { navController.navigateToFeeding() }
+            )
         }
         composable<NappyChangeRoute> {
-            NappyChangeScreenRoute(onShowSnackBar)
+            NappyChangeScreenRoute(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable<FeedingRoute> {
             FeedingScreenRoute(onShowSnackBar)

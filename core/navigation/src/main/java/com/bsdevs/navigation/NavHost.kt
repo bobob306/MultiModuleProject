@@ -52,6 +52,7 @@ fun MMPNavHost(
             onNavigateToSignIn = navController::navigateToLoginScreen,
         )
         babyCareSection(
+            navController = navController,
             onShowSnackBar = onShowSnackBar
         )
     }
