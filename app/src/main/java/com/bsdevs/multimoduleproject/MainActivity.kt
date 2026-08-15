@@ -1,5 +1,6 @@
 package com.bsdevs.multimoduleproject
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -52,7 +53,6 @@ class MainActivity : ComponentActivity() {
             val navController = rememberNavController()
             val snackbarHostState = remember { SnackbarHostState() }
             val scope = rememberCoroutineScope()
-            val otherPadding = WindowInsets.systemBars.asPaddingValues()
 
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = navBackStackEntry?.destination
@@ -62,14 +62,14 @@ class MainActivity : ComponentActivity() {
             } == false
 
             Scaffold(
-                modifier = Modifier.fillMaxSize().padding(otherPadding),
+                modifier = Modifier.fillMaxSize(),
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 bottomBar = {
                     if (shouldShowBottomBar) {
                         MMPBottomBar(navController)
                     }
                 }
-            ) { innerPadding ->
+            ) {
                 MMPNavHost(
                     navController = navController,
                     onShowSnackBar = { message, action ->
@@ -81,7 +81,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     },
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(it),
                 )
             }
         }
