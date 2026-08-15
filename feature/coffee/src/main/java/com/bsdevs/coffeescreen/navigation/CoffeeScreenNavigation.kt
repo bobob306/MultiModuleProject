@@ -43,7 +43,6 @@ fun NavController.navigateToCoffeeDetail(coffeeId: String, navOptions: NavOption
 //        navOptions = navOptions,
 //    )
 
-@RequiresApi(Build.VERSION_CODES.O)
 fun NavGraphBuilder.coffeeScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeInput: () -> Unit,

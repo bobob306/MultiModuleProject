@@ -1,14 +1,13 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.dagger.hilt.android")
-    id("kotlin-kapt") // Use kapt for Hilt
+    alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.bsdevs.renderer"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
@@ -30,14 +29,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
     }
 }
 
@@ -55,7 +48,7 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.ui.tooling)
 
-    kapt(libs.hilt.compiler) // Use kapt for Hilt
+    ksp(libs.hilt.compiler) // Use KSP for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.hilt.android) // Hilt compiler
 

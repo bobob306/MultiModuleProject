@@ -20,12 +20,14 @@ fun NavController.navigateToHome(navOptions: NavOptions) =
 fun NavGraphBuilder.homeScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffee: () -> Unit,
-    ) {
+    onNavigateToBabyCare: () -> Unit,
+) {
     navigation<HomeScreenBaseRoute>(startDestination = HomeScreenRoute) {
         composable<HomeScreenRoute> {
             HomeScreenRoute(
                 onShowSnackBar,
                 onNavigateToCoffee,
+                onNavigateToBabyCare,
             )
         }
     }

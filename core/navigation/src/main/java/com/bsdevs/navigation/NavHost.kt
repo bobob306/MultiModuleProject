@@ -1,11 +1,11 @@
 package com.bsdevs.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
+import com.bsdevs.babycare.navigation.babyCareSection
+import com.bsdevs.babycare.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
@@ -17,20 +17,21 @@ import com.bsdevs.login.loginScreenSection
 import com.bsdevs.login.navigateToLoginScreen
 import com.bsdevs.login.navigateToRegisterScreen
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MMPNavHost(
+    navController: NavHostController,
     onShowSnackBar: suspend (String, String?) -> Unit,
     modifier: Modifier,
 ) {
-    val navController = rememberNavController()
     NavHost(
         navController = navController,
         startDestination = SplashScreenBaseRoute,
+        modifier = modifier
     ) {
         homeScreenSection(
-            onShowSnackBar,
-            navController::navigateToCoffeeHome,
+            onShowSnackBar = onShowSnackBar,
+            onNavigateToCoffee = navController::navigateToCoffeeHome,
+            onNavigateToBabyCare = navController::navigateToBabyCareHome,
         )
         coffeeScreenSection(
             onShowSnackBar,
@@ -49,6 +50,9 @@ fun MMPNavHost(
             onShowSnackBar,
             onNavigateToCoffeeHome = navController::navigateToCoffeeHome,
             onNavigateToSignIn = navController::navigateToLoginScreen,
+        )
+        babyCareSection(
+            onShowSnackBar = onShowSnackBar
         )
     }
 }

@@ -1,10 +1,9 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.dagger.hilt.android")
-    id("kotlin-kapt") // Use kapt for Hilt
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0" // Apply the plugin
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization) // Apply the plugin
     id("kotlin-parcelize")
 }
 
@@ -32,14 +31,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
     }
 }
 
@@ -50,7 +43,7 @@ dependencies {
     implementation(project(":core:common:uicomponents"))
     debugImplementation(libs.androidx.compose.ui.ui.tooling)
 
-    kapt(libs.hilt.compiler) // Use kapt for Hilt
+    ksp(libs.hilt.compiler) // Use KSP for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.androidx.navigation.compose) // Or latest
     implementation(libs.androidx.lifecycle.runtime.ktx) // Or latest

@@ -1,8 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
     id("com.google.dagger.hilt.android")
-    id("kotlin-kapt") // Use kapt for Hilt
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -30,9 +29,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
     }
@@ -47,12 +43,13 @@ dependencies {
     implementation(project(":feature:coffee"))
     implementation(project(":feature:login"))
     implementation(project(":feature:splashscreen"))
+    implementation(project(":feature:babycare"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(libs.hilt.android) // Or latest
-    kapt(libs.hilt.compiler) // Use kapt for Hilt
+    ksp(libs.hilt.compiler) // Use KSP for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
 
     implementation(libs.androidx.navigation.compose) // Or latest

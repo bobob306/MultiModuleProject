@@ -6,7 +6,6 @@
       <GradleProjectSettings>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -20,10 +19,10 @@
             <option value="$PROJECT_DIR$/core/network" />
             <option value="$PROJECT_DIR$/core/renderer" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/babycare" />
             <option value="$PROJECT_DIR$/feature/coffee" />
             <option value="$PROJECT_DIR$/feature/home" />
             <option value="$PROJECT_DIR$/feature/login" />
-            <option value="$PROJECT_DIR$/feature/logins" />
             <option value="$PROJECT_DIR$/feature/priceinput" />
             <option value="$PROJECT_DIR$/feature/splashscreen" />
           </set>

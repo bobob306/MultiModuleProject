@@ -1,16 +1,15 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("kotlin-kapt") // Kapt for Hilt annotation processing
+    alias(libs.plugins.ksp)
     id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0" // Apply the plugin
+    alias(libs.plugins.kotlin.serialization) // Apply the plugin
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.bsdevs.multimoduleproject"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.bsdevs.multimoduleproject"
@@ -46,14 +45,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
+//    kotlinOptions {
+//        jvmTarget = "11"
+//    }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
     }
     packaging {
         resources.excludes.add("META-INF/gradle/incremental.annotation.processors")
@@ -70,8 +66,13 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose)
     implementation(project(":core:navigation"))
     implementation(project(":feature:home"))
+    implementation(project(":feature:babycare"))
+    implementation(project(":feature:coffee"))
+    implementation(project(":feature:splashscreen"))
+    implementation(project(":feature:login"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -86,8 +87,7 @@ dependencies {
 
     implementation(libs.hilt.android) // Hilt
     implementation(libs.androidx.hilt.navigation.compose) // Hilt navigation
-    implementation(libs.hilt.android.compiler) // Hilt compiler
-    kapt(libs.hilt.compiler) // Hilt compiler
+    ksp(libs.hilt.compiler) // Hilt compiler
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)

@@ -2,8 +2,12 @@ package com.bsdevs.homescreen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +33,7 @@ import com.bsdevs.renderer.RenderUI
 fun HomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffee: () -> Unit,
+    onNavigateToBabyCare: () -> Unit,
     viewModel: HomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
@@ -41,6 +46,7 @@ fun HomeScreenRoute(
                 onClick = viewModel::click,
                 onNavigationClick = {},
                 onNavigateToCoffee = onNavigateToCoffee,
+                onNavigateToBabyCare = onNavigateToBabyCare,
             )
         }
 
@@ -67,6 +73,7 @@ internal fun HomeScreen(
     onClick: (String, String) -> Unit,
     onNavigationClick: (String) -> Unit,
     onNavigateToCoffee: () -> Unit,
+    onNavigateToBabyCare: () -> Unit,
 ) {
     val context = LocalContext.current
     var showSnackBar by remember { mutableStateOf(false) }
@@ -77,10 +84,6 @@ internal fun HomeScreen(
             }
         }
     )
-//    val onClick: (String, String) -> Unit = { location, destination ->
-//        onClick(location, destination)
-//        showSnackBar = true
-//    }
     val scrollState = rememberScrollState()
     Column(
         modifier = Modifier
@@ -89,12 +92,33 @@ internal fun HomeScreen(
             .fillMaxSize()
             .padding(vertical = 24.dp, horizontal = 16.dp),
     ) {
-        Button(
-            modifier = Modifier.wrapContentSize().padding(12.dp),
-            onClick = onNavigateToCoffee,
-        ) {
-            Text("Navigate to coffee")
+        Text(
+            text = "Welcome to the Hub",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToCoffee,
+            ) {
+                Text("Coffee Section")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToBabyCare,
+            ) {
+                Text("Baby Care Section")
+            }
         }
+        
+        Text(
+            text = "Quick Actions",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+        )
+
         viewData.sortedBy { it.index }.forEach {
             RenderUI(
                 item = it,
