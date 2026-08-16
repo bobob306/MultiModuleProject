@@ -145,8 +145,7 @@ class BabyCareHomeViewModel @Inject constructor(
     }
 
     private suspend fun fetchNappyChangesBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<NappyChangeDto>, DocumentSnapshot?> {
-        var query = Firebase.firestore.collection("nappyChanges")
-            .whereEqualTo("userId", userId)
+        var query = Firebase.firestore.collection("nappyChanges").document(userId).collection("changes")
             .orderBy("date", Query.Direction.DESCENDING)
             .orderBy("time", Query.Direction.DESCENDING)
             .limit(pageSize)

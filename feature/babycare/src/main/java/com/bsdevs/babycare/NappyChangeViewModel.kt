@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -68,13 +70,17 @@ class NappyChangeViewModel @Inject constructor(
             time = currentState.time,
             type = currentState.type
         )
+        val currentDateTime = "${currentState.date} ${currentState.time}"
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
+
             try {
-                Firebase.firestore.collection("nappyChanges")
-                    .document(nappyChange.id!!)
+                val uploadNappy = FirebaseFirestore.getInstance().collection("nappyChanges")
+                    .document(userId).collection("changes")
+                    .document(currentDateTime)
                     .set(nappyChange)
+                    .await()
                 
                 _events.send(NappyChangeEvent.SaveSuccess)
             } catch (e: Exception) {
