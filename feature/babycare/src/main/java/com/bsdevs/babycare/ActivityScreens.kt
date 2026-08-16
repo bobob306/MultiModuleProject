@@ -356,6 +356,9 @@ fun FeedingScreenRoute(
             uiState = uiState,
             onToggleLeft = viewModel::toggleLeftTimer,
             onToggleRight = viewModel::toggleRightTimer,
+            onStartTimeSelected = viewModel::onStartTimeSelected,
+            onLeftDurationChanged = viewModel::onLeftDurationChanged,
+            onRightDurationChanged = viewModel::onRightDurationChanged,
             onUpdateBottleAmount = viewModel::updateBottleAmount,
             onSave = viewModel::submitFeeding
         )

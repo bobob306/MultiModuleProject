@@ -1,7 +1,8 @@
 package com.bsdevs.babycare
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,8 @@ fun BabyCareHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
+    onNavigateToEditNappyChange: (String) -> Unit,
+    onNavigateToEditFeeding: (String) -> Unit,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
 ) {
     val result by viewModel.viewData.collectAsStateWithLifecycle()
@@ -66,6 +69,8 @@ fun BabyCareHomeScreenRoute(
                 onRefresh = { viewModel.refreshData() }, // Make sure your ViewModel exposes a refresh method
                 onNavigateToNappyChange = onNavigateToNappyChange,
                 onNavigateToFeeding = onNavigateToFeeding,
+                onNavigateToEditNappyChange = onNavigateToEditNappyChange,
+                onNavigateToEditFeeding = onNavigateToEditFeeding,
                 onLoadMore = viewModel::loadMore
             )
         }
@@ -93,6 +98,8 @@ internal fun BabyCareHomeScreen(
     onRefresh: () -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
+    onNavigateToEditNappyChange: (String) -> Unit,
+    onNavigateToEditFeeding: (String) -> Unit,
     onLoadMore: () -> Unit
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
@@ -165,7 +172,15 @@ internal fun BabyCareHomeScreen(
                         onLoadMore()
                     }
                 }
-                ActivityFeedItem(item)
+                ActivityFeedItem(
+                    item = item,
+                    onEdit = {
+                        when (item) {
+                            is BabyActivity.Nappy -> item.id?.let { onNavigateToEditNappyChange(it) }
+                            is BabyActivity.Feeding -> item.id?.let { onNavigateToEditFeeding(it) }
+                        }
+                    }
+                )
             }
 
             // Item 5: Bottom Loading Spinner for Pagination
@@ -200,8 +215,12 @@ internal fun BabyCareHomeScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ActivityFeedItem(item: BabyActivity) {
+fun ActivityFeedItem(
+    item: BabyActivity,
+    onEdit: () -> Unit
+) {
     val icon = when (item) {
         is BabyActivity.Nappy -> Icons.Default.ChildCare
         is BabyActivity.Feeding -> Icons.Default.Restaurant
@@ -220,7 +239,12 @@ fun ActivityFeedItem(item: BabyActivity) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = onEdit
+            ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )

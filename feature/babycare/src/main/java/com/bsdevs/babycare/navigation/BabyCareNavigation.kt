@@ -17,19 +17,19 @@ data object BabyCareBaseRoute
 data object BabyCareHomeRoute
 
 @Serializable
-data object NappyChangeRoute
+data class NappyChangeRoute(val activityId: String? = null)
 
 @Serializable
-data object FeedingRoute
+data class FeedingRoute(val activityId: String? = null)
 
 fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
     navigate(route = BabyCareHomeRoute, navOptions = navOptions)
 
-fun NavController.navigateToNappyChange(navOptions: NavOptions? = null) =
-    navigate(route = NappyChangeRoute, navOptions = navOptions)
+fun NavController.navigateToNappyChange(activityId: String? = null, navOptions: NavOptions? = null) =
+    navigate(route = NappyChangeRoute(activityId), navOptions = navOptions)
 
-fun NavController.navigateToFeeding(navOptions: NavOptions? = null) =
-    navigate(route = FeedingRoute, navOptions = navOptions)
+fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavOptions? = null) =
+    navigate(route = FeedingRoute(activityId), navOptions = navOptions)
 
 fun NavGraphBuilder.babyCareSection(
     navController: NavController,
@@ -40,7 +40,9 @@ fun NavGraphBuilder.babyCareSection(
             BabyCareHomeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateToNappyChange = { navController.navigateToNappyChange() },
-                onNavigateToFeeding = { navController.navigateToFeeding() }
+                onNavigateToFeeding = { navController.navigateToFeeding() },
+                onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
+                onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) }
             )
         }
         composable<NappyChangeRoute> {
