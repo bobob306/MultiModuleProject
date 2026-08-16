@@ -8,7 +8,6 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputRadioVD
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.RadioInputViewData
@@ -39,7 +38,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.collections.List
 
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
@@ -47,12 +45,12 @@ class CoffeeInputScreenViewModel @Inject constructor(
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<CoffeeScreenViewData>> = _viewData.onStart {
-            loadDataFromNetwork()
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.Lazily,
-            initialValue = Result.Loading
-        )
+        loadDataFromNetwork()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = Result.Loading
+    )
 
     private val _navigationEvent = Channel<NavigationEvent>()
     val navigationEvent = _navigationEvent.receiveAsFlow() // Expose as Flow
@@ -65,7 +63,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             // Check mutable sets (assuming BEANS, ORIGIN, TASTE are the ones)
             val areSetsValid = inputs.all { input ->
                 when (input) {
-                    is InputViewData.InputVD -> {
+                    is InputVD -> {
                         when (input.inputType) {
                             InputType.BEANS, InputType.ORIGIN, InputType.TASTE, InputType.METHOD, InputType.ROASTER -> input.selectedSet.isNotEmpty()
                         }
@@ -160,12 +158,12 @@ class CoffeeInputScreenViewModel @Inject constructor(
                         RadioInputViewData(
                             label = "Decaffeinated",
                             isDecaf = true,
-                            )
+                        )
                     ),
                     isDecaf = false,
                 ),
             ),
-            )
+        )
         _viewData.value = Success(
             data = updatedViewData
         )
@@ -176,9 +174,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             is CoffeeInputScreenIntent.UpdateRoastDate -> onUpdateRoastData(intent.date)
             is CoffeeInputScreenIntent.SetDecaf -> onToggleDecaf(intent.isDecaf)
             CoffeeInputScreenIntent.SubmitCoffee -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    onEnterPress()
-                }
+                onEnterPress()
             }
 
             is CoffeeInputScreenIntent.ToggleDropdownSelection -> {
@@ -214,7 +210,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
-                    if (input is InputViewData.InputRadioVD) {
+                    if (input is InputRadioVD) {
                         input.copy(isDecaf = isDecaf)
                     } else {
                         // Keep other inputs as they are
@@ -230,7 +226,6 @@ class CoffeeInputScreenViewModel @Inject constructor(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun onEnterPress() {
         viewModelScope.launch {
             val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
@@ -248,7 +243,6 @@ class CoffeeInputScreenViewModel @Inject constructor(
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun mapToCoffeeDto(viewData: CoffeeScreenViewData): CoffeeDto {
         var beanTypes = emptySet<String>()
         var originCountries = emptySet<String>()
@@ -261,7 +255,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
 
         viewData.inputs.forEach { input ->
             when (input) {
-                is InputViewData.InputVD -> {
+                is InputVD -> {
                     when (input.inputType) {
                         InputType.BEANS -> beanTypes = input.selectedSet
                         InputType.ORIGIN -> originCountries = input.selectedSet
@@ -272,7 +266,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
                     }
                 }
 
-                is InputViewData.InputRadioVD -> {
+                is InputRadioVD -> {
                     // Assuming the label for the decaf radio button is consistent
                     // or you only have one InputRadioVD for decaf.
                     isDecaf = input.isDecaf
@@ -334,7 +328,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
-                    if (input is InputViewData.InputVD && input.inputType == inputType) {
+                    if (input is InputVD && input.inputType == inputType) {
                         val newSelectedSet = if (input.singleInput) {
                             // Logic for single input
                             if (input.selectedSet.contains(selection)) {
@@ -369,7 +363,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             if (currentResult is Success) {
                 val currentViewData = currentResult.data
                 val updatedInputs = currentViewData.inputs.map { input ->
-                    if (input is InputViewData.InputVD && input.inputType == inputType) {
+                    if (input is InputVD && input.inputType == inputType) {
                         input.copy(searchText = searchText)
                     } else {
                         input

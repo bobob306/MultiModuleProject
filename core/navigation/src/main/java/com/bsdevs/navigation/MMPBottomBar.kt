@@ -1,8 +1,6 @@
 package com.bsdevs.navigation
 
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
@@ -21,11 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.NavDestination.Companion.hasRoute
 import com.bsdevs.babycare.navigation.BabyCareBaseRoute
 import com.bsdevs.babycare.navigation.BabyCareHomeRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeHomeScreenRoute
@@ -53,7 +51,7 @@ fun MMPBottomBar(navController: NavHostController) {
         BottomNavItem.Coffee,
         BottomNavItem.Baby
     )
-    NavigationBar() {
+    NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
         items.forEach { item ->

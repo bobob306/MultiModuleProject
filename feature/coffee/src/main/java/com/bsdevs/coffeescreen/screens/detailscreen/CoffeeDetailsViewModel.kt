@@ -1,7 +1,5 @@
 package com.bsdevs.coffeescreen.screens.detailscreen
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -38,7 +36,7 @@ class CoffeeDetailsViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val accountService: AccountService,
 ) : ViewModel() {
-    private lateinit var selectedCoffee: String
+    private var selectedCoffee: String
 
     private val _viewData = MutableStateFlow<Result<CoffeeDetailsViewData>>(Loading)
     val viewData: StateFlow<Result<CoffeeDetailsViewData>> = _viewData.onStart {
@@ -67,7 +65,8 @@ class CoffeeDetailsViewModel @Inject constructor(
                 .get()
                 .await()
         val coffeeListFromNetwork = collectionReference.toObjects(CoffeeDto::class.java).first()
-        val shotsFromNetwork = collectionReference.documents.first().reference.collection("shots").get().await()
+        val shotsFromNetwork =
+            collectionReference.documents.first().reference.collection("shots").get().await()
         val formattedShots = shotsFromNetwork?.let {
             it.map { docs ->
                 docs.toObject(ShotDto::class.java)
@@ -117,6 +116,7 @@ class CoffeeDetailsViewModel @Inject constructor(
                     _navigationEvent.send(NavigationEvent.NavigateHome)
                 }
             }
+
             is CoffeeDetailsIntent.ShowSheet -> {
                 _viewData.update {
                     val data = viewData.value as Result.Success<CoffeeDetailsViewData>
@@ -125,6 +125,7 @@ class CoffeeDetailsViewModel @Inject constructor(
                     )
                 }
             }
+
             is CoffeeDetailsIntent.HideSheet -> {
                 _viewData.update {
                     val data = viewData.value as Result.Success<CoffeeDetailsViewData>
@@ -140,7 +141,7 @@ class CoffeeDetailsViewModel @Inject constructor(
                         val coffeeLabel = viewData.value as Result.Success<CoffeeDetailsViewData>
                         val label = coffeeLabel.data.coffeeDto.label
                         _viewData.update {
-                            Result.Loading
+                            Loading
                         }
                         val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
                         val formattedDate = formatter.format(intent.shot.date)
@@ -148,8 +149,8 @@ class CoffeeDetailsViewModel @Inject constructor(
                         val shotDto = ShotDto(
                             id = intent.shot.id,
                             date = formattedDate,
-                            weightIn = intent.shot.weightInGrams.toDouble()/10,
-                            weightOut = intent.shot.weightOutGrams.toDouble()/10,
+                            weightIn = intent.shot.weightInGrams.toDouble() / 10,
+                            weightOut = intent.shot.weightOutGrams.toDouble() / 10,
                             time = intent.shot.timeInSeconds,
                             rating = intent.shot.rating,
                         )
@@ -208,8 +209,8 @@ data class ShotDto(
 sealed class CoffeeDetailsIntent {
     object NavigateHome : CoffeeDetailsIntent()
     data class SubmitShot(val shot: EspressoShotDetails) : CoffeeDetailsIntent()
-    object ShowSheet: CoffeeDetailsIntent()
-    object HideSheet: CoffeeDetailsIntent()
+    object ShowSheet : CoffeeDetailsIntent()
+    object HideSheet : CoffeeDetailsIntent()
 }
 
 sealed class NavigationEvent {

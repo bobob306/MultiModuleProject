@@ -389,7 +389,7 @@ private fun DateInputRow(
 @Preview(showBackground = true)
 @Composable
 fun PreviewWheelInputRow() {
-    MaterialTheme() {
+    MaterialTheme {
         Column {
             WheelInputRow(
                 label = "Weight In (grams)",

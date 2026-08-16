@@ -16,6 +16,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
+import com.bsdevs.login.LoginScreenRoute
+import com.bsdevs.login.RegisterScreenRoute
 import kotlinx.coroutines.launch
 
 @Composable
@@ -29,6 +31,8 @@ fun MMPApp() {
 
     val shouldShowBottomBar = currentDestination?.hierarchy?.any {
         it.hasRoute(SplashScreenBaseRoute::class)
+        it.hasRoute(LoginScreenRoute::class)
+        it.hasRoute(RegisterScreenRoute::class)
     } == false
 
     Scaffold(

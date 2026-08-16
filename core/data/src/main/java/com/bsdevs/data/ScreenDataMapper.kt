@@ -7,7 +7,7 @@ import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.SpacerType
 import javax.inject.Inject
 
-interface ScreenDataMapper : DataMapper<List<ScreenDto>, List<NetworkScreenData>> {}
+interface ScreenDataMapper : DataMapper<List<ScreenDto>, List<NetworkScreenData>>
 
 class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
     override fun mapToData(dto: List<ScreenDto>): List<NetworkScreenData> {
