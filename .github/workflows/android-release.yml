@@ -21,17 +21,17 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Decode keystore from GitHub secret
+      # Decode keystore from GitHub secret safely without trailing newlines
       - name: Decode Keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
+        run: echo -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
 
-      # Build signed release APK with env vars for signing config
+      # Build signed release APK with env vars safely wrapped in single quotes
       - name: Build Signed Release APK
         env:
           SIGN_STORE_FILE: /tmp/release.keystore
-          SIGN_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          SIGN_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          SIGN_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGN_STORE_PASSWORD: '${{ secrets.KEYSTORE_PASSWORD }}'
+          SIGN_KEY_ALIAS: '${{ secrets.KEY_ALIAS }}'
+          SIGN_KEY_PASSWORD: '${{ secrets.KEY_PASSWORD }}'
         run: ./gradlew assembleRelease --info
 
       - name: List APK files (debugging)
@@ -64,7 +64,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.bump.outputs.new_tag }}
-          name: Release ${{ steps.bump.outputs.new_tag }}
+          name: Release ${{ secrets.bump.outputs.new_tag }}
           draft: false
           prerelease: false
           files: app/build/outputs/apk/release/app-release.apk
