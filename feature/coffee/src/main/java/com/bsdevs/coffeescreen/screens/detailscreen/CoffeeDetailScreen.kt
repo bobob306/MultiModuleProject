@@ -55,9 +55,9 @@ fun CoffeeDetailScreenRoute(
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.background)
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
             is Result.Loading -> {

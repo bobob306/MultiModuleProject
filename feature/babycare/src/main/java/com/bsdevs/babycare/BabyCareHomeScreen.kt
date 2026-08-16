@@ -246,7 +246,7 @@ fun ActivityFeedItem(
                 onLongClick = onEdit
             ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(
@@ -324,9 +324,12 @@ fun BabyCareTile(
     onClick: () -> Unit
 ) {
     Card(
-        onClick = onClick, // 🔄 Use the built-in click action of Card instead of .clickable
-        modifier = modifier, // ✂️ Removed .aspectRatio(1f) from here
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        onClick = onClick,
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
