@@ -44,6 +44,7 @@ dependencies {
     implementation(project(":feature:login"))
     implementation(project(":feature:splashscreen"))
     implementation(project(":feature:babycare"))
+    implementation(project(":core:common:uicomponents"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

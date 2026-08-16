@@ -75,7 +75,8 @@ fun CoffeeInputScreenRoute(
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()

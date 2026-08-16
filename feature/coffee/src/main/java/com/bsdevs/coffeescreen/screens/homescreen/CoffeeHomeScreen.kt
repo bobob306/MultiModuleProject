@@ -60,7 +60,8 @@ fun CoffeeHomeScreenRoute(
     Surface(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
             is Result.Loading -> LoadingScreen()
