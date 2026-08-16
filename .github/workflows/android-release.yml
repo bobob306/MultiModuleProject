@@ -32,7 +32,7 @@ jobs:
           SIGN_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           SIGN_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           SIGN_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease --info
 
       - name: List APK files (debugging)
         run: ls -lah app/build/outputs/apk/release/
