@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.dagger.hilt.android")
     alias(libs.plugins.ksp)
@@ -30,6 +31,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    kotlinOptions {
+        jvmTarget = "11"
+    }
     buildFeatures {
         compose = true
     }
@@ -40,7 +44,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:data"))
 
-    ksp(libs.hilt.compiler) // Use KSP for Hilt
+    ksp(libs.hilt.android.compiler) // Use KSP for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose
     implementation(libs.androidx.navigation.compose) // Or latest
     implementation(libs.androidx.lifecycle.runtime.ktx) // Or latest
