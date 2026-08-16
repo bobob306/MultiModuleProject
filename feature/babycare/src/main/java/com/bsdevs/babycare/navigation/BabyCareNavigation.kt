@@ -50,7 +50,10 @@ fun NavGraphBuilder.babyCareSection(
             )
         }
         composable<FeedingRoute> {
-            FeedingScreenRoute(onShowSnackBar)
+            FeedingScreenRoute(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

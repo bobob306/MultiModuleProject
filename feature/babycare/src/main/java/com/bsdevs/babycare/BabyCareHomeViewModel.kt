@@ -3,6 +3,7 @@ package com.bsdevs.babycare
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.common.result.Result
 import com.google.firebase.Firebase
@@ -10,6 +11,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,10 +28,10 @@ import javax.inject.Inject
 data class BabyCareHomeViewData(
     val lastNappyChange: String? = null,
     val lastFeeding: String? = null,
-    val activityFeed: List<NappyChangeDto> = emptyList(),
+    val activityFeed: List<BabyActivity> = emptyList(),
     val canLoadMore: Boolean = true,
     val isLoadingMore: Boolean = false,
-    val isRefreshing: Boolean = false // 👈 Added parameter for top spinner control
+    val isRefreshing: Boolean = false
 )
 
 @HiltViewModel
@@ -48,26 +50,36 @@ class BabyCareHomeViewModel @Inject constructor(
             initialValue = Result.Loading
         )
 
-    private var lastDocument: DocumentSnapshot? = null
-    private val pageSize = 20L
+    private var lastNappyDoc: DocumentSnapshot? = null
+    private var lastFeedingDoc: DocumentSnapshot? = null
+    private val pageSize = 15L
 
     fun loadData() {
         viewModelScope.launch {
             _viewData.update { Result.Loading }
-            lastDocument = null
+            lastNappyDoc = null
+            lastFeedingDoc = null
             try {
                 val userId = accountService.currentUserId
-                val result = fetchNappyChangesBatch(userId, null)
-                val nappyChanges = result.first
-                lastDocument = result.second
+                
+                val nappyTask = async { fetchNappyChangesBatch(userId, null) }
+                val feedingTask = async { fetchFeedingsBatch(userId, null) }
+                
+                val nappyResult = nappyTask.await()
+                val feedingResult = feedingTask.await()
+                
+                lastNappyDoc = nappyResult.second
+                lastFeedingDoc = feedingResult.second
+                
+                val combined = combineAndSort(nappyResult.first, feedingResult.first)
                 
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
-                            lastNappyChange = nappyChanges.firstOrNull()?.let { formatNappyChange(it) },
-                            lastFeeding = null,
-                            activityFeed = nappyChanges,
-                            canLoadMore = nappyChanges.size >= pageSize
+                            lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
+                            lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
+                            activityFeed = combined,
+                            canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize
                         )
                     )
                 }
@@ -77,41 +89,40 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    // 🚀 NEW: Pull-to-Refresh Background State Machine Worker
     fun refreshData() {
         val currentResult = _viewData.value
-        // Guard check: Avoid refreshing if already loading, refreshing, or if there's a hard error
         if (currentResult !is Result.Success || currentResult.data.isRefreshing || currentResult.data.isLoadingMore) return
 
         viewModelScope.launch {
-            // Turn on the refreshing wheel animation overlay while preserving old list visibility
             _viewData.update { Result.Success(currentResult.data.copy(isRefreshing = true)) }
-
-            // Wipe pagination bookmark node index reference tracking state variables
-            lastDocument = null
+            lastNappyDoc = null
+            lastFeedingDoc = null
 
             try {
                 val userId = accountService.currentUserId
-                val result = fetchNappyChangesBatch(userId, null)
-                val freshChanges = result.first
-                lastDocument = result.second
+                val nappyTask = async { fetchNappyChangesBatch(userId, null) }
+                val feedingTask = async { fetchFeedingsBatch(userId, null) }
+                
+                val nappyResult = nappyTask.await()
+                val feedingResult = feedingTask.await()
+                
+                lastNappyDoc = nappyResult.second
+                lastFeedingDoc = feedingResult.second
+                
+                val combined = combineAndSort(nappyResult.first, feedingResult.first)
 
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
-                            lastNappyChange = freshChanges.firstOrNull()?.let { formatNappyChange(it) },
-                            lastFeeding = currentResult.data.lastFeeding, // Preserve state information
-                            activityFeed = freshChanges, // Overwrite list with fresh database records
-                            canLoadMore = freshChanges.size >= pageSize,
-                            isRefreshing = false, // Stop the overlay animation
-                            isLoadingMore = false
+                            lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
+                            lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
+                            activityFeed = combined,
+                            canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
+                            isRefreshing = false
                         )
                     )
                 }
-                println("refreshed data successfully")
-
             } catch (e: Exception) {
-                // Fall back gracefully to the prior persistent data array tree and turn off refresh spinner
                 _viewData.update { Result.Success(currentResult.data.copy(isRefreshing = false)) }
             }
         }
@@ -125,15 +136,23 @@ class BabyCareHomeViewModel @Inject constructor(
             _viewData.update { Result.Success(currentResult.data.copy(isLoadingMore = true)) }
             try {
                 val userId = accountService.currentUserId
-                val result = fetchNappyChangesBatch(userId, lastDocument)
-                val newChanges = result.first
-                lastDocument = result.second
+                
+                val nappyTask = async { fetchNappyChangesBatch(userId, lastNappyDoc) }
+                val feedingTask = async { fetchFeedingsBatch(userId, lastFeedingDoc) }
+                
+                val nappyResult = nappyTask.await()
+                val feedingResult = feedingTask.await()
+                
+                lastNappyDoc = nappyResult.second
+                lastFeedingDoc = feedingResult.second
+                
+                val newCombined = combineAndSort(nappyResult.first, feedingResult.first)
                 
                 _viewData.update {
                     Result.Success(
                         currentResult.data.copy(
-                            activityFeed = currentResult.data.activityFeed + newChanges,
-                            canLoadMore = newChanges.size >= pageSize,
+                            activityFeed = currentResult.data.activityFeed + newCombined,
+                            canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
                             isLoadingMore = false
                         )
                     )
@@ -142,6 +161,11 @@ class BabyCareHomeViewModel @Inject constructor(
                 _viewData.update { Result.Success(currentResult.data.copy(isLoadingMore = false)) }
             }
         }
+    }
+
+    private fun combineAndSort(nappies: List<NappyChangeDto>, feedings: List<FeedingDto>): List<BabyActivity> {
+        val activities = nappies.map { BabyActivity.Nappy(it) } + feedings.map { BabyActivity.Feeding(it) }
+        return activities.sortedByDescending { it.dateTimeString }
     }
 
     private suspend fun fetchNappyChangesBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<NappyChangeDto>, DocumentSnapshot?> {
@@ -161,10 +185,45 @@ class BabyCareHomeViewModel @Inject constructor(
         return Pair(changes, lastDoc)
     }
 
+    private suspend fun fetchFeedingsBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<FeedingDto>, DocumentSnapshot?> {
+        var query = Firebase.firestore.collection("feedings").document(userId).collection("records")
+            .orderBy("date", Query.Direction.DESCENDING)
+            .orderBy("startTime", Query.Direction.DESCENDING)
+            .limit(pageSize)
+        
+        if (startAfter != null) {
+            query = query.startAfter(startAfter)
+        }
+        
+        val snapshot = query.get().await()
+        val feedings = snapshot.toObjects(FeedingDto::class.java)
+        val lastDoc = snapshot.documents.lastOrNull()
+        
+        return Pair(feedings, lastDoc)
+    }
+
     private fun formatNappyChange(dto: NappyChangeDto): String? {
         val dateStr = dto.date ?: return null
         val timeStr = dto.time ?: ""
+        return formatDateTime(dateStr, timeStr)
+    }
+
+    private fun formatFeeding(dto: FeedingDto): String? {
+        val dateStr = dto.date ?: return null
+        val timeStr = dto.startTime ?: ""
+        val formatted = formatDateTime(dateStr, timeStr) ?: return null
         
+        val sideIndicator = when (dto.mainFeedingSide) {
+            "Left" -> " (L)"
+            "Right" -> " (R)"
+            "Bottle" -> " (B)"
+            else -> ""
+        }
+        
+        return "$formatted$sideIndicator"
+    }
+
+    private fun formatDateTime(dateStr: String, timeStr: String): String? {
         val date = try { LocalDate.parse(dateStr) } catch (_: Exception) { return null }
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)

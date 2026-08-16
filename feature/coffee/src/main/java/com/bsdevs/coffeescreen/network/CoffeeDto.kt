@@ -1,17 +1,12 @@
 package com.bsdevs.coffeescreen.network
 
-import android.os.Build
-import android.os.Bundle
 import android.os.Parcelable
-import androidx.navigation.NavType
+import com.google.firebase.firestore.IgnoreExtraProperties
 import com.google.firebase.firestore.PropertyName
 import kotlinx.parcelize.Parcelize
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import java.util.Date
-import javax.annotation.processing.Generated
 
+@IgnoreExtraProperties
 @Serializable
 @Parcelize
 data class CoffeeDto(
@@ -24,6 +19,6 @@ data class CoffeeDto(
     @get:PropertyName("isDecaf") val isDecaf: Boolean? = null,
     val label: String? = null,
     val userId: String? = null,
-    val id: String? =  null,
+    val id: String? = null,
     val rating: Int? = null,
 ) : Parcelable

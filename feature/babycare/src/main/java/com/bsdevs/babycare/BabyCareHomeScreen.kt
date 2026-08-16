@@ -201,7 +201,24 @@ internal fun BabyCareHomeScreen(
 }
 
 @Composable
-fun ActivityFeedItem(item: NappyChangeDto) {
+fun ActivityFeedItem(item: BabyActivity) {
+    val icon = when (item) {
+        is BabyActivity.Nappy -> Icons.Default.ChildCare
+        is BabyActivity.Feeding -> Icons.Default.Restaurant
+    }
+    
+    val title = when (item) {
+        is BabyActivity.Nappy -> "Nappy Change: ${item.dto.type}"
+        is BabyActivity.Feeding -> {
+            if (item.dto.mainFeedingSide == "Bottle") {
+                "Feeding: Bottle (${item.dto.bottleAmountMl}ml)"
+            } else {
+                val side = item.dto.mainFeedingSide ?: "Both"
+                "Feeding: $side (${formatDuration(item.dto.totalDuration)})"
+            }
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -221,7 +238,7 @@ fun ActivityFeedItem(item: NappyChangeDto) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.ChildCare,
+                    imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -232,7 +249,7 @@ fun ActivityFeedItem(item: NappyChangeDto) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Nappy Change: ${item.type}",
+                    text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -250,6 +267,12 @@ fun ActivityFeedItem(item: NappyChangeDto) {
             )
         }
     }
+}
+
+private fun formatDuration(seconds: Long): String {
+    val minutes = seconds / 60
+    val remainingSeconds = seconds % 60
+    return "%02d:%02d".format(minutes, remainingSeconds)
 }
 
 private fun formatActivityDate(dateStr: String?): String {
