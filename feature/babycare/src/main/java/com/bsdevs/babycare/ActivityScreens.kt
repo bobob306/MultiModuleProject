@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
@@ -88,7 +89,7 @@ internal fun NappyChangeScreen(
     onTypeChanged: (String) -> Unit,
     onSave: () -> Unit
 ) {
-    var showTimePicker by remember { mutableStateOf(false) }
+    var showTimePicker by rememberSaveable { mutableStateOf(false) }
 
     // 🔄 Detect device screen orientation
     val configuration = LocalConfiguration.current
@@ -315,11 +316,57 @@ internal fun NappyChangeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedingScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
+    onNavigateBack: () -> Unit,
+    viewModel: FeedingViewModel = hiltViewModel()
 ) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Feeding Tracker (Placeholder)")
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is FeedingEvent.SaveSuccess -> {
+                    onShowSnackBar("Feeding session saved", null)
+                    onNavigateBack()
+                }
+                is FeedingEvent.SaveError -> {
+                    onShowSnackBar("Error saving feeding: ${event.message}", null)
+                }
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Feeding Session") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        FeedingScreen(
+            modifier = Modifier.padding(padding),
+            uiState = uiState,
+            onToggleLeft = viewModel::toggleLeftTimer,
+            onToggleRight = viewModel::toggleRightTimer,
+            onUpdateBottleAmount = viewModel::updateBottleAmount,
+            onSave = viewModel::submitFeeding
+        )
+    }
+
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
     }
 }
