@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.bsdevs.coffee"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26

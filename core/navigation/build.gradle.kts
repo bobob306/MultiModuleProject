@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.bsdevs.navigation"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
