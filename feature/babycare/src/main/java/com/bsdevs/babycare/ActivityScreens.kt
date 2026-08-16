@@ -1,7 +1,13 @@
 package com.bsdevs.babycare
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
@@ -9,6 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,88 +90,177 @@ internal fun NappyChangeScreen(
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Date Field (Read Only)
-        OutlinedTextField(
-            value = uiState.date,
-            onValueChange = {},
-            label = { Text("Date") },
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
-        )
+    // 🔄 Detect device screen orientation
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        // 🌟 FIXED: Time Field with an absolute touch overlay layer
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = uiState.time,
-                onValueChange = {},
-                label = { Text("Time") },
-                readOnly = true,
-                enabled = !uiState.isLoading,
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = "Select Time"
-                    )
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // This transparent layer covers the text field completely and captures the click
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable(enabled = !uiState.isLoading) {
-                        showTimePicker = true
-                    }
-            )
-        }
-
-        // Segmented Nappy Category Chips
-        Text("Type:", style = MaterialTheme.typography.titleMedium)
+    // 📱 1. LANDSCAPE MODE: Two-Column Side-by-Side Layout
+    if (isLandscape) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            listOf("Wet", "Dirty", "Both").forEach { type ->
-                FilterChip(
-                    selected = uiState.type == type,
-                    onClick = { onTypeChanged(type) },
-                    label = { Text(type) },
+            // Left Column: Scrollable Inputs
+            val leftScrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .verticalScroll(leftScrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Date Field
+                OutlinedTextField(
+                    value = uiState.date,
+                    onValueChange = {},
+                    label = { Text("Date") },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading
                 )
+
+                // Time Field with click layer
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = uiState.time,
+                        onValueChange = {},
+                        label = { Text("Time") },
+                        readOnly = true,
+                        enabled = !uiState.isLoading,
+                        trailingIcon = {
+                            Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+                    )
+                }
+
+                // Segmented Nappy Category Chips
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Type:", style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Wet", "Dirty", "Both").forEach { type ->
+                            FilterChip(
+                                selected = uiState.type == type,
+                                onClick = { onTypeChanged(type) },
+                                label = { Text(type) },
+                                enabled = !uiState.isLoading
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Right Column: Summary Panel & Actions Sticky on screen
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                if (uiState.error != null) {
+                    Text(
+                        text = uiState.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(0.8f), // Keep button neatly sized
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Save Nappy Change")
+                }
             }
         }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        if (uiState.error != null) {
-            Text(
-                text = uiState.error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        Button(
-            onClick = onSave,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
+    }
+    // 📱 2. PORTRAIT MODE: Clean Single Column Layout
+    else {
+        val portraitScrollState = rememberScrollState()
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(portraitScrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Save Nappy Change")
+            OutlinedTextField(
+                value = uiState.date,
+                onValueChange = {},
+                label = { Text("Date") },
+                readOnly = true,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading
+            )
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = uiState.time,
+                    onValueChange = {},
+                    label = { Text("Time") },
+                    readOnly = true,
+                    enabled = !uiState.isLoading,
+                    trailingIcon = {
+                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+                )
+            }
+
+            Text("Type:", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("Wet", "Dirty", "Both").forEach { type ->
+                    FilterChip(
+                        selected = uiState.type == type,
+                        onClick = { onTypeChanged(type) },
+                        label = { Text(type) },
+                        enabled = !uiState.isLoading
+                    )
+                }
+            }
+
+            // Fixed spacer height to prevent layout calculation infinite loop bugs
+            Spacer(modifier = Modifier.height(32.dp))
+
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading
+            ) {
+                Text("Save Nappy Change")
+            }
         }
     }
 
-    // Material 3 Time Picker Dialog Window Controller
+    // ⏰ Material 3 Smart Orientation-Aware Time Picker Dialog Box Control
     if (showTimePicker) {
         val initialTime = try {
             LocalTime.parse(uiState.time)
@@ -197,7 +296,19 @@ internal fun NappyChangeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TimePicker(state = timePickerState)
+                    // 🔄 Smart UI Swap based on orientation
+                    if (isLandscape) {
+                        Text(
+                            text = "Enter time",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        // 🎹 Sleek horizontal text boxes for Landscape
+                        TimeInput(state = timePickerState)
+                    } else {
+                        // 🕒 Classic clock wheel for Portrait
+                        TimePicker(state = timePickerState)
+                    }
                 }
             }
         )

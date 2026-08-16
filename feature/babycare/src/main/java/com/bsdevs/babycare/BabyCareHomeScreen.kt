@@ -10,9 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -122,18 +125,18 @@ internal fun BabyCareHomeScreen(
             // Item 2: Quick Action Tiles Row
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     BabyCareTile(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(max = 120.dp),
                         title = "Nappy Change",
                         subtitle = viewData.lastNappyChange,
                         icon = Icons.Default.ChildCare,
                         onClick = onNavigateToNappyChange
                     )
                     BabyCareTile(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).heightIn(max = 120.dp),
                         title = "Feeding",
                         subtitle = viewData.lastFeeding,
                         icon = Icons.Default.Restaurant,
@@ -274,9 +277,8 @@ fun BabyCareTile(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clickable(onClick = onClick),
+        onClick = onClick, // 🔄 Use the built-in click action of Card instead of .clickable
+        modifier = modifier, // ✂️ Removed .aspectRatio(1f) from here
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
@@ -291,14 +293,16 @@ fun BabyCareTile(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(32.dp), // 📏 Slightly smaller icon to guarantee it fits under 120.dp
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp),
-                    textAlign = TextAlign.Center
+                    modifier = Modifier.padding(top = 4.dp),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1, // 🛡️ Safe guard against text wrapping
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (subtitle != null) {
                     Text(
@@ -306,7 +310,9 @@ fun BabyCareTile(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp)
+                        modifier = Modifier.padding(top = 2.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
