@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     id("com.google.dagger.hilt.android")
@@ -45,15 +46,19 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-//    kotlinOptions {
-//        jvmTarget = "17"
-//    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
     buildFeatures {
         compose = true
     }
     packaging {
         resources.excludes.add("META-INF/gradle/incremental.annotation.processors")
     }
+}
+
+hilt {
+    enableAggregatingTask = true
 }
 
 dependencies {
@@ -87,7 +92,7 @@ dependencies {
 
     implementation(libs.hilt.android) // Hilt
     implementation(libs.androidx.hilt.navigation.compose) // Hilt navigation
-    ksp(libs.hilt.compiler) // Hilt compiler
+    ksp(libs.hilt.android.compiler) // Hilt compiler
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore.ktx)
