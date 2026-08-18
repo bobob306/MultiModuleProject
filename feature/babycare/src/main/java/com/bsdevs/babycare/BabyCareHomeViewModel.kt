@@ -25,14 +25,22 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
+sealed class HomeFeedItem {
+    data class Header(val title: String, val feedingCount: Int, val nappyCount: Int) :
+        HomeFeedItem()
+
+    data class ActivityRow(val activity: BabyActivity) : HomeFeedItem()
+}
+
 data class BabyCareHomeViewData(
     val lastNappyChange: String? = null,
     val lastFeeding: String? = null,
-    val activityFeed: List<BabyActivity> = emptyList(),
+    val activityFeed: List<HomeFeedItem> = emptyList(),
     val canLoadMore: Boolean = true,
     val isLoadingMore: Boolean = false,
     val isRefreshing: Boolean = false,
-    val currentFilter: ActivityFilter = ActivityFilter.NONE
+    val currentFilter: ActivityFilter = ActivityFilter.NONE,
+    val collapsedHeaders: Set<String> = emptySet(),
 )
 
 enum class ActivityFilter { NONE, NAPPY, FEEDING }
@@ -56,6 +64,8 @@ class BabyCareHomeViewModel @Inject constructor(
     private var lastNappyDoc: DocumentSnapshot? = null
     private var lastFeedingDoc: DocumentSnapshot? = null
     private val pageSize = 15L
+    private var cachedNappies = listOf<NappyChangeDto>()
+    private var cachedFeedings = listOf<FeedingDto>()
 
     fun loadData() {
         viewModelScope.launch {
@@ -78,16 +88,16 @@ class BabyCareHomeViewModel @Inject constructor(
                 cachedNappies = nappyResult.first
                 cachedFeedings = feedingResult.first
 
-                val combined = combineAndSort(nappyResult.first, feedingResult.first)
-
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
-                            lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
-                            lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
-                            activityFeed = combined,
+                            lastNappyChange = nappyResult.first.firstOrNull()
+                                ?.let { formatNappyChange(it) },
+                            lastFeeding = feedingResult.first.firstOrNull()
+                                ?.let { formatFeeding(it) },
+                            activityFeed = getFilteredAndSortedFeed(ActivityFilter.NONE),
                             canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
-                            currentFilter = ActivityFilter.NONE // 🌟 Explicitly default to un-filtered on clean boot
+                            currentFilter = ActivityFilter.NONE
                         )
                     )
                 }
@@ -125,9 +135,12 @@ class BabyCareHomeViewModel @Inject constructor(
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
-                            lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
-                            lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
-                            activityFeed = getFilteredAndSortedFeed(activeFilter), // 🔄 Commonised
+                            lastNappyChange = nappyResult.first.firstOrNull()
+                                ?.let { formatNappyChange(it) },
+                            lastFeeding = feedingResult.first.firstOrNull()
+                                ?.let { formatFeeding(it) },
+                            // 🔄 Regenerates your grouped items list using the active filter type
+                            activityFeed = getFilteredAndSortedFeed(activeFilter),
                             canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
                             isRefreshing = false,
                             currentFilter = activeFilter
@@ -166,7 +179,8 @@ class BabyCareHomeViewModel @Inject constructor(
                 _viewData.update {
                     Result.Success(
                         currentResult.data.copy(
-                            activityFeed = getFilteredAndSortedFeed(activeFilter), // 🔄 Commonised
+                            // 🔄 Re-evaluates the complete cached history with the new appended entries
+                            activityFeed = getFilteredAndSortedFeed(activeFilter),
                             canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
                             isLoadingMore = false
                         )
@@ -178,40 +192,76 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    private fun combineAndSort(nappies: List<NappyChangeDto>, feedings: List<FeedingDto>): List<BabyActivity> {
-        val activities = nappies.map { BabyActivity.Nappy(it) } + feedings.map { BabyActivity.Feeding(it) }
-        return activities.sortedByDescending { it.dateTimeString }
+    private fun combineAndSort(
+        nappies: List<NappyChangeDto>,
+        feedings: List<FeedingDto>,
+        collapsedHeaders: Set<String> // ➕ Add parameter parameter here
+    ): List<HomeFeedItem> {
+        val rawActivities = nappies.map { BabyActivity.Nappy(it) } + feedings.map { BabyActivity.Feeding(it) }
+        val sortedActivities = rawActivities.sortedByDescending { it.dateTimeString }
+
+        val groupedByDate = sortedActivities.groupBy { item ->
+            val pureDateString = item.date!!.split(" ").firstOrNull() ?: item.date!!
+            formatHeaderDate(pureDateString)
+        }
+
+        val finalizedFeed = mutableListOf<HomeFeedItem>()
+
+        groupedByDate.forEach { (dateHeader, activitiesInDay) ->
+            val feedingCount = activitiesInDay.count { it is BabyActivity.Feeding }
+            val nappyCount = activitiesInDay.count { it is BabyActivity.Nappy }
+
+            // Always include the Header block regardless of state layout rules
+            finalizedFeed.add(HomeFeedItem.Header(dateHeader, feedingCount, nappyCount))
+
+            // 🚨 CRUCIAL CHECK: Skip adding rows if this day header title is collapsed!
+            if (!collapsedHeaders.contains(dateHeader)) {
+                activitiesInDay.forEach { activity ->
+                    finalizedFeed.add(HomeFeedItem.ActivityRow(activity))
+                }
+            }
+        }
+
+        return finalizedFeed
     }
 
-    private suspend fun fetchNappyChangesBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<NappyChangeDto>, DocumentSnapshot?> {
-        var query = Firebase.firestore.collection("nappyChanges").document(userId).collection("changes")
-            .orderBy("dateTime", Query.Direction.DESCENDING)
-            .limit(pageSize)
-        
+
+    private suspend fun fetchNappyChangesBatch(
+        userId: String,
+        startAfter: DocumentSnapshot?
+    ): Pair<List<NappyChangeDto>, DocumentSnapshot?> {
+        var query =
+            Firebase.firestore.collection("nappyChanges").document(userId).collection("changes")
+                .orderBy("dateTime", Query.Direction.DESCENDING)
+                .limit(pageSize)
+
         if (startAfter != null) {
             query = query.startAfter(startAfter)
         }
-        
+
         val snapshot = query.get().await()
         val changes = snapshot.toObjects(NappyChangeDto::class.java)
         val lastDoc = snapshot.documents.lastOrNull()
-        
+
         return Pair(changes, lastDoc)
     }
 
-    private suspend fun fetchFeedingsBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<FeedingDto>, DocumentSnapshot?> {
+    private suspend fun fetchFeedingsBatch(
+        userId: String,
+        startAfter: DocumentSnapshot?
+    ): Pair<List<FeedingDto>, DocumentSnapshot?> {
         var query = Firebase.firestore.collection("feedings").document(userId).collection("records")
             .orderBy("dateTime", Query.Direction.DESCENDING)
             .limit(pageSize)
-        
+
         if (startAfter != null) {
             query = query.startAfter(startAfter)
         }
-        
+
         val snapshot = query.get().await()
         val feedings = snapshot.toObjects(FeedingDto::class.java)
         val lastDoc = snapshot.documents.lastOrNull()
-        
+
         return Pair(feedings, lastDoc)
     }
 
@@ -225,22 +275,26 @@ class BabyCareHomeViewModel @Inject constructor(
         val dateStr = dto.date ?: return null
         val timeStr = dto.startTime ?: ""
         val formatted = formatDateTime(dateStr, timeStr) ?: return null
-        
+
         val sideIndicator = when (dto.mainFeedingSide) {
             "Left" -> " (L)"
             "Right" -> " (R)"
             "Bottle" -> " (B)"
             else -> ""
         }
-        
+
         return "$formatted$sideIndicator"
     }
 
     private fun formatDateTime(dateStr: String, timeStr: String): String? {
-        val date = try { LocalDate.parse(dateStr) } catch (_: Exception) { return null }
+        val date = try {
+            LocalDate.parse(dateStr)
+        } catch (_: Exception) {
+            return null
+        }
         val today = LocalDate.now()
         val yesterday = today.minusDays(1)
-        
+
         return when {
             date == today -> "today $timeStr"
             date == yesterday -> "yesterday $timeStr"
@@ -251,47 +305,84 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    private fun getFilteredAndSortedFeed(filter: ActivityFilter): List<BabyActivity> {
+    private fun getFilteredAndSortedFeed(
+        filter: ActivityFilter,
+        collapsed: Set<String> = (_viewData.value as? Result.Success)?.data?.collapsedHeaders ?: emptySet()
+    ): List<HomeFeedItem> {
         val filteredNappies = if (filter == ActivityFilter.FEEDING) emptyList() else cachedNappies
         val filteredFeedings = if (filter == ActivityFilter.NAPPY) emptyList() else cachedFeedings
-        return combineAndSort(filteredNappies, filteredFeedings)
+
+        // Pass the collapsed set directly to your mapping builder block layout
+        return combineAndSort(filteredNappies, filteredFeedings, collapsed)
     }
 
-
-    // 🗃️ Cache memory fields to keep raw items safe during filtering shifts
-    private var cachedNappies = listOf<NappyChangeDto>()
-    private var cachedFeedings = listOf<FeedingDto>()
-
-    // 🛠️ 1. Main filter toggle entry point called by clicking a Home UI card icon
     fun toggleActivityFilter(filter: ActivityFilter) {
         val currentResult = _viewData.value
         if (currentResult !is Result.Success) return
 
-        val newFilter = if (currentResult.data.currentFilter == filter) ActivityFilter.NONE else filter
+        // If clicking an already active filter, clear it back to NONE
+        val newFilterSetting = if (currentResult.data.currentFilter == filter) {
+            ActivityFilter.NONE
+        } else {
+            filter
+        }
 
         _viewData.update {
             Result.Success(
                 currentResult.data.copy(
-                    activityFeed = getFilteredAndSortedFeed(newFilter), // 🔄 Commonised
-                    currentFilter = newFilter
+                    activityFeed = getFilteredAndSortedFeed(newFilterSetting), // 🔄 Re-computes list
+                    currentFilter = newFilterSetting
                 )
             )
         }
     }
 
-    // 🛠️ 2. Core filtering engine that combines items without hitting the network
-    private fun updateUiFeedWithFilter(filter: ActivityFilter, currentData: BabyCareHomeViewData) {
-        // Drop the collection components completely if the opposing filter option is selected
-        val filteredNappies = if (filter == ActivityFilter.FEEDING) emptyList() else cachedNappies
-        val filteredFeedings = if (filter == ActivityFilter.NAPPY) emptyList() else cachedFeedings
+    private fun formatHeaderDate(dateString: String): String {
+        return try {
+            // Safe check: extract just the YYYY-MM-DD segment if it contains time info
+            val cleanDateStr = dateString.split(" ").firstOrNull() ?: dateString
+            val targetDate = LocalDate.parse(cleanDateStr)
+            val today = LocalDate.now()
 
-        val newlySortedFeed = combineAndSort(filteredNappies, filteredFeedings)
+            when (targetDate) {
+                today -> "Today"
+                today.minusDays(1) -> "Yesterday"
+                else -> {
+                    val day = targetDate.dayOfMonth
+                    val suffix = when {
+                        day in 11..13 -> "th"
+                        day % 10 == 1 -> "st"
+                        day % 10 == 2 -> "nd"
+                        day % 10 == 3 -> "rd"
+                        else -> "th"
+                    }
+                    val monthFormatter = DateTimeFormatter.ofPattern(" MMMM", Locale.ENGLISH)
+                    "$day$suffix${targetDate.format(monthFormatter)}"
+                }
+            }
+        } catch (e: Exception) {
+            dateString // Fallback safety representation if parsing strings fails
+        }
+    }
+
+    // 🛠️ 1. Main interaction endpoint called when tapping a sticky header row
+    fun toggleHeaderCollapse(headerTitle: String) {
+        val currentResult = _viewData.value
+        if (currentResult !is Result.Success) return
+
+        val currentCollapsed = currentResult.data.collapsedHeaders
+        val updatedCollapsed = if (currentCollapsed.contains(headerTitle)) {
+            currentCollapsed - headerTitle // Expand
+        } else {
+            currentCollapsed + headerTitle // Collapse
+        }
 
         _viewData.update {
             Result.Success(
-                currentData.copy(
-                    activityFeed = newlySortedFeed,
-                    currentFilter = filter // Save the active filter flag inside your state layout
+                currentResult.data.copy(
+                    collapsedHeaders = updatedCollapsed,
+                    // Re-evaluate list compilation passing the updated state rules configuration
+                    activityFeed = getFilteredAndSortedFeed(currentResult.data.currentFilter, updatedCollapsed)
                 )
             )
         }

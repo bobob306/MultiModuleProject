@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChildCare
@@ -46,7 +44,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.common.result.Result
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -75,6 +72,7 @@ fun BabyCareHomeScreenRoute(
                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                 onToggleFilter = viewModel::toggleActivityFilter,
+                onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore
             )
         }
@@ -105,19 +103,11 @@ internal fun BabyCareHomeScreen(
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
+    onToggleHeaderCollapse: (String) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     // 1. Direct PullToRefreshBox wrapper at the root level
-
-    // 🔄 1. Dynamically chunk your flat list into date groups whenever the feed changes
-    val groupedActivities = remember(viewData.activityFeed) {
-        viewData.activityFeed.groupBy { item ->
-            // Use the combined dateTime string if available, otherwise fall back to the raw date field
-            val referenceDate = item.dateTime
-            formatHeaderDate(referenceDate)
-        }
-    }
     PullToRefreshBox(
         isRefreshing = isRefreshing, // Use the localized ui flag
         onRefresh = {
@@ -180,60 +170,99 @@ internal fun BabyCareHomeScreen(
                 )
             }
 
-            // 📱 Item 4: Sticky Grouped Activity Feed Layout
-            groupedActivities.forEach { (dateHeader, activitiesInDay) ->
+            // 📱 Item 4: High-performance flat-list loop with Native Sticky Headers
+            val activityItems = viewData.activityFeed
 
-                // 📌 Opaque Box Sticky Header (Prevents cards from bleeding through when scrolling)
-                stickyHeader(key = dateHeader) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        Text(
-                            text = dateHeader,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                }
+            activityItems.forEach { feedItem ->
+                when (feedItem) {
 
-                // 📋 Scrollable Feed Logs list inside BabyCareHomeScreen
-                itemsIndexed(
-                    items = activitiesInDay,
-                    key = { _, item -> item.id ?: "" }
-                ) { _, item ->
+                    // 📌 1. Natively pin headers to the top using stickyHeader
+                    is HomeFeedItem.Header -> {
+                        stickyHeader(key = "header_${feedItem.title}") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .clickable { onToggleHeaderCollapse(feedItem.title) } // 🔄 Click to collapse/expand
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Left Side: Date Title text + Dynamic Chevron state arrow layout
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    val isCollapsed = viewData.collapsedHeaders.contains(feedItem.title)
+                                    Text(
+                                        text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}", // Inline structural indicator
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
 
-                    val globalIndex = viewData.activityFeed.indexOf(item)
-                    if (globalIndex >= viewData.activityFeed.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
-                        LaunchedEffect(Unit) {
-                            onLoadMore()
+                                // Right Side: Quick Totals metrics indicators
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (feedItem.feedingCount > 0) {
+                                        Text(text = "🍼 ${feedItem.feedingCount}", style = MaterialTheme.typography.labelMedium)
+                                    }
+                                    if (feedItem.nappyCount > 0) {
+                                        Text(text = "🧷 ${feedItem.nappyCount}", style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .animateItem()
-                    ) {
-                        ActivityFeedItem(
-                            item = item,
-                            onEdit = {
-                                when (item) {
-                                    is BabyActivity.Nappy -> item.id?.let { onNavigateToEditNappyChange(it) }
-                                    is BabyActivity.Feeding -> item.id?.let { onNavigateToEditFeeding(it) }
-                                }
-                            },
-                            // 🛠️ CONNECT: Determine filter enum dynamically when clicking the row icon
-                            onIconClick = {
-                                val targetFilter = when (item) {
-                                    is BabyActivity.Nappy -> ActivityFilter.NAPPY
-                                    is BabyActivity.Feeding -> ActivityFilter.FEEDING
-                                }
-                                onToggleFilter(targetFilter) // Triggers your ViewModel commonised filter function!
+                    // 📋 2. Render standard rows using individual item slots underneath
+                    is HomeFeedItem.ActivityRow -> {
+                        val currentActivity = feedItem.activity
+
+                        // Extract the unique ID value directly for the primitive key signature reference
+                        val uniqueId = when (currentActivity) {
+                            is BabyActivity.Nappy -> currentActivity.dto.id
+                            is BabyActivity.Feeding -> currentActivity.dto.id
+                        }
+
+                        item(key = "row_${uniqueId}") {
+
+                            // Calculate pagination indices relative to standard rows only
+                            val allRows = remember(activityItems) {
+                                activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
                             }
-                        )
+                            val globalIndex = allRows.indexOf(feedItem)
+
+                            if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+                                LaunchedEffect(Unit) {
+                                    onLoadMore()
+                                }
+                            }
+
+                            Box(modifier = Modifier.fillMaxWidth().animateItem()) {
+                                ActivityFeedItem(
+                                    item = currentActivity,
+                                    onEdit = {
+                                        val activityId = when (currentActivity) {
+                                            is BabyActivity.Nappy -> currentActivity.dto.id
+                                            is BabyActivity.Feeding -> currentActivity.dto.id
+                                        }
+                                        activityId?.let {
+                                            when (currentActivity) {
+                                                is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
+                                                is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
+                                            }
+                                        }
+                                    },
+                                    onIconClick = {
+                                        val targetFilter = when (currentActivity) {
+                                            is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                            is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                        }
+                                        onToggleFilter(targetFilter)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -426,33 +455,5 @@ fun BabyCareTile(
                 }
             }
         }
-    }
-}
-
-private fun formatHeaderDate(dateString: String): String {
-    return try {
-        // Safe check: extract just the YYYY-MM-DD segment if it contains time info
-        val cleanDateStr = dateString.split(" ").firstOrNull() ?: dateString
-        val targetDate = LocalDate.parse(cleanDateStr)
-        val today = LocalDate.now()
-
-        when (targetDate) {
-            today -> "Today"
-            today.minusDays(1) -> "Yesterday"
-            else -> {
-                val day = targetDate.dayOfMonth
-                val suffix = when {
-                    day in 11..13 -> "th"
-                    day % 10 == 1 -> "st"
-                    day % 10 == 2 -> "nd"
-                    day % 10 == 3 -> "rd"
-                    else -> "th"
-                }
-                val monthFormatter = DateTimeFormatter.ofPattern(" MMMM", Locale.ENGLISH)
-                "$day$suffix${targetDate.format(monthFormatter)}"
-            }
-        }
-    } catch (e: Exception) {
-        dateString // Fallback safety representation if parsing strings fails
     }
 }
