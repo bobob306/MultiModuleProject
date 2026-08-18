@@ -193,7 +193,8 @@ internal fun BabyCareHomeScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val isCollapsed = viewData.collapsedHeaders.contains(feedItem.title)
+                                    val isCollapsed =
+                                        viewData.collapsedHeaders.contains(feedItem.title)
                                     Text(
                                         text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}", // Inline structural indicator
                                         style = MaterialTheme.typography.titleMedium,
@@ -204,10 +205,16 @@ internal fun BabyCareHomeScreen(
                                 // Right Side: Quick Totals metrics indicators
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     if (feedItem.feedingCount > 0) {
-                                        Text(text = "🍼 ${feedItem.feedingCount}", style = MaterialTheme.typography.labelMedium)
+                                        Text(
+                                            text = "🍼 ${feedItem.feedingCount}",
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
                                     }
                                     if (feedItem.nappyCount > 0) {
-                                        Text(text = "🧷 ${feedItem.nappyCount}", style = MaterialTheme.typography.labelMedium)
+                                        Text(
+                                            text = "🍃 ${feedItem.nappyCount}",
+                                            style = MaterialTheme.typography.labelMedium
+                                        )
                                     }
                                 }
                             }
@@ -238,7 +245,11 @@ internal fun BabyCareHomeScreen(
                                 }
                             }
 
-                            Box(modifier = Modifier.fillMaxWidth().animateItem()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                            ) {
                                 ActivityFeedItem(
                                     item = currentActivity,
                                     onEdit = {
@@ -248,8 +259,13 @@ internal fun BabyCareHomeScreen(
                                         }
                                         activityId?.let {
                                             when (currentActivity) {
-                                                is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
-                                                is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
+                                                is BabyActivity.Nappy -> onNavigateToEditNappyChange(
+                                                    activityId
+                                                )
+
+                                                is BabyActivity.Feeding -> onNavigateToEditFeeding(
+                                                    activityId
+                                                )
                                             }
                                         }
                                     },
