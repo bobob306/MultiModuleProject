@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import androidx.navigation.navDeepLink
 import com.bsdevs.babycare.BabyCareHomeScreenRoute
 import com.bsdevs.babycare.FeedingScreenRoute
 import com.bsdevs.babycare.NappyChangeScreenRoute
@@ -20,7 +21,7 @@ data object BabyCareHomeRoute
 data class NappyChangeRoute(val activityId: String? = null)
 
 @Serializable
-data class FeedingRoute(val activityId: String? = null)
+data class FeedingRoute(val activityId: String? = null, val startSide: String? = null)
 
 fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
     navigate(route = BabyCareHomeRoute, navOptions = navOptions)
@@ -45,13 +46,21 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) }
             )
         }
-        composable<NappyChangeRoute> {
+        composable<NappyChangeRoute>(
+            deepLinks = listOf(
+                navDeepLink<NappyChangeRoute>(basePath = "babycare://nappy")
+            )
+        ) {
             NappyChangeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-        composable<FeedingRoute> {
+        composable<FeedingRoute>(
+            deepLinks = listOf(
+                navDeepLink<FeedingRoute>(basePath = "babycare://feeding")
+            )
+        ) {
             FeedingScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() }

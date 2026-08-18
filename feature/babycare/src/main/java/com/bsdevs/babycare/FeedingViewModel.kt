@@ -61,12 +61,25 @@ class FeedingViewModel @Inject constructor(
     private val _events = Channel<FeedingEvent>()
     val events = _events.receiveAsFlow()
 
+    // 🗃️ Store tracking details in an array or map indexed by the side
+    private val timerJobs = mutableMapOf<FeedingSide, Job?>()
+    private val baseDurations = mutableMapOf<FeedingSide, Long>().withDefault { 0L }
+
     init {
         route.activityId?.let { id ->
             // 🔄 ONLY load from network if we haven't started tracking or loaded yet
             if (_uiState.value.id == null && !_uiState.value.isLoading) {
                 loadFeeding(id)
             }
+        }
+        
+        route.startSide?.let { sideStr ->
+            val side = when (sideStr.lowercase()) {
+                "left" -> FeedingSide.LEFT
+                "right" -> FeedingSide.RIGHT
+                else -> null
+            }
+            side?.let { startTimer(it) }
         }
     }
 
@@ -108,10 +121,6 @@ class FeedingViewModel @Inject constructor(
             }
         }
     }
-
-    // 🗃️ Store tracking details in an array or map indexed by the side
-    private val timerJobs = mutableMapOf<FeedingSide, Job?>()
-    private val baseDurations = mutableMapOf<FeedingSide, Long>().withDefault { 0L }
 
     fun toggleTimer(side: FeedingSide) {
         val isRunning = when (side) {
@@ -186,72 +195,9 @@ class FeedingViewModel @Inject constructor(
         _uiState.update { it.copy(rightDuration = duration) }
     }
 
-    private var leftTimerJob: Job? = null
-    private var rightTimerJob: Job? = null
-
-    private var leftStartTime: Long? = null
-    private var rightStartTime: Long? = null
-    private var leftBaseDuration: Long = 0
-    private var rightBaseDuration: Long = 0
-
     fun onStartTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format("%02d:%02d", hour, minute)
         _uiState.update { it.copy(startTime = formattedTime) }
-    }
-
-    fun toggleLeftTimer() {
-// ...
-        if (_uiState.value.isLeftRunning) {
-            pauseLeftTimer()
-        } else {
-            startLeftTimer()
-        }
-    }
-
-    fun toggleRightTimer() {
-        if (_uiState.value.isRightRunning) {
-            pauseRightTimer()
-        } else {
-            startRightTimer()
-        }
-    }
-
-    private fun startLeftTimer() {
-        leftStartTime = System.currentTimeMillis()
-        _uiState.update { it.copy(isLeftRunning = true) }
-        leftTimerJob = viewModelScope.launch {
-            while (true) {
-                val elapsed = (System.currentTimeMillis() - (leftStartTime ?: 0L)) / 1000
-                _uiState.update { it.copy(leftDuration = leftBaseDuration + elapsed) }
-                delay(1000L)
-            }
-        }
-    }
-
-    private fun pauseLeftTimer() {
-        leftTimerJob?.cancel()
-        leftBaseDuration = _uiState.value.leftDuration
-        leftStartTime = null
-        _uiState.update { it.copy(isLeftRunning = false) }
-    }
-
-    private fun startRightTimer() {
-        rightStartTime = System.currentTimeMillis()
-        _uiState.update { it.copy(isRightRunning = true) }
-        rightTimerJob = viewModelScope.launch {
-            while (true) {
-                val elapsed = (System.currentTimeMillis() - (rightStartTime ?: 0L)) / 1000
-                _uiState.update { it.copy(rightDuration = rightBaseDuration + elapsed) }
-                delay(1000L)
-            }
-        }
-    }
-
-    private fun pauseRightTimer() {
-        rightTimerJob?.cancel()
-        rightBaseDuration = _uiState.value.rightDuration
-        rightStartTime = null
-        _uiState.update { it.copy(isRightRunning = false) }
     }
 
     fun updateBottleAmount(amount: Int?) {

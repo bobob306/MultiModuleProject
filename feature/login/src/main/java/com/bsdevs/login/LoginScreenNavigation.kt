@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
+import androidx.navigation.navDeepLink
 import com.bsdevs.login.loginscreen.LoginScreenRoute
 import com.bsdevs.login.registerscreen.RegisterScreenRoute
 import kotlinx.serialization.Serializable
@@ -36,7 +37,11 @@ fun NavGraphBuilder.loginScreenSection(
     onNavigateToRegisterScreen: (navOptions: NavOptions?) -> Unit,
 ) {
     navigation<LoginScreenBaseRoute>(startDestination = LoginScreenRoute) {
-        composable<LoginScreenRoute> {
+        composable<LoginScreenRoute>(
+            deepLinks = listOf(
+                navDeepLink<LoginScreenRoute>(basePath = "babycare://login")
+            )
+        ) {
             LoginScreenRoute(
                 onShowSnackBar,
                 onNavigateToCoffeeHome,
