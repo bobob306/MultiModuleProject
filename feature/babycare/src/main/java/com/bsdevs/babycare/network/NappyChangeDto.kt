@@ -13,5 +13,6 @@ data class NappyChangeDto(
     val userId: String? = null,
     val date: String? = null, // ISO Local Date (yyyy-MM-dd)
     val time: String? = null, // HH:mm
+    val dateTime: String = "",
     val type: String? = null   // "Wet", "Dirty", "Both"
 ) : Parcelable

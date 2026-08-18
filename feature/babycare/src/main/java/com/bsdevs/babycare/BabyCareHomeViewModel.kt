@@ -31,8 +31,11 @@ data class BabyCareHomeViewData(
     val activityFeed: List<BabyActivity> = emptyList(),
     val canLoadMore: Boolean = true,
     val isLoadingMore: Boolean = false,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val currentFilter: ActivityFilter = ActivityFilter.NONE
 )
+
+enum class ActivityFilter { NONE, NAPPY, FEEDING }
 
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(
@@ -61,25 +64,30 @@ class BabyCareHomeViewModel @Inject constructor(
             lastFeedingDoc = null
             try {
                 val userId = accountService.currentUserId
-                
+
                 val nappyTask = async { fetchNappyChangesBatch(userId, null) }
                 val feedingTask = async { fetchFeedingsBatch(userId, null) }
-                
+
                 val nappyResult = nappyTask.await()
                 val feedingResult = feedingTask.await()
-                
+
                 lastNappyDoc = nappyResult.second
                 lastFeedingDoc = feedingResult.second
-                
+
+                // 🗃️ 1. Seed your cache memory properties with the raw initial datasets
+                cachedNappies = nappyResult.first
+                cachedFeedings = feedingResult.first
+
                 val combined = combineAndSort(nappyResult.first, feedingResult.first)
-                
+
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
                             lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
                             lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
                             activityFeed = combined,
-                            canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize
+                            canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
+                            currentFilter = ActivityFilter.NONE // 🌟 Explicitly default to un-filtered on clean boot
                         )
                     )
                 }
@@ -102,23 +110,27 @@ class BabyCareHomeViewModel @Inject constructor(
                 val userId = accountService.currentUserId
                 val nappyTask = async { fetchNappyChangesBatch(userId, null) }
                 val feedingTask = async { fetchFeedingsBatch(userId, null) }
-                
+
                 val nappyResult = nappyTask.await()
                 val feedingResult = feedingTask.await()
-                
+
                 lastNappyDoc = nappyResult.second
                 lastFeedingDoc = feedingResult.second
-                
-                val combined = combineAndSort(nappyResult.first, feedingResult.first)
+
+                cachedNappies = nappyResult.first
+                cachedFeedings = feedingResult.first
+
+                val activeFilter = currentResult.data.currentFilter
 
                 _viewData.update {
                     Result.Success(
                         BabyCareHomeViewData(
                             lastNappyChange = nappyResult.first.firstOrNull()?.let { formatNappyChange(it) },
                             lastFeeding = feedingResult.first.firstOrNull()?.let { formatFeeding(it) },
-                            activityFeed = combined,
+                            activityFeed = getFilteredAndSortedFeed(activeFilter), // 🔄 Commonised
                             canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
-                            isRefreshing = false
+                            isRefreshing = false,
+                            currentFilter = activeFilter
                         )
                     )
                 }
@@ -136,22 +148,25 @@ class BabyCareHomeViewModel @Inject constructor(
             _viewData.update { Result.Success(currentResult.data.copy(isLoadingMore = true)) }
             try {
                 val userId = accountService.currentUserId
-                
+
                 val nappyTask = async { fetchNappyChangesBatch(userId, lastNappyDoc) }
                 val feedingTask = async { fetchFeedingsBatch(userId, lastFeedingDoc) }
-                
+
                 val nappyResult = nappyTask.await()
                 val feedingResult = feedingTask.await()
-                
+
                 lastNappyDoc = nappyResult.second
                 lastFeedingDoc = feedingResult.second
-                
-                val newCombined = combineAndSort(nappyResult.first, feedingResult.first)
-                
+
+                cachedNappies = cachedNappies + nappyResult.first
+                cachedFeedings = cachedFeedings + feedingResult.first
+
+                val activeFilter = currentResult.data.currentFilter
+
                 _viewData.update {
                     Result.Success(
                         currentResult.data.copy(
-                            activityFeed = currentResult.data.activityFeed + newCombined,
+                            activityFeed = getFilteredAndSortedFeed(activeFilter), // 🔄 Commonised
                             canLoadMore = nappyResult.first.size >= pageSize || feedingResult.first.size >= pageSize,
                             isLoadingMore = false
                         )
@@ -170,8 +185,7 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private suspend fun fetchNappyChangesBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<NappyChangeDto>, DocumentSnapshot?> {
         var query = Firebase.firestore.collection("nappyChanges").document(userId).collection("changes")
-            .orderBy("date", Query.Direction.DESCENDING)
-            .orderBy("time", Query.Direction.DESCENDING)
+            .orderBy("dateTime", Query.Direction.DESCENDING)
             .limit(pageSize)
         
         if (startAfter != null) {
@@ -187,8 +201,7 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private suspend fun fetchFeedingsBatch(userId: String, startAfter: DocumentSnapshot?): Pair<List<FeedingDto>, DocumentSnapshot?> {
         var query = Firebase.firestore.collection("feedings").document(userId).collection("records")
-            .orderBy("date", Query.Direction.DESCENDING)
-            .orderBy("startTime", Query.Direction.DESCENDING)
+            .orderBy("dateTime", Query.Direction.DESCENDING)
             .limit(pageSize)
         
         if (startAfter != null) {
@@ -235,6 +248,52 @@ class BabyCareHomeViewModel @Inject constructor(
                 val formatter = DateTimeFormatter.ofPattern("d'th' MMMM", Locale.ENGLISH)
                 date.format(formatter)
             }
+        }
+    }
+
+    private fun getFilteredAndSortedFeed(filter: ActivityFilter): List<BabyActivity> {
+        val filteredNappies = if (filter == ActivityFilter.FEEDING) emptyList() else cachedNappies
+        val filteredFeedings = if (filter == ActivityFilter.NAPPY) emptyList() else cachedFeedings
+        return combineAndSort(filteredNappies, filteredFeedings)
+    }
+
+
+    // 🗃️ Cache memory fields to keep raw items safe during filtering shifts
+    private var cachedNappies = listOf<NappyChangeDto>()
+    private var cachedFeedings = listOf<FeedingDto>()
+
+    // 🛠️ 1. Main filter toggle entry point called by clicking a Home UI card icon
+    fun toggleActivityFilter(filter: ActivityFilter) {
+        val currentResult = _viewData.value
+        if (currentResult !is Result.Success) return
+
+        val newFilter = if (currentResult.data.currentFilter == filter) ActivityFilter.NONE else filter
+
+        _viewData.update {
+            Result.Success(
+                currentResult.data.copy(
+                    activityFeed = getFilteredAndSortedFeed(newFilter), // 🔄 Commonised
+                    currentFilter = newFilter
+                )
+            )
+        }
+    }
+
+    // 🛠️ 2. Core filtering engine that combines items without hitting the network
+    private fun updateUiFeedWithFilter(filter: ActivityFilter, currentData: BabyCareHomeViewData) {
+        // Drop the collection components completely if the opposing filter option is selected
+        val filteredNappies = if (filter == ActivityFilter.FEEDING) emptyList() else cachedNappies
+        val filteredFeedings = if (filter == ActivityFilter.NAPPY) emptyList() else cachedFeedings
+
+        val newlySortedFeed = combineAndSort(filteredNappies, filteredFeedings)
+
+        _viewData.update {
+            Result.Success(
+                currentData.copy(
+                    activityFeed = newlySortedFeed,
+                    currentFilter = filter // Save the active filter flag inside your state layout
+                )
+            )
         }
     }
 }

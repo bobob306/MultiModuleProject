@@ -116,12 +116,13 @@ class NappyChangeViewModel @Inject constructor(
         }
         
         val nappyId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
-
+        val combinedDateTime = "${currentState.date} ${currentState.time}"
         val nappyChange = NappyChangeDto(
             id = nappyId,
             userId = userId,
             date = currentState.date,
             time = currentState.time,
+            dateTime = combinedDateTime,
             type = currentState.type
         )
 
