@@ -39,11 +39,11 @@ jobs:
       - name: List APK files (debugging)
         run: ls -lah app/build/outputs/apk/release/
 
-      # Fetches the absolute latest release tag using clean JSON formatting
+      # Fetches the absolute latest release tag using strict JSON array formatting
       - name: Get Latest Tag or Use Default
         id: latest_tag
         run: |
-          latest_tag=$(gh release list --limit 1 --json tagName --jq '..tagName' --repo ${{ github.repository }})
+          latest_tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName' --repo ${{ github.repository }})
           # 🚨 SAFETY NET: If API drops or no releases found, default to v0.0.9999
           if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             latest_tag="v0.0.9999"
@@ -72,7 +72,7 @@ jobs:
           name: Release ${{ steps.bump.outputs.new_tag }}
           draft: false
           prerelease: false
-          generate_release_notes: true # 📝 FIXED: Automatically pulls commit headers for your release notes!
+          generate_release_notes: true # 📝 Automatically pulls commit headers for your release notes!
           files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
