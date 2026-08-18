@@ -1,10 +1,12 @@
 package com.bsdevs.babycare
 
+import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,12 +19,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.KeyboardType
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextAlign
 import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,88 +47,203 @@ internal fun FeedingScreen(
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var showDurationDialogForSide by rememberSaveable { mutableStateOf<String?>(null) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        // Start Time Field
-        Box(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            OutlinedTextField(
-                value = uiState.startTime,
-                onValueChange = {},
-                label = { Text("Start Time") },
-                readOnly = true,
-                enabled = !uiState.isLoading,
-                trailingIcon = {
-                    Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
-            )
-        }
+    // 🔄 1. Detect screen orientation
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val scrollState = rememberScrollState()
 
+    // 📱 OPTION A: LANDSCAPE MODE (Two-Column Side-by-Side Layout)
+    if (isLandscape) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            val showEdit = uiState.id != null
-            FeedingTimerButton(
-                label = "Left",
-                content = formatDuration(uiState.leftDuration),
-                isSelected = uiState.isLeftRunning,
-                onClick = onToggleLeft,
-                onLongClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" },
-                showEditButton = showEdit,
-                onEditClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" }
-            )
-            FeedingTimerButton(
-                label = "Right",
-                content = formatDuration(uiState.rightDuration),
-                isSelected = uiState.isRightRunning,
-                onClick = onToggleRight,
-                onLongClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" },
-                showEditButton = showEdit,
-                onEditClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" }
-            )
-            FeedingTimerButton(
-                label = "Bottle",
-                content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
-                isSelected = uiState.bottleAmountMl != null,
-                onClick = { showBottleDialog = true },
-                onLongClick = {}
-            )
+            // Left Column: Scrollable Inputs & Timer Buttons
+            Column(
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxHeight()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Start Time Field
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = uiState.startTime,
+                        onValueChange = {},
+                        label = { Text("Start Time") },
+                        readOnly = true,
+                        enabled = !uiState.isLoading,
+                        trailingIcon = {
+                            Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+                    )
+                }
+
+                // Row of Timer Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    val showEdit = uiState.id != null
+                    FeedingTimerButton(
+                        label = "Left",
+                        content = formatDuration(uiState.leftDuration),
+                        isSelected = uiState.isLeftRunning,
+                        onClick = onToggleLeft,
+                        onLongClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" },
+                        showEditButton = showEdit,
+                        onEditClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" }
+                    )
+                    FeedingTimerButton(
+                        label = "Right",
+                        content = formatDuration(uiState.rightDuration),
+                        isSelected = uiState.isRightRunning,
+                        onClick = onToggleRight,
+                        onLongClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" },
+                        showEditButton = showEdit,
+                        onEditClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" }
+                    )
+                    FeedingTimerButton(
+                        label = "Bottle",
+                        content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
+                        isSelected = uiState.bottleAmountMl != null,
+                        onClick = { showBottleDialog = true },
+                        onLongClick = {}
+                    )
+                }
+            }
+
+            // Right Column: Summary Panel & Active Action Button Layout
+            Column(
+                modifier = Modifier
+                    .weight(0.8f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Track Session Live",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (uiState.error != null) {
+                    Text(
+                        text = uiState.error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                Button(
+                    onClick = onSave,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Save Feeding Session")
+                }
+            }
         }
-
-        Spacer(modifier = Modifier.height(64.dp))
-
-        if (uiState.error != null) {
-            Text(
-                text = uiState.error,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        Button(
-            onClick = onSave,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
+    }
+    // 📱 OPTION B: PORTRAIT MODE (Original Single Stack Column)
+    else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
-            Text("Save Feeding Session")
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                OutlinedTextField(
+                    value = uiState.startTime,
+                    onValueChange = {},
+                    label = { Text("Start Time") },
+                    readOnly = true,
+                    enabled = !uiState.isLoading,
+                    trailingIcon = {
+                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                val showEdit = uiState.id != null
+                FeedingTimerButton(
+                    label = "Left",
+                    content = formatDuration(uiState.leftDuration),
+                    isSelected = uiState.isLeftRunning,
+                    onClick = onToggleLeft,
+                    onLongClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" },
+                    showEditButton = showEdit,
+                    onEditClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" }
+                )
+                FeedingTimerButton(
+                    label = "Right",
+                    content = formatDuration(uiState.rightDuration),
+                    isSelected = uiState.isRightRunning,
+                    onClick = onToggleRight,
+                    onLongClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" },
+                    showEditButton = showEdit,
+                    onEditClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" }
+                )
+                FeedingTimerButton(
+                    label = "Bottle",
+                    content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
+                    isSelected = uiState.bottleAmountMl != null,
+                    onClick = { showBottleDialog = true },
+                    onLongClick = {}
+                )
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            if (uiState.error != null) {
+                Text(
+                    text = uiState.error,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Button(
+                onClick = onSave,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.isLoading
+            ) {
+                Text("Save Feeding Session")
+            }
         }
     }
 
+    // 🍼 Bottle Entry Dialog
     if (showBottleDialog) {
         var amountText by rememberSaveable { mutableStateOf(uiState.bottleAmountMl?.toString() ?: "") }
-        
+
         AlertDialog(
             onDismissRequest = { showBottleDialog = false },
             title = { Text("Bottle Amount (ml)") },
@@ -195,7 +315,22 @@ internal fun FeedingScreen(
                 }
             },
             text = {
-                TimePicker(state = timePickerState)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // 🔄 Dynamic toggle: Uses smaller text fields in landscape so it doesn't break the layout
+                    if (isLandscape) {
+                        Text(
+                            text = "Enter time",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        TimeInput(state = timePickerState)
+                    } else {
+                        TimePicker(state = timePickerState)
+                    }
+                }
             }
         )
     }
@@ -213,7 +348,7 @@ internal fun FeedingScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
                         value = minutesText,
-                        onValueChange = { 
+                        onValueChange = {
                             if (it.isEmpty() || (it.all { c -> c.isDigit() } && it.toLong() <= 99)) {
                                 minutesText = it
                             }
@@ -225,7 +360,7 @@ internal fun FeedingScreen(
                     Text(":", modifier = Modifier.padding(horizontal = 8.dp))
                     OutlinedTextField(
                         value = secondsText,
-                        onValueChange = { 
+                        onValueChange = {
                             if (it.isEmpty() || (it.all { char -> char.isDigit() } && it.toLong() <= 59)) {
                                 secondsText = it
                             }
@@ -237,12 +372,12 @@ internal fun FeedingScreen(
                 }
             },
             confirmButton = {
-// ...
+                // 🛠️ FIXED: Re-added the complete missing action block cleanly here
                 TextButton(
                     onClick = {
                         val mins = minutesText.toLongOrNull() ?: 0L
                         val secs = secondsText.toLongOrNull() ?: 0L
-                        val total = mins * 60 + secs
+                        val total = (mins * 60) + secs
                         if (side == "Left") onLeftDurationChanged(total) else onRightDurationChanged(total)
                         showDurationDialogForSide = null
                     }

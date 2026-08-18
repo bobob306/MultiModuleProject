@@ -364,8 +364,9 @@ fun FeedingScreenRoute(
         FeedingScreen(
             modifier = Modifier.padding(padding),
             uiState = uiState,
-            onToggleLeft = viewModel::toggleLeftTimer,
-            onToggleRight = viewModel::toggleRightTimer,
+            // 🔄 Map your old explicit arguments to the commonised enum trigger function
+            onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },
+            onToggleRight = { viewModel.toggleTimer(FeedingSide.RIGHT) },
             onStartTimeSelected = viewModel::onStartTimeSelected,
             onLeftDurationChanged = viewModel::onLeftDurationChanged,
             onRightDurationChanged = viewModel::onRightDurationChanged,

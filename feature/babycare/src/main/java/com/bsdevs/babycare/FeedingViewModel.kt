@@ -1,5 +1,6 @@
 package com.bsdevs.babycare
 
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,6 +40,8 @@ data class FeedingUiState(
     val error: String? = null
 )
 
+enum class FeedingSide { LEFT, RIGHT }
+
 sealed class FeedingEvent {
     object SaveSuccess : FeedingEvent()
     data class SaveError(val message: String) : FeedingEvent()
@@ -60,7 +63,10 @@ class FeedingViewModel @Inject constructor(
 
     init {
         route.activityId?.let { id ->
-            loadFeeding(id)
+            // 🔄 ONLY load from network if we haven't started tracking or loaded yet
+            if (_uiState.value.id == null && !_uiState.value.isLoading) {
+                loadFeeding(id)
+            }
         }
     }
 
@@ -74,29 +80,110 @@ class FeedingViewModel @Inject constructor(
                     .whereEqualTo("id", id)
                     .get()
                     .await()
-                
+
                 val doc = snapshot.documents.firstOrNull()
                 val feeding = doc?.toObject(FeedingDto::class.java)
                 if (feeding != null) {
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
                             id = feeding.id,
                             originalDocId = doc.id,
                             date = feeding.date ?: it.date,
                             startTime = feeding.startTime ?: it.startTime,
+                            bottleAmountMl = feeding.bottleAmountMl,
                             leftDuration = feeding.leftDuration,
                             rightDuration = feeding.rightDuration,
-                            bottleAmountMl = feeding.bottleAmountMl,
                             isLoading = false
                         )
                     }
-                    leftBaseDuration = feeding.leftDuration
-                    rightBaseDuration = feeding.rightDuration
+                    // Seed your commonised base duration maps cleanly
+                    baseDurations[FeedingSide.LEFT] = feeding.leftDuration
+                    baseDurations[FeedingSide.RIGHT] = feeding.rightDuration
+                } else {
+                    // If it fails to find the doc, turn off the loading flag safely
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
+    }
+
+    // 🗃️ Store tracking details in an array or map indexed by the side
+    private val timerJobs = mutableMapOf<FeedingSide, Job?>()
+    private val baseDurations = mutableMapOf<FeedingSide, Long>().withDefault { 0L }
+
+    fun toggleTimer(side: FeedingSide) {
+        val isRunning = when (side) {
+            FeedingSide.LEFT -> _uiState.value.isLeftRunning
+            FeedingSide.RIGHT -> _uiState.value.isRightRunning
+        }
+
+        if (isRunning) {
+            pauseTimer(side)
+        } else {
+            startTimer(side)
+        }
+    }
+
+    private fun startTimer(side: FeedingSide) {
+        val sessionStartTime = SystemClock.elapsedRealtime()
+        val previousAccumulatedDuration = baseDurations.getValue(side)
+
+        // Update the running state flag dynamically
+        _uiState.update { state ->
+            when (side) {
+                FeedingSide.LEFT -> state.copy(isLeftRunning = true)
+                FeedingSide.RIGHT -> state.copy(isRightRunning = true)
+            }
+        }
+
+        // Launch a single unified timer loop
+        timerJobs[side] = viewModelScope.launch {
+            while (true) {
+                val actualSecondsElapsed = (SystemClock.elapsedRealtime() - sessionStartTime) / 1000
+                val totalDuration = previousAccumulatedDuration + actualSecondsElapsed
+
+                _uiState.update { state ->
+                    when (side) {
+                        FeedingSide.LEFT -> state.copy(leftDuration = totalDuration)
+                        FeedingSide.RIGHT -> state.copy(rightDuration = totalDuration)
+                    }
+                }
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun pauseTimer(side: FeedingSide) {
+        timerJobs[side]?.cancel()
+        timerJobs[side] = null
+
+        // Lock in the precise duration up to this millisecond
+        val finalDuration = when (side) {
+            FeedingSide.LEFT -> _uiState.value.leftDuration
+            FeedingSide.RIGHT -> _uiState.value.rightDuration
+        }
+        baseDurations[side] = finalDuration
+
+        // Flip the running state flag off
+        _uiState.update { state ->
+            when (side) {
+                FeedingSide.LEFT -> state.copy(isLeftRunning = false)
+                FeedingSide.RIGHT -> state.copy(isRightRunning = false)
+            }
+        }
+    }
+
+    // 📥 Make sure to update your existing duration setter endpoints too:
+    fun onLeftDurationChanged(duration: Long) {
+        baseDurations[FeedingSide.LEFT] = duration
+        _uiState.update { it.copy(leftDuration = duration) }
+    }
+
+    fun onRightDurationChanged(duration: Long) {
+        baseDurations[FeedingSide.RIGHT] = duration
+        _uiState.update { it.copy(rightDuration = duration) }
     }
 
     private var leftTimerJob: Job? = null
@@ -110,16 +197,6 @@ class FeedingViewModel @Inject constructor(
     fun onStartTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format("%02d:%02d", hour, minute)
         _uiState.update { it.copy(startTime = formattedTime) }
-    }
-
-    fun onLeftDurationChanged(duration: Long) {
-        leftBaseDuration = duration
-        _uiState.update { it.copy(leftDuration = duration) }
-    }
-
-    fun onRightDurationChanged(duration: Long) {
-        rightBaseDuration = duration
-        _uiState.update { it.copy(rightDuration = duration) }
     }
 
     fun toggleLeftTimer() {
