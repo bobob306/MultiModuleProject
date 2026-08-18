@@ -13,6 +13,7 @@ data class FeedingDto(
     val userId: String? = null,
     val date: String? = null, // ISO Local Date (yyyy-MM-dd)
     val startTime: String? = null, // HH:mm
+    val dateTime: String = "",
     val leftDuration: Long = 0, // seconds
     val rightDuration: Long = 0, // seconds
     val totalDuration: Long = 0, // seconds

@@ -43,7 +43,7 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToNappyChange = { navController.navigateToNappyChange() },
                 onNavigateToFeeding = { navController.navigateToFeeding() },
                 onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
-                onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) }
+                onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
             )
         }
         composable<NappyChangeRoute>(

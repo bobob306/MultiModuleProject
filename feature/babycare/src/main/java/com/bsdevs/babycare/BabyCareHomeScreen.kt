@@ -2,6 +2,7 @@ package com.bsdevs.babycare
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,8 +35,10 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -71,6 +74,7 @@ fun BabyCareHomeScreenRoute(
                 onNavigateToFeeding = onNavigateToFeeding,
                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
+                onToggleFilter = viewModel::toggleActivityFilter,
                 onLoadMore = viewModel::loadMore
             )
         }
@@ -90,7 +94,7 @@ fun BabyCareHomeScreenRoute(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 internal fun BabyCareHomeScreen(
     viewData: BabyCareHomeViewData,
@@ -100,11 +104,20 @@ internal fun BabyCareHomeScreen(
     onNavigateToFeeding: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
-    onLoadMore: () -> Unit
+    onToggleFilter: (ActivityFilter) -> Unit,
+    onLoadMore: () -> Unit,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     // 1. Direct PullToRefreshBox wrapper at the root level
 
+    // 🔄 1. Dynamically chunk your flat list into date groups whenever the feed changes
+    val groupedActivities = remember(viewData.activityFeed) {
+        viewData.activityFeed.groupBy { item ->
+            // Use the combined dateTime string if available, otherwise fall back to the raw date field
+            val referenceDate = item.dateTime
+            formatHeaderDate(referenceDate)
+        }
+    }
     PullToRefreshBox(
         isRefreshing = isRefreshing, // Use the localized ui flag
         onRefresh = {
@@ -132,18 +145,24 @@ internal fun BabyCareHomeScreen(
             // Item 2: Quick Action Tiles Row
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     BabyCareTile(
-                        modifier = Modifier.weight(1f).heightIn(max = 120.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = 120.dp),
                         title = "Nappy Change",
                         subtitle = viewData.lastNappyChange,
                         icon = Icons.Default.ChildCare,
                         onClick = onNavigateToNappyChange
                     )
                     BabyCareTile(
-                        modifier = Modifier.weight(1f).heightIn(max = 120.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = 120.dp),
                         title = "Feeding",
                         subtitle = viewData.lastFeeding,
                         icon = Icons.Default.Restaurant,
@@ -161,26 +180,62 @@ internal fun BabyCareHomeScreen(
                 )
             }
 
-            // Item 4: Dynamic Activity List Feed
-            itemsIndexed(
-                items = viewData.activityFeed,
-                key = { _, item -> item.id ?: "" }
-            ) { index, item ->
-                // Pagination check
-                if (index >= viewData.activityFeed.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
-                    LaunchedEffect(Unit) {
-                        onLoadMore()
+            // 📱 Item 4: Sticky Grouped Activity Feed Layout
+            groupedActivities.forEach { (dateHeader, activitiesInDay) ->
+
+                // 📌 Opaque Box Sticky Header (Prevents cards from bleeding through when scrolling)
+                stickyHeader(key = dateHeader) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        Text(
+                            text = dateHeader,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
                     }
                 }
-                ActivityFeedItem(
-                    item = item,
-                    onEdit = {
-                        when (item) {
-                            is BabyActivity.Nappy -> item.id?.let { onNavigateToEditNappyChange(it) }
-                            is BabyActivity.Feeding -> item.id?.let { onNavigateToEditFeeding(it) }
+
+                // 📋 Scrollable Feed Logs list inside BabyCareHomeScreen
+                itemsIndexed(
+                    items = activitiesInDay,
+                    key = { _, item -> item.id ?: "" }
+                ) { _, item ->
+
+                    val globalIndex = viewData.activityFeed.indexOf(item)
+                    if (globalIndex >= viewData.activityFeed.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+                        LaunchedEffect(Unit) {
+                            onLoadMore()
                         }
                     }
-                )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                    ) {
+                        ActivityFeedItem(
+                            item = item,
+                            onEdit = {
+                                when (item) {
+                                    is BabyActivity.Nappy -> item.id?.let { onNavigateToEditNappyChange(it) }
+                                    is BabyActivity.Feeding -> item.id?.let { onNavigateToEditFeeding(it) }
+                                }
+                            },
+                            // 🛠️ CONNECT: Determine filter enum dynamically when clicking the row icon
+                            onIconClick = {
+                                val targetFilter = when (item) {
+                                    is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                    is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                }
+                                onToggleFilter(targetFilter) // Triggers your ViewModel commonised filter function!
+                            }
+                        )
+                    }
+                }
             }
 
             // Item 5: Bottom Loading Spinner for Pagination
@@ -219,13 +274,14 @@ internal fun BabyCareHomeScreen(
 @Composable
 fun ActivityFeedItem(
     item: BabyActivity,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onIconClick: () -> Unit // ➕ 1. Add this callback parameter
 ) {
     val icon = when (item) {
         is BabyActivity.Nappy -> Icons.Default.ChildCare
         is BabyActivity.Feeding -> Icons.Default.Restaurant
     }
-    
+
     val title = when (item) {
         is BabyActivity.Nappy -> "Nappy Change: ${item.dto.type}"
         is BabyActivity.Feeding -> {
@@ -255,15 +311,18 @@ fun ActivityFeedItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 🔄 2. Make only this circle clickable to capture the filter event
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                    .clip(CircleShape) // Ensures the click ripple is a perfect circle
+                    .clickable { onIconClick() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+                    contentDescription = "Filter by type",
                     modifier = Modifier.size(24.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -367,5 +426,33 @@ fun BabyCareTile(
                 }
             }
         }
+    }
+}
+
+private fun formatHeaderDate(dateString: String): String {
+    return try {
+        // Safe check: extract just the YYYY-MM-DD segment if it contains time info
+        val cleanDateStr = dateString.split(" ").firstOrNull() ?: dateString
+        val targetDate = LocalDate.parse(cleanDateStr)
+        val today = LocalDate.now()
+
+        when (targetDate) {
+            today -> "Today"
+            today.minusDays(1) -> "Yesterday"
+            else -> {
+                val day = targetDate.dayOfMonth
+                val suffix = when {
+                    day in 11..13 -> "th"
+                    day % 10 == 1 -> "st"
+                    day % 10 == 2 -> "nd"
+                    day % 10 == 3 -> "rd"
+                    else -> "th"
+                }
+                val monthFormatter = DateTimeFormatter.ofPattern(" MMMM", Locale.ENGLISH)
+                "$day$suffix${targetDate.format(monthFormatter)}"
+            }
+        }
+    } catch (e: Exception) {
+        dateString // Fallback safety representation if parsing strings fails
     }
 }

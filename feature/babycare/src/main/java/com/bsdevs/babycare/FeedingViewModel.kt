@@ -1,6 +1,7 @@
 package com.bsdevs.babycare
 
 import android.os.SystemClock
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,6 +9,7 @@ import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.navigation.FeedingRoute
 import com.bsdevs.babycare.network.FeedingDto
+import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -224,12 +226,14 @@ class FeedingViewModel @Inject constructor(
         }
         
         val feedingId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
+        val combinedDateTime = "${currentState.date} ${currentState.startTime}"
 
         val feeding = FeedingDto(
             id = feedingId,
             userId = userId,
             date = currentState.date,
             startTime = currentState.startTime,
+            dateTime = combinedDateTime,
             leftDuration = currentState.leftDuration,
             rightDuration = currentState.rightDuration,
             totalDuration = currentState.leftDuration + currentState.rightDuration,
