@@ -10,6 +10,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 🔍 Fetch all tags and history so git knows about current live tags
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -37,19 +39,21 @@ jobs:
       - name: List APK files (debugging)
         run: ls -lah app/build/outputs/apk/release/
 
-      # Get latest release tag or use default
+      # Fetches the absolute latest release tag using clean JSON formatting
       - name: Get Latest Tag or Use Default
         id: latest_tag
         run: |
-          latest_tag=$(gh release list --limit 1 --repo ${{ github.repository }} | awk '{print $1}')
+          latest_tag=$(gh release list --limit 1 --json tagName --jq '..tagName' --repo ${{ github.repository }})
+          # 🚨 SAFETY NET: If API drops or no releases found, default to v0.0.9999
           if [[ -z "$latest_tag" || ! "$latest_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            latest_tag="v0.0.12"
+            latest_tag="v0.0.9999"
           fi
+          echo "Latest found tag is: $latest_tag"
           echo "tag=$latest_tag" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Bump patch version for new tag
+      # Bump patch version for new tag (e.g., v0.0.17 -> v0.0.18, or v0.0.9999 -> v0.0.10000)
       - name: Bump Patch Version
         id: bump
         run: |
@@ -57,6 +61,7 @@ jobs:
           IFS='.' read -r major minor patch <<<"${tag#v}"
           patch=$((patch + 1))
           new_tag="v${major}.${minor}.${patch}"
+          echo "New bumped tag will be: $new_tag"
           echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
 
       # Create GitHub Release and upload APK
@@ -64,9 +69,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.bump.outputs.new_tag }}
-          name: Release ${{ secrets.bump.outputs.new_tag }}
+          name: Release ${{ steps.bump.outputs.new_tag }}
           draft: false
           prerelease: false
+          generate_release_notes: true # 📝 FIXED: Automatically pulls commit headers for your release notes!
           files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
