@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import com.bsdevs.babycare.navigation.babyCareSection
-import com.bsdevs.babycare.navigation.navigateToBabyCareHome
+import com.bsdevs.babycare.presentation.navigation.babyCareSection
+import com.bsdevs.babycare.presentation.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome

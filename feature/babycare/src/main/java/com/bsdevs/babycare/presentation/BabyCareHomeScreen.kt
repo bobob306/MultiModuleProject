@@ -1,4 +1,4 @@
-package com.bsdevs.babycare
+package com.bsdevs.babycare.presentation
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background

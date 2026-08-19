@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.navigation
+package com.bsdevs.babycare.presentation.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -6,9 +6,9 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.navDeepLink
-import com.bsdevs.babycare.BabyCareHomeScreenRoute
-import com.bsdevs.babycare.FeedingScreenRoute
-import com.bsdevs.babycare.NappyChangeScreenRoute
+import com.bsdevs.babycare.presentation.BabyCareHomeScreenRoute
+import com.bsdevs.babycare.presentation.FeedingScreenRoute
+import com.bsdevs.babycare.presentation.NappyChangeScreenRoute
 import kotlinx.serialization.Serializable
 
 @Serializable

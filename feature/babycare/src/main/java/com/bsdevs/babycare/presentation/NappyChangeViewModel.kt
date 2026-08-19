@@ -1,15 +1,15 @@
-package com.bsdevs.babycare
+package com.bsdevs.babycare.presentation
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.navigation.NappyChangeRoute
+import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
 import com.bsdevs.babycare.network.NappyChangeDto
-import com.google.firebase.Firebase
+import com.bsdevs.babycare.network.UnifiedEventDto
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +24,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.reflect.typeOf
 
 data class NappyChangeUiState(
     val id: String? = null,
@@ -43,6 +44,7 @@ sealed class NappyChangeEvent {
 @HiltViewModel
 class NappyChangeViewModel @Inject constructor(
     private val accountService: AccountService,
+    private val repository: BabyCareRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -65,34 +67,29 @@ class NappyChangeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val snapshot = FirebaseFirestore.getInstance().collection("nappyChanges")
-                    .document(userId).collection("changes")
-                    .whereEqualTo("id", id)
-                    .get()
-                    .await()
-                
-                val doc = snapshot.documents.firstOrNull()
-                val nappy = doc?.toObject(NappyChangeDto::class.java)
-                if (nappy != null) {
-                    _uiState.update { 
+                // 🔄 Query data safely through the repository layer instead of legacy flat collections
+                val nappyEvent = repository.getNappyEventById(userId, id)
+
+                if (nappyEvent != null) {
+                    val extractedDate = nappyEvent.dateTimeString.split(" ").firstOrNull() ?: _uiState.value.date
+
+                    _uiState.update {
                         it.copy(
-                            id = nappy.id,
-                            originalDocId = doc.id,
-                            date = nappy.date ?: it.date,
-                            time = nappy.time ?: it.time,
-                            type = nappy.type ?: it.type,
+                            id = nappyEvent.id,
+                            date = extractedDate,
+                            time = nappyEvent.time,
+                            // Map the nested custom variant string parameter safely straight back into your radio choice state
+                            type = nappyEvent.nappyType ?: "",
                             isLoading = false
                         )
                     }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
-    }
-
-    fun onTimeChanged(newTime: String) {
-        _uiState.update { it.copy(time = newTime) }
     }
 
     fun onTimeSelected(hour: Int, minute: Int) {
@@ -107,52 +104,49 @@ class NappyChangeViewModel @Inject constructor(
     fun submitNappyChange() {
         val currentState = _uiState.value
         val userId = accountService.currentUserId
-        
-        // Ensure we have a valid UUID. If the current ID is null or a legacy timestamp string, generate a new UUID.
+
+        // Validate or generate an explicit unique event identifier string
         val isCurrentIdUuid = try {
             currentState.id?.let { UUID.fromString(it) } != null
         } catch (e: Exception) {
             false
         }
-        
+        val isEditing = !currentState.id.isNullOrEmpty()
         val nappyId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
-        val combinedDateTime = "${currentState.date} ${currentState.time}"
-        val nappyChange = NappyChangeDto(
+
+        // ➕ Map your local parameters directly into our modern Unified Event payload schema
+        val unifiedNappyEvent = UnifiedEventDto(
             id = nappyId,
-            userId = userId,
-            date = currentState.date,
             time = currentState.time,
-            dateTime = combinedDateTime,
-            type = currentState.type
+            dateTimeString = "${currentState.date} ${currentState.time}",
+            type = "NAPPY",
+            nappyType = currentState.type // e.g., "Wet", "Dirty", "Both"
         )
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             try {
-                val db = FirebaseFirestore.getInstance()
-                val collection = db.collection("nappyChanges")
-                    .document(userId).collection("changes")
-                
-                // MIGRATION LOGIC:
-                // If we are editing an existing record (originalDocId exists) 
-                // AND that document was stored under a different ID (like the old timestamp string),
-                // we delete the old document to prevent duplicates.
-                if (currentState.originalDocId != null && currentState.originalDocId != nappyId) {
-                    collection.document(currentState.originalDocId).delete().await()
+                if (isEditing) {
+                    // 🔄 Execute update transaction against the nested entry element
+                    repository.updateActivityEvent(
+                        userId = userId,
+                        date = currentState.date,
+                        eventId = nappyId,
+                        updatedEvent = unifiedNappyEvent
+                    )
+                } else {
+                    // 🚀 Execute clean atomic insert push using arrayUnion tokens
+                    repository.saveActivityEvent(
+                        userId = userId,
+                        date = currentState.date,
+                        event = unifiedNappyEvent
+                    )
                 }
 
-                // Save the record using the UUID as the document ID
-                collection.document(nappyId)
-                    .set(nappyChange)
-                    .await()
-                
                 _events.send(NappyChangeEvent.SaveSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-                _events.send(NappyChangeEvent.SaveError(e.message ?: "Unknown error"))
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _events.send(NappyChangeEvent.SaveError(e.message ?: "Failed to save nappy record change."))
             }
         }
     }
