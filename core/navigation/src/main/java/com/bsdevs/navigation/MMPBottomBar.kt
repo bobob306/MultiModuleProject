@@ -24,8 +24,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.bsdevs.babycare.navigation.BabyCareBaseRoute
-import com.bsdevs.babycare.navigation.BabyCareHomeRoute
+import com.bsdevs.babycare.presentation.navigation.BabyCareBaseRoute
+import com.bsdevs.babycare.presentation.navigation.BabyCareHomeRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeHomeScreenRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute

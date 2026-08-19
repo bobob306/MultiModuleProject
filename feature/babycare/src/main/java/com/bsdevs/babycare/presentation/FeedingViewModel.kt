@@ -1,15 +1,15 @@
-package com.bsdevs.babycare
+package com.bsdevs.babycare.presentation
 
 import android.os.SystemClock
-import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.navigation.FeedingRoute
+import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.FeedingDto
-import com.google.firebase.firestore.CollectionReference
+import com.bsdevs.babycare.network.UnifiedEventDto
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -52,6 +52,7 @@ sealed class FeedingEvent {
 @HiltViewModel
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
+    private val repository: BabyCareRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -90,32 +91,28 @@ class FeedingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val snapshot = FirebaseFirestore.getInstance().collection("feedings")
-                    .document(userId).collection("records")
-                    .whereEqualTo("id", id)
-                    .get()
-                    .await()
+                // 🔄 FIXED: Query data safely through the unified repository layer instead of flat collections
+                val feedingEvent = repository.getFeedingEventById(userId, id)
 
-                val doc = snapshot.documents.firstOrNull()
-                val feeding = doc?.toObject(FeedingDto::class.java)
-                if (feeding != null) {
+                if (feedingEvent != null) {
+                    // Extract the date out of your YYYY-MM-DD space-split timestamp format layout string
+                    val extractedDate = feedingEvent.dateTimeString.split(" ").firstOrNull() ?: _uiState.value.date
+
                     _uiState.update {
                         it.copy(
-                            id = feeding.id,
-                            originalDocId = doc.id,
-                            date = feeding.date ?: it.date,
-                            startTime = feeding.startTime ?: it.startTime,
-                            bottleAmountMl = feeding.bottleAmountMl,
-                            leftDuration = feeding.leftDuration,
-                            rightDuration = feeding.rightDuration,
+                            id = feedingEvent.id,
+                            date = extractedDate,
+                            startTime = feedingEvent.time,
+                            bottleAmountMl = feedingEvent.bottleAmountMl,
+                            leftDuration = feedingEvent.leftDuration,
+                            rightDuration = feedingEvent.rightDuration,
                             isLoading = false
                         )
                     }
                     // Seed your commonised base duration maps cleanly
-                    baseDurations[FeedingSide.LEFT] = feeding.leftDuration
-                    baseDurations[FeedingSide.RIGHT] = feeding.rightDuration
+                    baseDurations[FeedingSide.LEFT] = feedingEvent.leftDuration
+                    baseDurations[FeedingSide.RIGHT] = feedingEvent.rightDuration
                 } else {
-                    // If it fails to find the doc, turn off the loading flag safely
                     _uiState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
@@ -123,6 +120,7 @@ class FeedingViewModel @Inject constructor(
             }
         }
     }
+
 
     fun toggleTimer(side: FeedingSide) {
         val isRunning = when (side) {
@@ -209,7 +207,7 @@ class FeedingViewModel @Inject constructor(
     fun submitFeeding() {
         val currentState = _uiState.value
         val userId = accountService.currentUserId
-        
+
         val mainFeedingSide = when {
             currentState.bottleAmountMl != null -> "Bottle"
             currentState.leftDuration > currentState.rightDuration -> "Left"
@@ -218,56 +216,53 @@ class FeedingViewModel @Inject constructor(
             else -> null
         }
 
-        // Ensure we have a valid UUID. If the current ID is null or a legacy timestamp string, generate a new UUID.
+        // Dynamic clean UUID validator parameter logic
         val isCurrentIdUuid = try {
             currentState.id?.let { UUID.fromString(it) } != null
         } catch (e: Exception) {
             false
         }
-        
         val feedingId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
-        val combinedDateTime = "${currentState.date} ${currentState.startTime}"
 
-        val feeding = FeedingDto(
+        // ➕ 1. Map your UI state values directly into a clean UnifiedEventDto payload instance
+        val unifiedFeedingEvent = UnifiedEventDto(
             id = feedingId,
-            userId = userId,
-            date = currentState.date,
-            startTime = currentState.startTime,
-            dateTime = combinedDateTime,
+            type = "FEEDING",
+            time = currentState.startTime,
+            dateTimeString = "${currentState.date} ${currentState.startTime}",
+            mainFeedingSide = mainFeedingSide,
             leftDuration = currentState.leftDuration,
             rightDuration = currentState.rightDuration,
             totalDuration = currentState.leftDuration + currentState.rightDuration,
-            mainFeedingSide = mainFeedingSide,
             bottleAmountMl = currentState.bottleAmountMl
         )
-        
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-
             try {
-                val db = FirebaseFirestore.getInstance()
-                val collection = db.collection("feedings")
-                    .document(userId).collection("records")
-                
-                // MIGRATION LOGIC:
-                // If we are editing an existing record (originalDocId exists) 
-                // AND that document was stored under a different ID (like the old timestamp string),
-                // we delete the old document to prevent duplicates.
-                if (currentState.originalDocId != null && currentState.originalDocId != feedingId) {
-                    collection.document(currentState.originalDocId).delete().await()
+                // Check if an entry ID already existed inside your state layer
+                val isEditingExistingItem = !currentState.id.isNullOrEmpty()
+
+                if (isEditingExistingItem) {
+                    // 🔄 TRIGGER AN UPDATE TRANSACTION TASK
+                    repository.updateActivityEvent(
+                        userId = userId,
+                        date = currentState.date,
+                        eventId = currentState.id!!,
+                        updatedEvent = unifiedFeedingEvent
+                    )
+                } else {
+                    // 🚀 TRIGGER A STANDARD ATOMIC INSERT PUSH
+                    repository.saveActivityEvent(
+                        userId = userId,
+                        date = currentState.date,
+                        event = unifiedFeedingEvent
+                    )
                 }
 
-                // Save the record using the UUID as the document ID
-                collection.document(feedingId)
-                    .set(feeding)
-                    .await()
-                
                 _events.send(FeedingEvent.SaveSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
-                _events.send(FeedingEvent.SaveError(e.message ?: "Unknown error"))
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
