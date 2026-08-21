@@ -1,5 +1,6 @@
 package com.bsdevs.renderer.components
 
+import android.location.Location
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,7 @@ import com.bsdevs.data.LocationTypeData
 import com.bsdevs.data.NetworkScreenData.NavigationButtonDataNetwork
 
 @Composable
-fun MMPButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
+fun MMPButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, LocationTypeData, String) -> Unit) {
     navigationButtonData.run {
         when (sort) {
             PRIMARY -> {
@@ -38,13 +39,13 @@ fun MMPButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (Strin
 }
 
 @Composable
-fun PrimaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
+fun PrimaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, LocationTypeData, String) -> Unit) {
     navigationButtonData.run {
         Button(
             modifier = Modifier
                 .wrapContentSize(),
             onClick = {
-                onClick(destination, label)
+                onClick(destination, location, label)
             },
             content = {
                 Text(label, color = MaterialTheme.colorScheme.onPrimary)
@@ -54,7 +55,7 @@ fun PrimaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (S
 }
 
 @Composable
-fun SecondaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
+fun SecondaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, LocationTypeData, String) -> Unit) {
     navigationButtonData.run {
         Button(
             colors = ButtonColors(
@@ -66,7 +67,7 @@ fun SecondaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: 
             modifier = Modifier
                 .wrapContentSize(),
             onClick = {
-                onClick(destination, label)
+                onClick(destination, location, label)
             },
             content = {
                 Text(
@@ -80,14 +81,14 @@ fun SecondaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: 
 }
 
 @Composable
-fun TertiaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, String) -> Unit) {
+fun TertiaryButton(navigationButtonData: NavigationButtonDataNetwork, onClick: (String, LocationTypeData, String) -> Unit) {
     navigationButtonData.run {
         Text(
             text = label,
             textDecoration = TextDecoration.Underline,
             color = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier
-                .clickable { onClick(destination, label) }
+                .clickable { onClick(destination, location, label) }
                 .background(color = MaterialTheme.colorScheme.onTertiary)
                 .wrapContentSize(),
         )
@@ -106,7 +107,7 @@ fun ButtonsPreview() {
                 sort = PRIMARY,
                 index = 1
             )
-        ) { _, _ -> }
+        ) { _, _, _-> }
         MMPButton(
             navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
@@ -115,7 +116,7 @@ fun ButtonsPreview() {
                 sort = SECONDARY,
                 index = 1
             )
-        ) { _, _ -> }
+        ) { _, _, _ -> }
         MMPButton(
             navigationButtonData = NavigationButtonDataNetwork(
                 label = "Click me",
@@ -124,7 +125,7 @@ fun ButtonsPreview() {
                 sort = TERTIARY,
                 index = 1
             )
-        ) { _, _ -> }
+        ) { _, _, _ -> }
 
         TertiaryButton(
             navigationButtonData = NavigationButtonDataNetwork(
@@ -134,7 +135,7 @@ fun ButtonsPreview() {
                 sort = TERTIARY,
                 index = 1
             )
-        ) { _, _ -> }
+        ) { _, _, _ -> }
 
         SecondaryButton(
             navigationButtonData = NavigationButtonDataNetwork(
@@ -144,7 +145,7 @@ fun ButtonsPreview() {
                 sort = SECONDARY,
                 index = 1
             )
-        ) { _, _ -> }
+        ) { _, _, _ -> }
 
         PrimaryButton(
             navigationButtonData = NavigationButtonDataNetwork(
@@ -154,7 +155,7 @@ fun ButtonsPreview() {
                 sort = PRIMARY,
                 index = 1
             ),
-            onClick = { _, _ -> }
+            onClick = { _, _, _ -> }
         )
     }
 }

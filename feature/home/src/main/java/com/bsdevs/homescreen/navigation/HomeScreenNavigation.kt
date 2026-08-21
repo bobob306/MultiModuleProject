@@ -21,6 +21,7 @@ fun NavGraphBuilder.homeScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffee: () -> Unit,
     onNavigateToBabyCare: () -> Unit,
+    onNavigateToDeepLink: (String) -> Unit,
 ) {
     navigation<HomeScreenBaseRoute>(startDestination = HomeScreenRoute) {
         composable<HomeScreenRoute> {
@@ -28,6 +29,7 @@ fun NavGraphBuilder.homeScreenSection(
                 onShowSnackBar,
                 onNavigateToCoffee,
                 onNavigateToBabyCare,
+                onNavigateToDeepLink = onNavigateToDeepLink
             )
         }
     }

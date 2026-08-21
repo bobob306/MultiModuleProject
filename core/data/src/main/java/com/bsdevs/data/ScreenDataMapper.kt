@@ -71,6 +71,7 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     location = item.location.toLocationTypeData,
                     sort = item.sort.toButtonTypeData,
                 )
+                else ->  NetworkScreenData.Unknown(99)
             }
         }
         return listOfData

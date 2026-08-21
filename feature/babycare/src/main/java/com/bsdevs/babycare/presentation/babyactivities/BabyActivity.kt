@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.babyactivities
 
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto

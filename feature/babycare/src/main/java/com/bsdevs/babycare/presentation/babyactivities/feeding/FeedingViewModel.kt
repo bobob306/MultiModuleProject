@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.babyactivities.feeding
 
 import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
@@ -8,9 +8,7 @@ import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
-import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.UnifiedEventDto
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -21,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter

@@ -47,6 +47,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     debugImplementation(libs.ui.tooling)
+    implementation(libs.androidx.material.icons.extended)
 
     ksp(libs.hilt.compiler) // Use KSP for Hilt
     implementation(libs.androidx.hilt.navigation.compose) // For Hilt with Navigation Compose

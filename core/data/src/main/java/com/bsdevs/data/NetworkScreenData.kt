@@ -99,7 +99,39 @@ sealed class NetworkScreenData(
         val imageUrl: String?,
         val checked: Boolean,
     ) : NetworkScreenData(index)
+
+    data class BabyDashboardTilesNetwork(
+        override val index: Int,
+        val content: List<BabyDashboardTileNetwork>
+    ) : NetworkScreenData(index)
+
+    // ➕ 2. The sticky day summary header with aggregate counts
+    data class BabyFeedHeaderNetwork(
+        override val index: Int,
+        val title: String,
+        val feedingCount: Int,
+        val nappyCount: Int
+    ) : NetworkScreenData(index)
+
+    // ➕ 3. The actual activity log row tracking card item
+    data class BabyFeedRowNetwork(
+        override val index: Int,
+        val id: String,
+        val activityType: String, // "NAPPY" or "FEEDING"
+        val title: String,
+        val subtitle: String,
+        val time: String,
+        val rawDate: String
+    ) : NetworkScreenData(index)
 }
+
+data class BabyDashboardTileNetwork(
+    val lastNappyChange: String?,
+    val lastFeeding: String?,
+    val destination: String,
+    val locationTypeData: LocationTypeData,
+    val label: String,
+)
 
 data class RadioButtonLabelData(
     val label: String?,

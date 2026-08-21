@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.LocationTypeData
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
 
@@ -34,16 +34,29 @@ fun HomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffee: () -> Unit,
     onNavigateToBabyCare: () -> Unit,
+    onNavigateToDeepLink: (String) -> Unit,
     viewModel: HomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvents.collect { event ->
+            when (event) {
+                is HomeNavigationEvent.NavigateToDeepLink -> {
+                    // 🚀 Fire the callback up to the NavHost to handle the actual navigation
+                    onNavigateToDeepLink(event.uriString)
+                }
+            }
+        }
+    }
+
     when (viewData.value) {
         is Result.Success -> {
             HomeScreen(
                 onShowSnackBar = onShowSnackBar,
                 onLoadData = viewModel::getScreen,
                 viewData = (viewData.value as Result.Success<List<NetworkScreenData>>).data,
-                onClick = viewModel::click,
+                onClick = viewModel::handleServerButtonClick,
                 onNavigationClick = {},
                 onNavigateToCoffee = onNavigateToCoffee,
                 onNavigateToBabyCare = onNavigateToBabyCare,
@@ -70,7 +83,7 @@ internal fun HomeScreen(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLoadData: () -> Unit,
     viewData: List<NetworkScreenData>,
-    onClick: (String, String) -> Unit,
+    onClick: (String, LocationTypeData, String) -> Unit,
     onNavigationClick: (String) -> Unit,
     onNavigateToCoffee: () -> Unit,
     onNavigateToBabyCare: () -> Unit,
@@ -112,7 +125,7 @@ internal fun HomeScreen(
                 Text("Baby Care Section")
             }
         }
-        
+
         Text(
             text = "Quick Actions",
             style = MaterialTheme.typography.titleLarge,
@@ -123,9 +136,10 @@ internal fun HomeScreen(
             RenderUI(
                 item = it,
                 context = context,
-                onClick = onClick,
+                onNavigationClick = onClick,
                 onChipClick = {},
                 onSwitchClick = {},
+                onClick = {_, _ -> }
             )
         }
     }

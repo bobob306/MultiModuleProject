@@ -4,6 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import com.bsdevs.babycare.presentation.navigation.FeedingRoute
+import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
 import com.bsdevs.babycare.presentation.navigation.babyCareSection
 import com.bsdevs.babycare.presentation.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
@@ -32,6 +34,9 @@ fun MMPNavHost(
             onShowSnackBar = onShowSnackBar,
             onNavigateToCoffee = navController::navigateToCoffeeHome,
             onNavigateToBabyCare = navController::navigateToBabyCareHome,
+            onNavigateToDeepLink = { uriString ->
+                DeepLinkRouter.navigate(navController, uriString)
+            }
         )
         coffeeScreenSection(
             onShowSnackBar,
@@ -53,7 +58,10 @@ fun MMPNavHost(
         )
         babyCareSection(
             navController = navController,
-            onShowSnackBar = onShowSnackBar
+            onShowSnackBar = onShowSnackBar,
+            onNavigateToDeepLink = { uriString ->
+                DeepLinkRouter.navigate(navController, uriString)
+            }
         )
     }
 }

@@ -1,20 +1,29 @@
 package com.bsdevs.homescreen
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.LocationTypeData
+import com.bsdevs.data.LocationTypeData.INTERNAL
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+sealed class HomeNavigationEvent {
+    data class NavigateToDeepLink(val uriString: String) : HomeNavigationEvent()
+}
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
@@ -30,6 +39,9 @@ class HomeScreenViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = Result.Loading
         )
+
+    private val _navigationEvents = Channel<HomeNavigationEvent>(Channel.BUFFERED)
+    val navigationEvents = _navigationEvents.receiveAsFlow()
 
     fun getScreen() {
         viewModelScope.launch {
@@ -50,7 +62,15 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    fun click(destination: String, label: String) {
-        println("Destination: $destination, Label: $label")
+    fun handleServerButtonClick(destinationUrl: String, location: LocationTypeData, label: String) {
+        println("Destination: $destinationUrl, Label: $label")
+        viewModelScope.launch {
+            if (location == INTERNAL) {
+                // Emits the safe action token down into your screen view listener pipe
+                _navigationEvents.send(HomeNavigationEvent.NavigateToDeepLink(destinationUrl))
+            } else {
+                // Optional: Handle EXTERNAL browser redirection URLs here down the road
+            }
+        }
     }
 }

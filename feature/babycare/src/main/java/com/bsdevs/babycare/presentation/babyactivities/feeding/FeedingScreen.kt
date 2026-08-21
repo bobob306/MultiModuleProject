@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.babyactivities.feeding
 
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,7 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
-import java.time.LocalTime
+import com.bsdevs.renderer.components.BabyCareTimePickerDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -283,56 +283,13 @@ internal fun FeedingScreen(
         )
     }
 
-    if (showTimePicker) {
-        val initialTime = try {
-            LocalTime.parse(uiState.startTime)
-        } catch (e: Exception) {
-            LocalTime.now()
-        }
-
-        val timePickerState = rememberTimePickerState(
-            initialHour = initialTime.hour,
-            initialMinute = initialTime.minute,
-            is24Hour = true
-        )
-
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onStartTimeSelected(timePickerState.hour, timePickerState.minute)
-                        showTimePicker = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancel")
-                }
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // 🔄 Dynamic toggle: Uses smaller text fields in landscape so it doesn't break the layout
-                    if (isLandscape) {
-                        Text(
-                            text = "Enter time",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        TimeInput(state = timePickerState)
-                    } else {
-                        TimePicker(state = timePickerState)
-                    }
-                }
-            }
-        )
-    }
+    BabyCareTimePickerDialog(
+        showDialog = showTimePicker,
+        rawTimeString = uiState.startTime,
+        isLandscape = isLandscape,
+        onDismissRequest = { showTimePicker = false },
+        onTimeSelected = { hour, minute -> onStartTimeSelected(hour, minute) }
+    )
 
     if (showDurationDialogForSide != null) {
         val side = showDurationDialogForSide!!

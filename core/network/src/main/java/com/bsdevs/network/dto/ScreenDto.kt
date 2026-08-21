@@ -34,6 +34,7 @@ data class ZSizeDto(
     @SerialName("size") val size: Map<String, SizePropertyDto>? = null,
     @SerialName("weight") val weight: Map<String, WeightPropertyDto>? = null,
 )
+
 @Serializable
 data class IndexPropertyDto(@SerialName("indexProperty") val int: Double)
 
@@ -96,6 +97,17 @@ sealed class ScreenDto(
         @SerialName("destination") val destination: String,
         @SerialName("sort") val sort: ButtonType? = PRIMARY,
     ) : ScreenDto(index)
+
+    @SerialName("BABY_CARE_ROW")
+    data class BabyCareRowDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("lastNappyChange") val lastNappyChange: String?,
+        @SerialName("lastFeeding") val lastFeeding: String?,
+        @SerialName("destination") val destination: String,
+        @SerialName("location") val location: LocationType?,
+        @SerialName("label") val label: String,
+        ) : ScreenDto(index)
+
 }
 
 data class SizeDto(

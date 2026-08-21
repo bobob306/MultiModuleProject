@@ -6,9 +6,9 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.navDeepLink
-import com.bsdevs.babycare.presentation.BabyCareHomeScreenRoute
-import com.bsdevs.babycare.presentation.FeedingScreenRoute
-import com.bsdevs.babycare.presentation.NappyChangeScreenRoute
+import com.bsdevs.babycare.presentation.babyhome.BabyCareHomeScreenRoute
+import com.bsdevs.babycare.presentation.babyactivities.FeedingScreenRoute
+import com.bsdevs.babycare.presentation.babyactivities.NappyChangeScreenRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -35,15 +35,13 @@ fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavO
 fun NavGraphBuilder.babyCareSection(
     navController: NavController,
     onShowSnackBar: suspend (String, String?) -> Unit,
+    onNavigateToDeepLink: (String) -> Unit,
 ) {
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
             BabyCareHomeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateToNappyChange = { navController.navigateToNappyChange() },
-                onNavigateToFeeding = { navController.navigateToFeeding() },
-                onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
-                onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
+                onNavigateToDeepLink = onNavigateToDeepLink
             )
         }
         composable<NappyChangeRoute>(
