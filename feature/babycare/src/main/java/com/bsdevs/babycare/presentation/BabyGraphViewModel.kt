@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.network.UnifiedEventDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,18 @@ import javax.inject.Inject
 
 data class FeedingGraphUiState(
     val hourlyCounts: List<HourlyFeedingCount> = emptyList(),
-    val totalFeedsInCache: Int = 0
+    val totalFeedsInCache: Int = 0,
+    val analysisResult: FeedingAnalysisResult? = null
+)
+
+data class FeedingAnalysisResult(
+    val bucketGaps: List<FeedingBucketData> = emptyList()
+)
+
+data class FeedingBucketData(
+    val rangeLabel: String,     // e.g., "10-20 min"
+    val averageGapMinutes: Int, // Average resting gap following this feed length
+    val totalCount: Int         // Number of instances found in history
 )
 
 data class HourlyFeedingCount(
@@ -49,10 +61,12 @@ class BabyGraphViewModel @Inject constructor(
                     count = countsByHour[hour] ?: 0
                 )
             }
+            val analysis = calculateFeedingGaps(feedingEvents)
 
             FeedingGraphUiState(
                 hourlyCounts = hourlyGraphData,
-                totalFeedsInCache = feedingEvents.size
+                totalFeedsInCache = feedingEvents.size,
+                analysisResult = analysis
             )
         }
         .stateIn(
@@ -76,6 +90,123 @@ class BabyGraphViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("GRAPH_ERROR", "Failed parsing time string: $timeString", e)
             0
+        }
+    }
+
+    private fun calculateFeedingGaps(events: List<UnifiedEventDto>): FeedingAnalysisResult? {
+        // 1. ISOLATE: Filter out everything that isn't a feeding event FIRST
+        val onlyFeedings = events.filter { it.type == "FEEDING" && it.dateTimeString.isNotEmpty() }
+
+        // Safety check: We need at least two feeding events total to analyze intervals
+        if (onlyFeedings.size < 2) {
+            Log.w("ANALYSIS_DEBUG", "⚠️ Not enough feeds to compute gaps. Total found: ${onlyFeedings.size}")
+            return null
+        }
+
+        // 2. SORT: Chronologically order from OLDEST to NEWEST (Ascending text sort fits YYYY-MM-DD flawlessly)
+        val sortedFeeds = onlyFeedings.sortedBy { it.dateTimeString }
+        Log.d("ANALYSIS_DEBUG", "🚀 Processing ${sortedFeeds.size} chronological feeds for interval gaps")
+
+        data class FeedGapPair(val feedDurationMinutes: Long, val gapMinutes: Long)
+        val pairs = mutableListOf<FeedGapPair>()
+
+        // 3. MEASURE: Loop strictly through consecutive feeding events
+        for (i in 0 until sortedFeeds.size - 1) {
+            val currentFeed = sortedFeeds[i]
+            val nextFeed = sortedFeeds[i + 1]
+
+            val currentMinutes = parseToTotalMinutes(currentFeed.dateTimeString)
+            val nextMinutes = parseToTotalMinutes(nextFeed.dateTimeString)
+
+            // Skip if either date fails to parse cleanly into absolute minutes
+            if (currentMinutes == -1L || nextMinutes == -1L) continue
+
+            val gapMinutes = nextMinutes - currentMinutes
+
+            // Filter out bad calculations (negative) or giant gaps across unlogged days (over 12 hours)
+            if (gapMinutes in 15..720) {
+                // Determine the current feed's length. Fall back to 15 mins for standard bottle inputs
+                val duration = if (currentFeed.totalDuration > 0) currentFeed.totalDuration else 15L
+                pairs.add(FeedGapPair(duration, gapMinutes))
+            }
+        }
+
+        if (pairs.isEmpty()) {
+            Log.w("ANALYSIS_DEBUG", "⚠️ Valid gaps list empty after timeframe filtering threshold boundaries.")
+            return null
+        }
+
+        // 4. BUCKET: Group the computed pairs into your requested time blocks
+        val buckets = listOf(
+            "0-10 min" to pairs.filter {
+                val mins = it.feedDurationMinutes / 60L // 🌟 Convert seconds to minutes
+                mins in 0..10
+            },
+            "10-20 min" to pairs.filter {
+                val mins = it.feedDurationMinutes / 60L
+                mins in 11..20
+            },
+            "20-30 min" to pairs.filter {
+                val mins = it.feedDurationMinutes / 60L
+                mins in 21..30
+            },
+            "30+ min" to pairs.filter {
+                val mins = it.feedDurationMinutes / 60L
+                mins > 30
+            }
+        )
+
+        val bucketDataList = buckets.map { (label, filteredPairs) ->
+            val avgGap = if (filteredPairs.isNotEmpty()) {
+                filteredPairs.map { it.gapMinutes }.average().toInt()
+            } else {
+                0
+            }
+
+            Log.d("ANALYSIS_DEBUG", "📦 Bucket [$label]: Found ${filteredPairs.size} matches. Avg Gap: $avgGap mins")
+
+            FeedingBucketData(
+                rangeLabel = label,
+                averageGapMinutes = avgGap,
+                totalCount = filteredPairs.size
+            )
+        }
+
+        return FeedingAnalysisResult(bucketGaps = bucketDataList)
+    }
+
+
+    /**
+     * Converts a standard "yyyy-MM-dd HH:mm" string into raw total minutes since a baseline
+     * to easily calculate time differences without using Java 8 time libraries.
+     */
+    private fun parseToTotalMinutes(dateTimeString: String): Long {
+        return try {
+            // Split "2026-08-16 22:31" into ["2026-08-16", "22:31"]
+            val spaceParts = dateTimeString.split(" ")
+            if (spaceParts.size < 2) return -1L
+
+            val dateParts = spaceParts[0].split("-") // ["2026", "08", "16"]
+            val timeParts = spaceParts[1].split(":") // ["22", "31"]
+
+            if (dateParts.size < 3 || timeParts.size < 2) return -1L
+
+            // Explicitly cast every integer chunk into a Long primitive immediately
+            val year = dateParts[0].toLong()
+            val month = dateParts[1].toLong()
+            val day = dateParts[2].toLong()
+            val hour = timeParts[0].toLong()
+            val minute = timeParts[1].toLong()
+
+            // Combine operations using uniform Long math to eliminate any type variance errors
+            val minutesInDay = (hour * 60L) + minute
+            val minutesInYear = year * 365L * 24L * 60L
+            val minutesInMonth = month * 30L * 24L * 60L
+            val minutesInDays = day * 24L * 60L
+
+            minutesInYear + minutesInMonth + minutesInDays + minutesInDay
+        } catch (e: Exception) {
+            -1L
         }
     }
 }

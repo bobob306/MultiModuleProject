@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -109,6 +110,9 @@ fun BabyFeedingGraphScreen(
                     )
                 }
             }
+            uiState.analysisResult?.let {
+                BucketedAnalysisInsightCard(analysis = uiState.analysisResult)
+            }
         }
     }
 }
@@ -177,6 +181,68 @@ fun FeedingHourCanvas(
                 canvasHeight - 8.dp.toPx(),
                 textPaint
             )
+        }
+    }
+}
+
+@Composable
+fun BucketedAnalysisInsightCard(analysis: FeedingAnalysisResult) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = "📊 Interval Analysis by Feed Length",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                text = "Shows the average time before your baby wants to feed again.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Render the 4 columns or rows dynamically
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                analysis.bucketGaps.forEach { bucket ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = bucket.rangeLabel,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+
+                        if (bucket.totalCount == 0) {
+                            Text(
+                                text = "No data yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f)
+                            )
+                        } else {
+                            Text(
+                                text = "${bucket.averageGapMinutes} min gap (${bucket.totalCount} feeds)",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
