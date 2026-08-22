@@ -1,6 +1,5 @@
 package com.bsdevs.babycare.presentation
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
@@ -10,15 +9,15 @@ import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.result.Result
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -52,34 +51,47 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private val pageSize = 20
     private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
-    val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
     private val _collapsedHeaders = MutableStateFlow<Set<String>>(emptySet())
 
-    init {
-        viewModelScope.launch {
-            combine(
-                repository.cachedDays, // 🔄 Collect your modern unified days data stream
-                _currentFilter,
-                _collapsedHeaders
-            ) { dailyLogsList, filter, collapsed ->
-                processFeed(dailyLogsList, filter, collapsed)
-            }.collect { updatedViewData ->
-                _viewData.value = Result.Success(updatedViewData)
-            }
+    private val _isInitialLoading = MutableStateFlow(false)
+
+    val viewData: StateFlow<Result<BabyCareHomeViewData>> = combine(
+        repository.cachedDays,
+        _currentFilter,
+        _collapsedHeaders,
+        _isInitialLoading
+    ) { dailyLogsList, filter, collapsed, isLoading ->
+        if (isLoading && dailyLogsList.isEmpty()) {
+            Result.Loading
+        } else {
+            val processed = processFeed(dailyLogsList, filter, collapsed)
+            Result.Success(processed)
         }
+    }.catch { e ->
+        emit(Result.Error(e))
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = Result.Loading
+    )
+
+    init {
         loadData()
     }
 
     fun loadData() {
+        // Prevent redundant network fetches if cached data is already present
         viewModelScope.launch {
-            _viewData.update { Result.Loading }
+            _isInitialLoading.value = true
             try {
                 repository.loadInitialData(accountService.currentUserId, pageSize)
             } catch (e: Exception) {
-                _viewData.value = Result.Error(e)
+                // Handle initial fetch failure
+            } finally {
+                _isInitialLoading.value = false
             }
         }
     }
@@ -166,8 +178,10 @@ class BabyCareHomeViewModel @Inject constructor(
 
             // Capture your summary tiles from the top sorted item of the most recent day block
             if (index == 0) {
-                absoluteLastNappy = sortedDayEvents.firstOrNull { it.type == "NAPPY" }?.let { "Last nappy: ${it.time}" }
-                absoluteLastFeeding = sortedDayEvents.firstOrNull { it.type == "FEEDING" }?.let { "Last feed: ${it.time}" }
+                absoluteLastNappy = sortedDayEvents.firstOrNull { it.type == "NAPPY" }
+                    ?.let { "Last nappy: ${it.time}" }
+                absoluteLastFeeding = sortedDayEvents.firstOrNull { it.type == "FEEDING" }
+                    ?.let { "Last feed: ${it.time}" }
             }
 
             if (!collapsed.contains(displayHeaderTitle)) {
@@ -197,11 +211,13 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         // 🔄 Fix 2: If the type field was corrupted (e.g., set to "Wet"), recognize it as a nappy activity
-        val isNappy = event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
+        val isNappy =
+            event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
 
         return if (isNappy) {
             // Fallback: If nappyType is missing because it was saved under 'type', recover it here
-            val correctedNappyType = if (!event.nappyType.isNullOrEmpty()) event.nappyType else event.type
+            val correctedNappyType =
+                if (!event.nappyType.isNullOrEmpty()) event.nappyType else event.type
 
             BabyActivity.Nappy(
                 NappyChangeDto(

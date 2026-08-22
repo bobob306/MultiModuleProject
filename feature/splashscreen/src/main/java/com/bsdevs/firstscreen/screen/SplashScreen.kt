@@ -20,7 +20,7 @@ private const val SPLASH_TIMEOUT = 1000L
 @Composable
 fun SplashScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    onNavigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    onNavigateToBabyHome: (navOptions: NavOptions?) -> Unit,
     onNavigateToSignIn: (navOptions: NavOptions?) -> Unit,
     viewModel: SplashScreenViewModel = hiltViewModel()
 ) {
@@ -40,7 +40,7 @@ fun SplashScreenRoute(
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->
             when (event) {
-                SplashScreenNavigationEvents.NavigateToHomeScreen -> onNavigateToCoffeeHome.invoke(null)
+                SplashScreenNavigationEvents.NavigateToHomeScreen -> onNavigateToBabyHome.invoke(null)
                 SplashScreenNavigationEvents.NavigateToSignInScreen -> onNavigateToSignIn.invoke(null)
             }
         }

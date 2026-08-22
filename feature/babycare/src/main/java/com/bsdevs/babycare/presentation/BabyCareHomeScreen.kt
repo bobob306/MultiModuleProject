@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Card
@@ -54,6 +55,7 @@ fun BabyCareHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
+    onNavigateToGraph: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
@@ -73,7 +75,8 @@ fun BabyCareHomeScreenRoute(
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                 onToggleFilter = viewModel::toggleActivityFilter,
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
-                onLoadMore = viewModel::loadMore
+                onLoadMore = viewModel::loadMore,
+                onNavigateToGraph = onNavigateToGraph,
             )
         }
 
@@ -104,6 +107,7 @@ internal fun BabyCareHomeScreen(
     onNavigateToEditFeeding: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onToggleHeaderCollapse: (String) -> Unit,
+    onNavigateToGraph: () -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
@@ -157,6 +161,15 @@ internal fun BabyCareHomeScreen(
                         subtitle = viewData.lastFeeding,
                         icon = Icons.Default.Restaurant,
                         onClick = onNavigateToFeeding
+                    )
+                    BabyCareTile(
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = 120.dp),
+                        title = "Analysis",
+                        subtitle = null,
+                        icon = Icons.Default.AutoGraph,
+                        onClick = onNavigateToGraph
                     )
                 }
             }

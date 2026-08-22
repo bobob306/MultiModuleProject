@@ -16,36 +16,101 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
+import java.time.YearMonth
 
 @Singleton
 class BabyCareRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : BabyCareRepository {
 
-    // 🌟 Expose a single StateFlow stream of your pre-grouped daily objects!
     private val _cachedDays = MutableStateFlow<List<DailyLogDto>>(emptyList())
     override val cachedDays: StateFlow<List<DailyLogDto>> = _cachedDays.asStateFlow()
 
-    // 📅 Tracks the starting day anchor coordinate for your pagination windows
-    private var currentAnchorDate: LocalDate = LocalDate.now()
+    // 📅 Tracks the current year-month anchor for pagination
+    private var currentAnchorMonth: YearMonth = YearMonth.now()
 
     override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult {
-        currentAnchorDate = LocalDate.now()
+        // Reset anchor to the current month for the initial load
+        currentAnchorMonth = YearMonth.now()
 
-        // Boundaries for the first 5 calendar days (e.g., Today down to 4 days ago)
-        val startDateStr = currentAnchorDate.toString()
-        val endDateStr = currentAnchorDate.minusDays(4).toString()
+        val monthString = formatYearMonth(currentAnchorMonth) // e.g., "2026-08"
+        Log.w("FIRESTORE_METRICS", "📡 Fetching initial month document: $monthString")
 
-        Log.w("FIRESTORE_METRICS", "📡 Fetching initial 5 days: $startDateStr down to $endDateStr")
-        val dailyDocs = fetchDayDocumentsBlock(userId, startDateStr, endDateStr)
+        // Fetch the entire month document and parse its daily map
+        val monthlyDays = fetchMonthDocument(userId, monthString)
+        println(monthlyDays)
 
-        _cachedDays.value = dailyDocs
-        currentAnchorDate = currentAnchorDate.minusDays(5)
+        // Update cache, sorting the days descending so the newest logs appear first
+        _cachedDays.value = monthlyDays.sortedByDescending { it.date }
+
+        // Point the anchor to the previous month for the next pagination call
+        currentAnchorMonth = currentAnchorMonth.minusMonths(1)
 
         return RepositoryFetchResult(
-            nextAnchorDate = currentAnchorDate,
-            hasMoreData = true
+            nextAnchorMonth = currentAnchorMonth,
+            hasMoreData = true // You can check if the previous month exists to set this accurately
         )
+    }
+
+    private suspend fun fetchMonthDocument(userId: String, monthString: String): List<DailyLogDto> {
+        return try {
+            // 1. Target the single monthly document directly using its ID (e.g., "2026-08")
+            val documentSnapshot = firestore.collection("babyLogs")
+                .document(userId)
+                .collection("months")
+                .document(monthString)
+                .get()
+                .await()
+
+            // If the document doesn't exist yet, return an empty list safely
+            if (!documentSnapshot.exists()) {
+                Log.d("FIRESTORE_METRICS", "ℹ️ No document found for month: $monthString")
+                return emptyList()
+            }
+
+            Log.d("FIRESTORE_METRICS", "🎉 Billed Cost = 1 document read for the entire month: $monthString!")
+
+            // 2. Cast the root "days" field to a Map
+            val daysMap = documentSnapshot.get("days") as? Map<String, List<Map<String, Any?>>> ?: emptyMap()
+
+            // 3. Parse the map entries into your DailyLogDto objects
+            daysMap.map { (dateString, eventsArray) ->
+                DailyLogDto(
+                    date = dateString,
+                    userId = userId,
+                    events = eventsArray.map { eventMap -> parseUnifiedEvent(eventMap) }
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("FIRESTORE_ERROR", "❌ Failed fetching monthly data for $monthString", e)
+            emptyList()
+        }
+    }
+
+    private fun parseUnifiedEvent(eventMap: Map<String, Any?>): UnifiedEventDto {
+        return UnifiedEventDto(
+            id = eventMap["id"] as? String ?: "",
+            type = eventMap["type"] as? String ?: "",
+            time = eventMap["time"] as? String ?: "",
+            dateTimeString = eventMap["dateTimeString"] as? String ?: "",
+
+            // Nappy-specific fields
+            nappyType = eventMap["nappyType"] as? String,
+
+            // Feeding-specific fields
+            mainFeedingSide = eventMap["mainFeedingSide"] as? String,
+            leftDuration = eventMap["leftDuration"] as? Long ?: 0L,
+            rightDuration = eventMap["rightDuration"] as? Long ?: 0L,
+            totalDuration = eventMap["totalDuration"] as? Long ?: 0L,
+
+            // Safe conversion from Firestore Long to your DTO's Int?
+            bottleAmountMl = (eventMap["bottleAmountMl"] as? Long)?.toInt()
+        )
+    }
+
+
+    private fun formatYearMonth(yearMonth: YearMonth): String {
+        return String.format("%04d-%02d", yearMonth.year, yearMonth.monthValue)
     }
 
     override suspend fun refreshData(userId: String, pageSize: Int): RepositoryFetchResult {
@@ -53,19 +118,22 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult {
-        val startDateStr = currentAnchorDate.toString()
-        val endDateStr = currentAnchorDate.minusDays(4).toString()
+        val monthString = formatYearMonth(currentAnchorMonth)
+        Log.w("FIRESTORE_METRICS", "📡 Paginating next month document: $monthString")
 
-        Log.w("FIRESTORE_METRICS", "📡 Paginiating next 5 days: $startDateStr down to $endDateStr")
-        val newDailyDocs = fetchDayDocumentsBlock(userId, startDateStr, endDateStr)
+        // Fetch the new month's data
+        val newMonthlyDays = fetchMonthDocument(userId, monthString)
 
-        // Append the new calendar days cleanly into your local data memory pools
-        _cachedDays.value = _cachedDays.value + newDailyDocs
-        currentAnchorDate = currentAnchorDate.minusDays(5)
+        // Append new logs to the cache and maintain a descending chronological order (newest first)
+        val updatedList = _cachedDays.value + newMonthlyDays
+        _cachedDays.value = updatedList.sortedByDescending { it.date }
+
+        // Advance the tracking anchor backward by one month
+        currentAnchorMonth = currentAnchorMonth.minusMonths(1)
 
         return RepositoryFetchResult(
-            nextAnchorDate = currentAnchorDate,
-            hasMoreData = true
+            nextAnchorMonth = currentAnchorMonth,
+            hasMoreData = true // Ideal optimization: verify if older months exist in Firestore
         )
     }
 

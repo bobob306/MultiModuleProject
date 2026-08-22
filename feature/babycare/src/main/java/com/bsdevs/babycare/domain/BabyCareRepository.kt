@@ -7,9 +7,10 @@ import com.bsdevs.babycare.network.UnifiedEventDto
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
+import java.time.YearMonth
 
 data class RepositoryFetchResult(
-    val nextAnchorDate: LocalDate?, // 📅 Tracks where the next 5-day block should start
+    val nextAnchorMonth: YearMonth?,
     val hasMoreData: Boolean
 )
 
