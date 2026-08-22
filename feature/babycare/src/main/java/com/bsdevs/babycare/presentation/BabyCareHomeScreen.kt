@@ -67,7 +67,6 @@ fun BabyCareHomeScreenRoute(
             BabyCareHomeScreen(
                 viewData = state.data,
                 // If your success viewData already tracks the root refresh loading block:
-                isRefreshing = state.data.isRefreshing, // Or map to a dedicated 'isRefreshing' state field if available
                 onRefresh = { viewModel.refreshData() }, // Make sure your ViewModel exposes a refresh method
                 onNavigateToNappyChange = onNavigateToNappyChange,
                 onNavigateToFeeding = onNavigateToFeeding,
@@ -99,7 +98,6 @@ fun BabyCareHomeScreenRoute(
 @Composable
 internal fun BabyCareHomeScreen(
     viewData: BabyCareHomeViewData,
-    isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
@@ -113,7 +111,7 @@ internal fun BabyCareHomeScreen(
     val pullToRefreshState = rememberPullToRefreshState()
     // 1. Direct PullToRefreshBox wrapper at the root level
     PullToRefreshBox(
-        isRefreshing = isRefreshing, // Use the localized ui flag
+        isRefreshing = viewData.isRefreshing, // Use the localized ui flag
         onRefresh = {
             onRefresh() // Trigger your Firebase fetch logic
         },

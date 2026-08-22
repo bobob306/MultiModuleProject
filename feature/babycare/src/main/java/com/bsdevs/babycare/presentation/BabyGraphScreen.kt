@@ -62,9 +62,10 @@ fun BabyFeedingGraphScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(innerPadding)
                 .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "Feeding Frequency by Hour",
@@ -190,13 +191,14 @@ fun BucketedAnalysisInsightCard(analysis: FeedingAnalysisResult) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .wrapContentHeight()
             .padding(top = 24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.secondaryContainer
         )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
+            modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = "📊 Interval Analysis by Feed Length",
