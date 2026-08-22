@@ -265,10 +265,6 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    fun toggleActivityFilter(filter: ActivityFilter) {
-        _currentFilter.update { current -> if (current == filter) ActivityFilter.NONE else filter }
-    }
-
     private fun formatHeaderDate(dateString: String): String {
         return try {
             // Safe check: extract just the YYYY-MM-DD segment if it contains time info
@@ -298,7 +294,19 @@ class BabyCareHomeViewModel @Inject constructor(
     }
 
     fun toggleHeaderCollapse(title: String) {
-        _collapsedHeaders.update { current -> if (current.contains(title)) current - title else current + title }
+        _collapsedHeaders.update { current ->
+            if (current.contains(title)) current - title else current + title
+        }
+        // 🌟 FORCE UI REFRESH: Immediately push the recalculated state to the screen
+        updateDisplayFeed(repository.cachedDays.value)
+    }
+
+    fun toggleActivityFilter(filter: ActivityFilter) {
+        _currentFilter.update { current ->
+            if (current == filter) ActivityFilter.NONE else filter
+        }
+        // 🌟 FORCE UI REFRESH: Immediately push the filtered state to the screen
+        updateDisplayFeed(repository.cachedDays.value)
     }
 
     private fun setLoadingMoreState(value: Boolean) {
@@ -306,15 +314,6 @@ class BabyCareHomeViewModel @Inject constructor(
         if (currentResult is Result.Success) {
             _viewData.value = Result.Success(
                 currentResult.data.copy(isLoadingMore = value)
-            )
-        }
-    }
-
-    private fun setRefreshingState(value: Boolean) {
-        val currentResult = _viewData.value
-        if (currentResult is Result.Success) {
-            _viewData.value = Result.Success(
-                currentResult.data.copy(isRefreshing = value)
             )
         }
     }
