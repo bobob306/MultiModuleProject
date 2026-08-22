@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
@@ -13,8 +14,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -50,7 +53,6 @@ class BabyCareHomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val pageSize = 20
-    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
 
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
@@ -58,54 +60,72 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private val _isInitialLoading = MutableStateFlow(false)
 
-    val viewData: StateFlow<Result<BabyCareHomeViewData>> = combine(
-        repository.cachedDays,
-        _currentFilter,
-        _collapsedHeaders,
-        _isInitialLoading
-    ) { dailyLogsList, filter, collapsed, isLoading ->
-        if (isLoading && dailyLogsList.isEmpty()) {
-            Result.Loading
-        } else {
-            val processed = processFeed(dailyLogsList, filter, collapsed)
-            Result.Success(processed)
-        }
-    }.catch { e ->
-        emit(Result.Error(e))
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = Result.Loading
-    )
+    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
+    val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {
-        loadData()
+        // 🌟 2. Observe the repository cache in the background to handle instant updates
+        // without letting empty states lock up our initialization pipeline
+        viewModelScope.launch {
+            repository.cachedDays.collect { dailyLogs ->
+                // Only map to Success if we aren't currently waiting on a full initial pull
+                if (_viewData.value !is Result.Loading || dailyLogs.isNotEmpty()) {
+                    updateDisplayFeed(dailyLogs)
+                }
+            }
+        }
+
+        // Trigger initial data load immediately on launch
+        initialLoad()
     }
 
-    fun loadData() {
-        // Prevent redundant network fetches if cached data is already present
+    private fun initialLoad() {
         viewModelScope.launch {
-            _isInitialLoading.value = true
             try {
-                repository.loadInitialData(accountService.currentUserId, pageSize)
+                // Fetch the current month document from Firestore
+                val fetchResult = repository.loadInitialData(accountService.currentUserId, pageSize)
+
+                // Force switch the state to success immediately, even if the month is brand new/empty
+                updateDisplayFeed(repository.cachedDays.value, fetchResult.hasMoreData)
             } catch (e: Exception) {
-                // Handle initial fetch failure
-            } finally {
-                _isInitialLoading.value = false
+                Log.e("HOME_INIT_ERROR", "Failed initial data block fetch", e)
+                _viewData.value = Result.Error(e)
             }
         }
     }
+    private fun updateDisplayFeed(dailyLogs: List<DailyLogDto>, canLoadMore: Boolean = true) {
+        val processedFeed = processFeed(
+            dailyLogs = dailyLogs,
+            filter = _currentFilter.value,
+            collapsed = _collapsedHeaders.value
+        )
+        _viewData.value = Result.Success(
+            processedFeed.copy(
+                isRefreshing = false,
+                isLoadingMore = false,
+                canLoadMore = canLoadMore
+            )
+        )
+    }
 
     fun refreshData() {
-        val current = (_viewData.value as? Result.Success)?.data ?: return
-        if (current.isRefreshing || current.isLoadingMore) return
+        val current = when (val currentState = _viewData.value) {
+            is Result.Success -> currentState.data
+            else -> BabyCareHomeViewData(isRefreshing = true)
+        }
+
+        if (current.isLoadingMore) return
 
         viewModelScope.launch {
-            setRefreshingState(true)
+            // Turn on pull-to-refresh spinner indicator
+            _viewData.value = Result.Success(current.copy(isRefreshing = true))
+
             try {
-                repository.refreshData(accountService.currentUserId, pageSize)
-            } finally {
-                setRefreshingState(false)
+                val refreshResult = repository.loadInitialData(accountService.currentUserId, pageSize)
+                updateDisplayFeed(repository.cachedDays.value, refreshResult.hasMoreData)
+            } catch (e: Exception) {
+                Log.e("REFRESH_ERROR", "Failed to clear refresh cycle", e)
+                _viewData.value = Result.Success(current.copy(isRefreshing = false))
             }
         }
     }

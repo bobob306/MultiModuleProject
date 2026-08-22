@@ -137,94 +137,6 @@ class BabyCareRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) {
-        val db = firestore.collection("babyLogs").document(userId).collection("days").document(date)
-
-        try {
-            // 🚀 1. Try to atomically push the event into the array assuming the day doc exists
-            db.update("events", FieldValue.arrayUnion(event)).await()
-            Log.d("FIRESTORE_WRITE", "Successfully appended activity event to existing day document: $date")
-        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
-            // 🛑 2. If the document doesn't exist, handle the error code gracefully
-            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
-                Log.w("FIRESTORE_WRITE", "Day document $date not found. Creating a fresh one...")
-
-                val newDayDoc = DailyLogDto(
-                    date = date,
-                    userId = userId,
-                    events = listOf(event)
-                )
-                // Use set with merge options to safely initialize the document layout
-                db.set(newDayDoc, SetOptions.merge()).await()
-            } else {
-                throw e // Re-throw any other critical network or rules permissions faults
-            }
-        }
-    }
-
-    override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? {
-        // 🔍 1. High Performance Look-up: Search your local in-memory cache first! Cost = 0 reads! 🎉
-        val cachedEvent = _cachedDays.value
-            .flatMap { it.events }
-            .firstOrNull { it.id == activityId }
-
-        if (cachedEvent != null) return cachedEvent
-
-        // 📡 2. Cloud Server Fallback: If not in cache, query the database using the collectionGroup tool
-        Log.w("FIRESTORE_METRICS", "Activity not found in cache. Querying network server...")
-
-        val snapshot = firestore.collectionGroup("days")
-            .get()
-            .await()
-
-        // Map through the day blocks to isolate the target object
-        val remoteDayDocs = snapshot.toObjects(DailyLogDto::class.java)
-        return remoteDayDocs
-            .flatMap { it.events }
-            .firstOrNull { it.id == activityId }
-    }
-
-    override suspend fun getNappyEventById(userId: String, activityId: String): UnifiedEventDto? {
-        // 🔍 1. High Performance Look-up: Search local in-memory cache first! Cost = 0 reads! 🎉
-        val cachedEvent = _cachedDays.value
-            .flatMap { it.events }
-            .firstOrNull { it.id == activityId }
-
-        if (cachedEvent != null) return cachedEvent
-
-        // 📡 2. Cloud Server Fallback: Query network server only if cache doesn't contain it
-        Log.w("FIRESTORE_METRICS", "Nappy activity not found in cache. Querying network server...")
-        val snapshot = firestore.collectionGroup("days").get().await()
-        val remoteDayDocs = snapshot.toObjects(DailyLogDto::class.java)
-
-        return remoteDayDocs
-            .flatMap { it.events }
-            .firstOrNull { it.id == activityId }
-    }
-
-    override suspend fun updateActivityEvent(
-        userId: String,
-        date: String,
-        eventId: String,
-        updatedEvent: UnifiedEventDto
-    ) {
-        val docRef = firestore.collection("babyLogs").document(userId).collection("days").document(date)
-
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(docRef)
-            val dailyLog = snapshot.toObject(DailyLogDto::class.java) ?: return@runTransaction
-
-            // 🔄 Map through the list, replace the old event matching the ID with the updated copy
-            val updatedEventsList = dailyLog.events.map { existingEvent ->
-                if (existingEvent.id == eventId) updatedEvent else existingEvent
-            }
-
-            // Write the modified array payload back to the document root safely
-            transaction.update(docRef, "events", updatedEventsList)
-        }.await()
-        Log.d("FIRESTORE_EDIT", "Successfully updated event: $eventId inside day block doc: $date")
-    }
-
     override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) {
         val docRef = firestore.collection("babyLogs").document(userId).collection("days").document(date)
 
@@ -256,5 +168,132 @@ class BabyCareRepositoryImpl @Inject constructor(
 
         Log.d("FIRESTORE_METRICS", "🎉 Billed Cost = ${snapshot.size()} reads total for this 5-day history block! Max saved profile!")
         return snapshot.toObjects(DailyLogDto::class.java)
+    }
+
+    private fun extractMonthString(dateString: String): String {
+        return try {
+            val parts = dateString.split("-")
+            "${parts[0]}-${parts[1]}"
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) {
+        val monthDocId = extractMonthString(date)
+        val db = firestore.collection("babyLogs").document(userId).collection("months").document(monthDocId)
+
+        try {
+            db.update("days.$date", FieldValue.arrayUnion(event)).await()
+            Log.d("FIRESTORE_WRITE", "Successfully saved event to network.")
+
+            // 🌟 FORCE UI REFRESH: Insert the new event into the local cache stream
+            updateLocalCacheWithNewEvent(date, userId, event)
+
+        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
+            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
+                val initialPayload = mapOf("days" to mapOf(date to listOf(event)))
+                db.set(initialPayload, SetOptions.merge()).await()
+
+                // 🌟 FORCE UI REFRESH: Insert the new event into the local cache stream
+                updateLocalCacheWithNewEvent(date, userId, event)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? {
+        // 🔍 1. In-Memory Cache Lookup (Cost = 0 reads)
+        val cachedEvent = _cachedDays.value
+            .flatMap { it.events }
+            .firstOrNull { it.id == activityId }
+
+        if (cachedEvent != null) return cachedEvent
+
+        // 📡 2. Cloud Server Fallback via the new 'months' collection group layout
+        Log.w("FIRESTORE_METRICS", "Activity not found in cache. Querying network server...")
+        return try {
+            val snapshot = firestore.collectionGroup("months").get().await()
+
+            // Loop through all documents, extract and parse fields manually to isolate the ID matches
+            snapshot.documents.flatMap { doc ->
+                val daysMap = doc.get("days") as? Map<String, List<Map<String, Any?>>> ?: emptyMap()
+                daysMap.values.flatten().map { parseUnifiedEvent(it) }
+            }.firstOrNull { it.id == activityId }
+        } catch (e: Exception) {
+            Log.e("FIRESTORE_ERROR", "Failed to retrieve event by ID via network", e)
+            null
+        }
+    }
+
+    override suspend fun getNappyEventById(userId: String, activityId: String): UnifiedEventDto? {
+        // Both types map to unified fields, so we can route cleanly into the same lookup engine
+        return getFeedingEventById(userId, activityId)
+    }
+
+    override suspend fun updateActivityEvent(
+        userId: String,
+        date: String,
+        eventId: String,
+        updatedEvent: UnifiedEventDto
+    ) {
+        val monthDocId = extractMonthString(date)
+        val docRef = firestore.collection("babyLogs").document(userId).collection("months").document(monthDocId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            if (!snapshot.exists()) return@runTransaction
+
+            val rawDaysMap = snapshot.get("days") as? Map<String, List<Map<String, Any?>>> ?: return@runTransaction
+            val dayEvents = rawDaysMap[date]?.map { parseUnifiedEvent(it) } ?: emptyList()
+
+            val updatedEventsList = dayEvents.map { existingEvent ->
+                if (existingEvent.id == eventId) updatedEvent else existingEvent
+            }
+
+            transaction.update(docRef, "days.$date", updatedEventsList)
+        }.await()
+        Log.d("FIRESTORE_EDIT", "Successfully updated event on network.")
+
+        // 🌟 FORCE UI REFRESH: Modify the entry inside the local cache stream
+        updateLocalCacheWithModifiedEvent(date, eventId, updatedEvent)
+    }
+
+    private fun updateLocalCacheWithNewEvent(date: String, userId: String, event: UnifiedEventDto) {
+        val currentList = _cachedDays.value.toMutableList()
+        val existingDayIndex = currentList.indexOfFirst { it.date == date }
+
+        if (existingDayIndex != -1) {
+            // Day already exists in cache, append the event to its array
+            val targetDay = currentList[existingDayIndex]
+            currentList[existingDayIndex] = targetDay.copy(
+                events = targetDay.events + event
+            )
+        } else {
+            // Day doesn't exist in memory yet, initialize a brand new DailyLogDto block
+            currentList.add(
+                DailyLogDto(date = date, userId = userId, events = listOf(event))
+            )
+        }
+
+        // Re-sort descending so the UI remains chronological and push the state
+        _cachedDays.value = currentList.sortedByDescending { it.date }
+    }
+
+    private fun updateLocalCacheWithModifiedEvent(date: String, eventId: String, updatedEvent: UnifiedEventDto) {
+        val currentList = _cachedDays.value.toMutableList()
+        val existingDayIndex = currentList.indexOfFirst { it.date == date }
+
+        if (existingDayIndex != -1) {
+            val targetDay = currentList[existingDayIndex]
+            val updatedEvents = targetDay.events.map { existingEvent ->
+                if (existingEvent.id == eventId) updatedEvent else existingEvent
+            }
+            currentList[existingDayIndex] = targetDay.copy(events = updatedEvents)
+
+            // Push the update to emit to all active screen viewers instantly
+            _cachedDays.value = currentList
+        }
     }
 }
