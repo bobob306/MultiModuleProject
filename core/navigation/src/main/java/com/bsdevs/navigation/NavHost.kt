@@ -48,7 +48,7 @@ fun MMPNavHost(
         )
         splashScreenSection(
             onShowSnackBar,
-            onNavigateToCoffeeHome = navController::navigateToCoffeeHome,
+            onNavigateToBabyHome = navController::navigateToBabyCareHome,
             onNavigateToSignIn = navController::navigateToLoginScreen,
         )
         babyCareSection(

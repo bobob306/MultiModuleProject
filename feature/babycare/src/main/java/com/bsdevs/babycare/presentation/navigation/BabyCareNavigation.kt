@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.navDeepLink
 import com.bsdevs.babycare.presentation.BabyCareHomeScreenRoute
+import com.bsdevs.babycare.presentation.BabyGraphRoute
 import com.bsdevs.babycare.presentation.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.NappyChangeScreenRoute
 import kotlinx.serialization.Serializable
@@ -18,6 +19,9 @@ data object BabyCareBaseRoute
 data object BabyCareHomeRoute
 
 @Serializable
+data object BabyGraphRoute
+
+@Serializable
 data class NappyChangeRoute(val activityId: String? = null)
 
 @Serializable
@@ -25,6 +29,9 @@ data class FeedingRoute(val activityId: String? = null, val startSide: String? =
 
 fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
     navigate(route = BabyCareHomeRoute, navOptions = navOptions)
+
+fun NavController.navigateToGraph(navOptions: NavOptions? = null) =
+    navigate(route = BabyGraphRoute, navOptions = navOptions)
 
 fun NavController.navigateToNappyChange(activityId: String? = null, navOptions: NavOptions? = null) =
     navigate(route = NappyChangeRoute(activityId), navOptions = navOptions)
@@ -44,6 +51,7 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToFeeding = { navController.navigateToFeeding() },
                 onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
+                onNavigateToGraph = {navController.navigateToGraph()}
             )
         }
         composable<NappyChangeRoute>(
@@ -62,6 +70,16 @@ fun NavGraphBuilder.babyCareSection(
             )
         ) {
             FeedingScreenRoute(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<BabyGraphRoute>(
+            deepLinks = listOf(
+                navDeepLink<BabyGraphRoute>(basePath = "babycare://graph")
+            )
+        ) {
+            BabyGraphRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() }
             )

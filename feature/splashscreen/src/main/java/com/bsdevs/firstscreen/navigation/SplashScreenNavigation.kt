@@ -19,15 +19,15 @@ fun NavController.navigateToSplash(navOptions: NavOptions?) =
 
 fun NavGraphBuilder.splashScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    onNavigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    onNavigateToBabyHome: (navOptions: NavOptions?) -> Unit,
     onNavigateToSignIn: (navOptions: NavOptions?) -> Unit
 ) {
     navigation<SplashScreenBaseRoute>(startDestination = SplashScreenRoute) {
         composable<SplashScreenRoute> {
             SplashScreenRoute(
                 onShowSnackBar,
-                onNavigateToCoffeeHome,
-                onNavigateToSignIn,
+                onNavigateToBabyHome = onNavigateToBabyHome,
+                onNavigateToSignIn = onNavigateToSignIn,
             )
         }
     }
