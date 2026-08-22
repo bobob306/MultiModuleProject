@@ -4,6 +4,7 @@ import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.data.NetworkScreenData
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
@@ -24,4 +25,5 @@ interface BabyCareRepository {
     suspend fun getNappyEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto)
     suspend fun deleteActivityEvent(userId: String, date: String, eventId: String)
+    suspend fun fetchScreenLayout(screenName: String): List<NetworkScreenData>
 }

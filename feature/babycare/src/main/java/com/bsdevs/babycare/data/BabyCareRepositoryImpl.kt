@@ -5,6 +5,9 @@ import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.domain.RepositoryFetchResult
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.data.SizeData
+import com.bsdevs.data.SpacerTypeData
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +18,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 
 @Singleton
@@ -76,9 +80,9 @@ class BabyCareRepositoryImpl @Inject constructor(
             // 🚀 1. Try to atomically push the event into the array assuming the day doc exists
             db.update("events", FieldValue.arrayUnion(event)).await()
             Log.d("FIRESTORE_WRITE", "Successfully appended activity event to existing day document: $date")
-        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
+        } catch (e: FirebaseFirestoreException) {
             // 🛑 2. If the document doesn't exist, handle the error code gracefully
-            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
+            if (e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
                 Log.w("FIRESTORE_WRITE", "Day document $date not found. Creating a fresh one...")
 
                 val newDayDoc = DailyLogDto(
@@ -156,6 +160,55 @@ class BabyCareRepositoryImpl @Inject constructor(
         }.await()
         Log.d("FIRESTORE_EDIT", "Successfully updated event: $eventId inside day block doc: $date")
     }
+
+    override suspend fun fetchScreenLayout(screenName: String): List<NetworkScreenData> {
+        return try {
+            // Query your remote static schema collection document payload
+            val snapshot = firestore.collection("screens").document(screenName).get().await()
+            val rawList = snapshot.get("ScreenContent") as? List<Map<String, Any>> ?: emptyList()
+
+            // Loop through maps and cast them type-safely using your existing data schemas
+            rawList.mapIndexed { fallbackIndex, map ->
+                val type = map["type"] as? String ?: "UNKNOWN"
+                val index = (map["index"] as? Long)?.toInt() ?: fallbackIndex
+
+                when (type) {
+                    "TITLE" -> NetworkScreenData.SmallTitleDataNetwork(
+                        index = index,
+                        content = map["content"] as? String ?: ""
+                    )
+                    "SUBTITLE" -> NetworkScreenData.SubtitleDataNetwork(
+                        index = index,
+                        content = map["content"] as? String ?: ""
+                    )
+                    "SPACER" -> {
+                        val sizeObj = map["sizeobject"] as? Map<String, Any>
+                        val heightVal = (sizeObj?.get("size") as? String)?.toIntOrNull() ?: 16
+                        NetworkScreenData.SpacerDataNetwork(
+                            index = index,
+                            size = SizeData(
+                                type = SpacerTypeData.HEIGHT,
+                                height = heightVal,
+                                weight = null,
+                            )
+                        )
+                    }
+                    "IMAGE" -> NetworkScreenData.ImageDataNetwork(
+                        index = index,
+                        url = map["url"] as? String ?: "",
+                        contentDescription = map["contentDescription"] as? String ?: "",
+                        height = (map["height"] as? Long)?.toInt() ?: 120,
+                        width = (map["width"] as? Long)?.toInt() ?: 120
+                    )
+                    else -> NetworkScreenData.Unknown(index = index)
+                }
+            }.sortedBy { it.index } // Force structural synchronization sorting rules
+        } catch (e: Exception) {
+            Log.e("FIRESTORE_LAYOUT", "Failed to deserialize layout payload", e)
+            emptyList()
+        }
+    }
+
 
     override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) {
         val docRef = firestore.collection("babyLogs").document(userId).collection("days").document(date)

@@ -26,33 +26,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
-
-sealed class HomeFeedItem {
-    data class Header(val title: String, val feedingCount: Int, val nappyCount: Int) :
-        HomeFeedItem()
-
-    data class ActivityRow(val activity: BabyActivity) : HomeFeedItem()
-}
-
-
-sealed class HomeUiIntent {
-    data class CollapseHeader(val dateHeader: String) : HomeUiIntent()
-    data class ToggleFilter(val activityType: String) : HomeUiIntent()
-    data class EditActivityRow(val id: String, val activityType: String) : HomeUiIntent()
-}
-
-data class BabyCareHomeViewData(
-    val lastNappyChange: String? = null,
-    val lastFeeding: String? = null,
-    val activityFeed: List<NetworkScreenData> = emptyList(),
-    val canLoadMore: Boolean = true,
-    val isLoadingMore: Boolean = false,
-    val isRefreshing: Boolean = false,
-    val currentFilter: ActivityFilter = ActivityFilter.NONE,
-    val collapsedHeaders: Set<String> = emptySet(),
-)
-
-enum class ActivityFilter { NONE, NAPPY, FEEDING }
+import kotlin.time.Duration.Companion.minutes
 
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(
@@ -146,7 +120,7 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    fun onUiIntent(intent: HomeUiIntent) {
+    fun onUiIntent(intent: UiIntent.HomeUiIntent) {
         val currentResult = _viewData.value as? Result.Success
         if (currentResult !is Result.Success) return
 
@@ -165,6 +139,7 @@ class BabyCareHomeViewModel @Inject constructor(
             is HomeUiIntent.EditActivityRow -> {
                 onEditActivityRow(currentResult, intent)
             }
+            is HomeUiIntent.LoadMore -> loadMore()
         }
     }
 
@@ -231,7 +206,7 @@ class BabyCareHomeViewModel @Inject constructor(
                         if (unifiedEvent.mainFeedingSide == "Bottle") {
                             "Bottle Feeding (${unifiedEvent.bottleAmountMl ?: 0}ml)"
                         } else {
-                            "Breast Feeding: ${unifiedEvent.mainFeedingSide ?: "Both"}"
+                            "${unifiedEvent.mainFeedingSide ?: "Both"}, ${unifiedEvent.totalDuration/60} mins "
                         }
                     }
 
@@ -272,7 +247,7 @@ class BabyCareHomeViewModel @Inject constructor(
         val mostRecentNappyChange = sortedEvents.firstOrNull { it.type == "NAPPY" }
 
         val nappyTile = BabyDashboardTileNetwork(
-            lastNappyChange = mostRecentNappyChange?.time,
+            lastNappyChange = "${mostRecentNappyChange?.time}",
             destination = "babycare://nappy",
             locationTypeData = INTERNAL,
             label = "Feeding nav",
@@ -283,7 +258,7 @@ class BabyCareHomeViewModel @Inject constructor(
             destination = "babycare://feeding",
             locationTypeData = INTERNAL,
             label = "Feeding nav",
-            lastFeeding = mostRecentFeeding?.time,
+            lastFeeding = "${mostRecentFeeding?.mainFeedingSide} ${mostRecentFeeding?.time}" ,
         )
         return listOf(nappyTile, feedingTile)
     }
@@ -291,37 +266,23 @@ class BabyCareHomeViewModel @Inject constructor(
     private fun onCollapseHeader(
         currentResult: Result.Success<BabyCareHomeViewData>, intent: HomeUiIntent.CollapseHeader
     ) {
-        val currentCollapsed = currentResult.data.collapsedHeaders
-        val updatedCollapsed = if (currentCollapsed.contains(intent.dateHeader)) {
-            currentCollapsed - intent.dateHeader
-        } else {
-            currentCollapsed + intent.dateHeader
+        _collapsedHeaders.update { currentSet ->
+            if (currentSet.contains(intent.dateHeader)) {
+                currentSet - intent.dateHeader
+            } else {
+                currentSet + intent.dateHeader
+            }
         }
-
-        val latestCachedDays = repository.cachedDays.value
-
-        _viewData.value = Result.Success(
-            currentResult.data.copy(
-                collapsedHeaders = updatedCollapsed,
-                // 🔄 FIXED: Append .activityFeed to pull the clean List<NetworkScreenData> out of the wrapper!
-                activityFeed = processFeed(
-                    dailyLogs = latestCachedDays,
-                    filter = currentResult.data.currentFilter,
-                    collapsed = updatedCollapsed
-                ).activityFeed
-            )
-        )
     }
 
     private fun onToggleFilter(
         currentResult: Result.Success<BabyCareHomeViewData>, intent: HomeUiIntent.ToggleFilter
     ) {
-        val targetFilter =
-            if (intent.activityType == "NAPPY") ActivityFilter.NAPPY else ActivityFilter.FEEDING
-        val activeFilter =
-            if (currentResult.data.currentFilter == targetFilter) ActivityFilter.NONE else targetFilter
+        val targetFilter = if (intent.activityType == "NAPPY") ActivityFilter.NAPPY else ActivityFilter.FEEDING
+        val activeFilter = if (currentResult.data.currentFilter == targetFilter) ActivityFilter.NONE else targetFilter
 
-        _currentFilter.value = activeFilter // Sync back to your initialization combine blocks
+        // Syncs back to your initialization combine blocks perfectly
+        _currentFilter.value = activeFilter
     }
 
     fun onEditActivityRow(
@@ -400,8 +361,4 @@ class BabyCareHomeViewModel @Inject constructor(
             )
         }
     }
-}
-
-sealed class BabyCareHomeNavigationEvent {
-    data class NavigateToDeepLink(val uriString: String) : BabyCareHomeNavigationEvent()
 }

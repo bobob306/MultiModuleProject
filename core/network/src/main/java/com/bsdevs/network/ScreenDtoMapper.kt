@@ -45,8 +45,22 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         )
                     }
 
-                    "TITLE" -> {
-                        ScreenDto.TitleDto(
+                    "SMALL_TITLE" -> {
+                        ScreenDto.SmallTitleDto(
+                            index = item["index"].toString().toInt(),
+                            content = item["content"] as String
+                        )
+                    }
+
+                    "MEDIUM_TITLE" -> {
+                        ScreenDto.MediumTitleDto(
+                            index = item["index"].toString().toInt(),
+                            content = item["content"] as String
+                        )
+                    }
+
+                    "LARGE_TITLE" -> {
+                        ScreenDto.LargeTitleDto(
                             index = item["index"].toString().toInt(),
                             content = item["content"] as String
                         )
@@ -60,14 +74,33 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     }
 
                     "SPACER" -> {
-                        val size = item["size"] as ArrayList<*>
-                        val type = size[0].toString()
+                        val sizeArray = item["size"] as? ArrayList<*>
+                        val sizeObject = item["sizeobject"] as? HashMap<*, *>
+
+                        val typeString = when {
+                            sizeArray != null -> sizeArray[0].toString()
+                            sizeObject != null -> sizeObject["type"].toString()
+                            else -> "HEIGHT"
+                        }
+
+                        val resolvedSize = when {
+                            sizeArray != null -> sizeArray[1].toString().toIntOrNull() ?: 16
+                            sizeObject != null -> sizeObject["size"].toString().toIntOrNull() ?: 16
+                            else -> 16
+                        }
+
+                        val resolvedWeight = when {
+                            sizeArray != null && typeString == "WEIGHT" -> sizeArray[1].toString().toFloatOrNull()
+                            sizeObject != null && typeString == "WEIGHT" -> sizeObject["weight"].toString().toFloatOrNull()
+                            else -> null
+                        }
+
                         ScreenDto.SpacerDto(
-                            index = item["index"].toString().toInt(), size = SizeDto(
-                                type = type.toSpacerType,
-                                size = if (type == "HEIGHT") size[1].toString().toInt() else null,
-                                weight = if (type == "WEIGHT") size[1].toString()
-                                    .toFloat() else null,
+                            index = item["index"].toString().toIntOrNull() ?: 0,
+                            size = SizeDto(
+                                type = typeString.toSpacerType,
+                                size = if (typeString == "HEIGHT") resolvedSize else null,
+                                weight = resolvedWeight
                             )
                         )
                     }
@@ -89,7 +122,7 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                 }
             }
         }
-        val flattenedList = listOfLists.flatten()
+        val flattenedList = listOfLists.flatten().sortedBy { it.index }
         return flattenedList
     }
 

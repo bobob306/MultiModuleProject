@@ -4,7 +4,17 @@ sealed class NetworkScreenData(
     open val index: Int,
 ) {
     data class Unknown(override val index: Int) : NetworkScreenData(index)
-    data class TitleDataNetwork(
+    data class SmallTitleDataNetwork(
+        override val index: Int,
+        val content: String,
+    ) : NetworkScreenData(index)
+
+    data class MediumTitleDataNetwork(
+        override val index: Int,
+        val content: String,
+    ) : NetworkScreenData(index)
+
+    data class LargeTitleDataNetwork(
         override val index: Int,
         val content: String,
     ) : NetworkScreenData(index)
@@ -122,6 +132,10 @@ sealed class NetworkScreenData(
         val subtitle: String,
         val time: String,
         val rawDate: String
+    ) : NetworkScreenData(index)
+    data class ActivityFeedNetwork(
+        override val index: Int,
+        val content: List<NetworkScreenData>
     ) : NetworkScreenData(index)
 }
 

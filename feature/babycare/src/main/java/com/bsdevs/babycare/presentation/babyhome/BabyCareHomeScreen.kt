@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation.babyhome
 
+import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -77,8 +78,7 @@ fun BabyCareHomeScreenRoute(
                 isRefreshing = state.data.isRefreshing,
                 onRefresh = { viewModel.refreshData() },
                 onNavigate = viewModel::onNavigate,
-                onLoadMore = viewModel::loadMore,
-                onUiIntent = viewModel::onUiIntent
+                onUiIntent = {viewModel.onUiIntent(intent = it as UiIntent.HomeUiIntent)}
             )
         }
 
@@ -103,8 +103,7 @@ internal fun BabyCareHomeScreen(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onNavigate: (String, LocationTypeData, String) -> Unit,
-    onLoadMore: () -> Unit,
-    onUiIntent: (HomeUiIntent) -> Unit,
+    onUiIntent: (UiIntent) -> Unit,
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
     val context = LocalContext.current
@@ -119,24 +118,219 @@ internal fun BabyCareHomeScreen(
         state = pullToRefreshState,
         modifier = Modifier.fillMaxSize()
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        ActivityFeed(activityItems, viewData.isLoadingMore, hasNoRows, viewData.canLoadMore, context, onUiIntent, onNavigate)
+//        LazyColumn(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .padding(horizontal = 16.dp),
+//            verticalArrangement = Arrangement.spacedBy(4.dp)
+//        ) {
+//
+//            // 🚀 1. Dynamic Server-Driven UI Renderer Processing Loop
+//            activityItems.forEach { screenDataNode ->
+//                when (screenDataNode) {
+//
+//                    // 📌 Pinned Header components intercepting sticky top placements
+//                    is BabyFeedHeaderNetwork -> {
+//                        stickyHeader(key = "header_${screenDataNode.title}") {
+//                            RenderUI(
+//                                item = screenDataNode,
+//                                context = context,
+//                                onNavigationClick = null,
+//                                onChipClick = {},
+//                                onSwitchClick = {},
+//                                onClick = { id, type ->
+//                                    when (type) {
+//                                        "COLLAPSE" -> onUiIntent(HomeUiIntent.CollapseHeader(id))
+//                                        "FILTER" -> onUiIntent(HomeUiIntent.ToggleFilter(id))
+//                                        "EDIT" -> {
+//                                            if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
+//                                                onUiIntent(
+//                                                    HomeUiIntent.EditActivityRow(
+//                                                        id,
+//                                                        screenDataNode.activityType
+//                                                    )
+//                                                )
+//                                            }
+//                                        }
+//                                    }
+//                                },
+//                            )
+//                        }
+//                    }
+//
+//                    // 📋 Flat components mapping into sequential generic rows
+//                    else -> {
+//                        val elementKey = when (screenDataNode) {
+//                            is NetworkScreenData.BabyDashboardTilesNetwork -> "nappy_tile_${screenDataNode.index}"
+//                            is NetworkScreenData.BabyFeedRowNetwork -> "row_${screenDataNode.id}"
+//                            else -> "${screenDataNode::class.java.simpleName}_${screenDataNode.index}"
+//                        }
+//
+//                        item(key = elementKey) {
+//                            val allRows = remember(activityItems) {
+//                                activityItems.filterIsInstance<NetworkScreenData.BabyFeedRowNetwork>()
+//                            }
+//
+//                            // Check pagination boundaries strictly relative to list rows
+//                            if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
+//                                val globalIndex = allRows.indexOf(screenDataNode)
+//                                if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+//                                    LaunchedEffect(Unit) {
+//                                        onLoadMore()
+//                                    }
+//                                }
+//                            }
+//
+//                            Box(
+//                                modifier = Modifier
+//                                    .fillMaxWidth()
+//                                    .animateItem()
+//                            ) {
+//                                RenderUI(
+//                                    item = screenDataNode,
+//                                    context = context,
+//                                    onNavigationClick = { destination, locationType, label ->
+//                                        onNavigate(destination, locationType, label)
+//                                    },
+//                                    onChipClick = {},
+//                                    onSwitchClick = {},
+//                                    onClick = { id, type ->
+//                                        when (type) {
+//                                            "COLLAPSE" -> onUiIntent(HomeUiIntent.CollapseHeader(id))
+//                                            "FILTER" -> onUiIntent(HomeUiIntent.ToggleFilter(id))
+//                                            "EDIT" -> {
+//                                                if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
+//                                                    onUiIntent(
+//                                                        HomeUiIntent.EditActivityRow(
+//                                                            id,
+//                                                            screenDataNode.activityType
+//                                                        )
+//                                                    )
+//                                                }
+//                                            }
+//                                        }
+//                                    },
+//                                )
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//
+//            // ⏳ 2. Structural Spinner Slot for Pagination Loads
+//            if (viewData.isLoadingMore) {
+//                item(key = "sdui_pagination_spinner") {
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(16.dp),
+//                        contentAlignment = Alignment.Center
+//                    ) {
+//                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+//                    }
+//                }
+//            }
+//
+//            // 📭 3. Structural Row Placeholder when Activity history size matches 0
+//
+//            if (hasNoRows) {
+//                item(key = "sdui_empty_placeholder") {
+//                    Box(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 32.dp),
+//                        contentAlignment = Alignment.Center
+//                    ) {
+//                        Text(
+//                            text = "No recent activity recorded.",
+//                            style = MaterialTheme.typography.bodyMedium,
+//                            color = MaterialTheme.colorScheme.onSurfaceVariant
+//                        )
+//                    }
+//                }
+//            }
+//            // 🛏️ 4. Decorative Spacing Buffer
+//            item(key = "sdui_bottom_spacer") { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
+//        }
+    }
+}
 
-            // 🚀 1. Dynamic Server-Driven UI Renderer Processing Loop
-            activityItems.forEach { screenDataNode ->
-                when (screenDataNode) {
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ActivityFeed(
+    activityItems: List<NetworkScreenData>,
+    isLoadingMore: Boolean,
+    hasNoRows: Boolean,
+    canLoadMore: Boolean,
+    context: Context,
+    onUiIntent: (UiIntent) -> Unit,
+    onNavigate: (String, LocationTypeData, String) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
 
-                    // 📌 Pinned Header components intercepting sticky top placements
-                    is BabyFeedHeaderNetwork -> {
-                        stickyHeader(key = "header_${screenDataNode.title}") {
+        // 🚀 1. Dynamic Server-Driven UI Renderer Processing Loop
+        activityItems.forEach { screenDataNode ->
+            when (screenDataNode) {
+
+                // 📌 Pinned Header components intercepting sticky top placements
+                is BabyFeedHeaderNetwork -> {
+                    stickyHeader(key = "header_${screenDataNode.title}") {
+                        RenderUI(
+                            item = screenDataNode,
+                            context = context,
+                            onNavigationClick = null,
+                            onChipClick = {},
+                            onSwitchClick = {},
+                            onClick = { id, type ->
+                                when (type) {
+                                    "COLLAPSE" -> onUiIntent(HomeUiIntent.CollapseHeader(id))
+                                    "FILTER" -> onUiIntent(HomeUiIntent.ToggleFilter(id))
+                                }
+                            },
+                        )
+                    }
+                }
+
+                // 📋 Flat components mapping into sequential generic rows
+                else -> {
+                    val elementKey = when (screenDataNode) {
+                        is NetworkScreenData.BabyDashboardTilesNetwork -> "nappy_tile_${screenDataNode.index}"
+                        is NetworkScreenData.BabyFeedRowNetwork -> "row_${screenDataNode.id}"
+                        else -> "${screenDataNode::class.java.simpleName}_${screenDataNode.index}"
+                    }
+
+                    item(key = elementKey) {
+                        val allRows = remember(activityItems) {
+                            activityItems.filterIsInstance<NetworkScreenData.BabyFeedRowNetwork>()
+                        }
+
+                        // Check pagination boundaries strictly relative to list rows
+                        if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
+                            val globalIndex = allRows.indexOf(screenDataNode)
+                            if (globalIndex >= allRows.size - 1 && canLoadMore && isLoadingMore) {
+                                LaunchedEffect(Unit) {
+                                    onUiIntent.invoke(HomeUiIntent.LoadMore)
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem()
+                        ) {
                             RenderUI(
                                 item = screenDataNode,
                                 context = context,
-                                onNavigationClick = null,
+                                onNavigationClick = { destination, locationType, label ->
+                                    onNavigate(destination, locationType, label)
+                                },
                                 onChipClick = {},
                                 onSwitchClick = {},
                                 onClick = { id, type ->
@@ -145,7 +339,12 @@ internal fun BabyCareHomeScreen(
                                         "FILTER" -> onUiIntent(HomeUiIntent.ToggleFilter(id))
                                         "EDIT" -> {
                                             if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
-                                                onUiIntent(HomeUiIntent.EditActivityRow(id, screenDataNode.activityType))
+                                                onUiIntent(
+                                                    HomeUiIntent.EditActivityRow(
+                                                        id,
+                                                        screenDataNode.activityType
+                                                    )
+                                                )
                                             }
                                         }
                                     }
@@ -153,96 +352,44 @@ internal fun BabyCareHomeScreen(
                             )
                         }
                     }
-
-                    // 📋 Flat components mapping into sequential generic rows
-                    else -> {
-                        val elementKey = when (screenDataNode) {
-                            is NetworkScreenData.BabyDashboardTilesNetwork -> "nappy_tile_${screenDataNode.index}"
-                            is NetworkScreenData.BabyFeedRowNetwork -> "row_${screenDataNode.id}"
-                            else -> "${screenDataNode::class.java.simpleName}_${screenDataNode.index}"
-                        }
-
-                        item(key = elementKey) {
-                            val allRows = remember(activityItems) {
-                                activityItems.filterIsInstance<NetworkScreenData.BabyFeedRowNetwork>()
-                            }
-
-                            // Check pagination boundaries strictly relative to list rows
-                            if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
-                                val globalIndex = allRows.indexOf(screenDataNode)
-                                if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
-                                    LaunchedEffect(Unit) {
-                                        onLoadMore()
-                                    }
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateItem()
-                            ) {
-                                RenderUI(
-                                    item = screenDataNode,
-                                    context = context,
-                                    onNavigationClick = { destination, locationType, label ->
-                                        onNavigate(destination, locationType, label)
-                                    },
-                                    onChipClick = {},
-                                    onSwitchClick = {},
-                                    onClick = { id, type ->
-                                        when (type) {
-                                            "COLLAPSE" -> onUiIntent(HomeUiIntent.CollapseHeader(id))
-                                            "FILTER" -> onUiIntent(HomeUiIntent.ToggleFilter(id))
-                                            "EDIT" -> {
-                                                if (screenDataNode is NetworkScreenData.BabyFeedRowNetwork) {
-                                                    onUiIntent(HomeUiIntent.EditActivityRow(id, screenDataNode.activityType))
-                                                }
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
                 }
             }
-
-            // ⏳ 2. Structural Spinner Slot for Pagination Loads
-            if (viewData.isLoadingMore) {
-                item(key = "sdui_pagination_spinner") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    }
-                }
-            }
-
-            // 📭 3. Structural Row Placeholder when Activity history size matches 0
-
-            if (hasNoRows) {
-                item(key = "sdui_empty_placeholder") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No recent activity recorded.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            // 🛏️ 4. Decorative Spacing Buffer
-            item(key = "sdui_bottom_spacer") { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
         }
+
+        // ⏳ 2. Structural Spinner Slot for Pagination Loads
+        if (isLoadingMore) {
+            item(key = "sdui_pagination_spinner") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+
+        // 📭 3. Structural Row Placeholder when Activity history size matches 0
+
+        if (hasNoRows) {
+            item(key = "sdui_empty_placeholder") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No recent activity recorded.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        // 🛏️ 4. Decorative Spacing Buffer
+        item(key = "sdui_bottom_spacer") { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
     }
 }
 

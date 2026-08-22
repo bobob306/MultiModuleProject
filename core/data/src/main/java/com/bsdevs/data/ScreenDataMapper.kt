@@ -19,7 +19,6 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                         type = when (item.size.type) {
                             SpacerType.HEIGHT -> SpacerTypeData.HEIGHT
                             SpacerType.WEIGHT -> SpacerTypeData.WEIGHT
-                            else -> SpacerTypeData.HEIGHT
                         },
                         height = item.size.size ?: 0,
                         weight = item.size.weight ?: 0f
@@ -31,7 +30,17 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     content = item.content
                 )
 
-                is ScreenDto.TitleDto -> NetworkScreenData.TitleDataNetwork(
+                is ScreenDto.SmallTitleDto -> NetworkScreenData.SmallTitleDataNetwork(
+                    index = item.index,
+                    content = item.content
+                )
+
+                is ScreenDto.MediumTitleDto -> NetworkScreenData.MediumTitleDataNetwork(
+                    index = item.index,
+                    content = item.content
+                )
+
+                is ScreenDto.LargeTitleDto -> NetworkScreenData.LargeTitleDataNetwork(
                     index = item.index,
                     content = item.content
                 )

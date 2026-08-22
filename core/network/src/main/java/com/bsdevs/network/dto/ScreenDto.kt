@@ -53,8 +53,20 @@ sealed class ScreenDto(
 ) {
     data class Unknown(override val index: Int) : ScreenDto(index)
 
-    @SerialName("TITLE")
-    data class TitleDto(
+    @SerialName("SMALL_TITLE")
+    data class SmallTitleDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("content") val content: String,
+    ) : ScreenDto(index)
+
+    @SerialName("MEDIUM_TITLE")
+    data class MediumTitleDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("content") val content: String,
+    ) : ScreenDto(index)
+
+    @SerialName("LARGE_TITLE")
+    data class LargeTitleDto(
         @SerialName("index") override val index: Int,
         @SerialName("content") val content: String,
     ) : ScreenDto(index)
