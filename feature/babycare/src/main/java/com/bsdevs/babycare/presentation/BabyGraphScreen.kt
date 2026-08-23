@@ -81,7 +81,6 @@ fun BabyFeedingGraphScreen(
             )
 
             if (uiState.totalFeedsInCache == 0) {
-                // Empty state handler
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -95,11 +94,11 @@ fun BabyFeedingGraphScreen(
                     )
                 }
             } else {
-                // Scrollable container for the graph canvas
+                // --- CHART 1: HOURLY FREQUENCY ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(300.dp)
+                        .height(260.dp)
                         .horizontalScroll(rememberScrollState())
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                         .padding(horizontal = 16.dp)
@@ -110,10 +109,149 @@ fun BabyFeedingGraphScreen(
                         labelColor = MaterialTheme.colorScheme.onSurface
                     )
                 }
+
+                // --- CHART 2: DAILY AVERAGE GAP (NEW) ---
+                Text(
+                    text = "Average Gap Between Feeds Each Day",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(top = 32.dp, bottom = 16.dp)
+                )
+
+                if (uiState.dailyAverageGaps.isEmpty()) {
+                    Text(
+                        text = "Need consecutive feeds tracked on the same day to calculate average gaps.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                            .horizontalScroll(rememberScrollState())
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        DailyAverageGapCanvas(
+                            dailyGaps = uiState.dailyAverageGaps,
+                            lineColor = MaterialTheme.colorScheme.tertiary,
+                            labelColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             }
+
             uiState.analysisResult?.let {
                 BucketedAnalysisInsightCard(analysis = uiState.analysisResult)
             }
+        }
+    }
+}
+
+@Composable
+fun DailyAverageGapCanvas(
+    dailyGaps: List<DailyAverageGap>,
+    lineColor: Color,
+    labelColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val stepWidth = 72.dp
+    val bottomLabelSpace = 32.dp
+    val topPaddingSpace = 24.dp
+
+    // Safely parse max Y axis ceiling bounds encompassing both datasets smoothly
+    val maxGapValue = dailyGaps.flatMap {
+        listOfNotNull(it.averageGapMinutes, it.rolling14DayAverageMinutes)
+    }.maxOrNull()?.coerceAtLeast(60) ?: 60
+
+    Canvas(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(stepWidth * dailyGaps.size.coerceAtLeast(1))
+    ) {
+        val canvasHeight = size.height
+        val chartHeight = canvasHeight - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
+
+        val textPaint = android.graphics.Paint().apply {
+            color = labelColor.toArgb()
+            textSize = 10.sp.toPx()
+            textAlign = android.graphics.Paint.Align.CENTER
+            isAntiAlias = true
+        }
+
+        val dailyPoints = mutableListOf<Offset>()
+        val rollingPoints = mutableListOf<Offset>()
+
+        // 1. Plot coordinates for both lines mapping concurrently
+        dailyGaps.forEachIndexed { index, item ->
+            val x = (index * stepWidth.toPx()) + (stepWidth.toPx() / 2f)
+
+            // Map Daily Line
+            val dailyRatio = item.averageGapMinutes.toFloat() / maxGapValue
+            val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * dailyRatio))
+            dailyPoints.add(Offset(x, dailyY))
+
+            // Map Rolling Line (if data point available)
+            item.rolling14DayAverageMinutes?.let { rollingAvg ->
+                val rollingRatio = rollingAvg.toFloat() / maxGapValue
+                val rollingY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * rollingRatio))
+                rollingPoints.add(Offset(x, rollingY))
+            }
+
+            // Simple Date Truncation (Format helper block shortcut matching your previous implementation)
+            val displayDate = try {
+                val parts = item.dateString.split("-")
+                if (parts.size >= 3) "${parts[2]} ${
+                    when (parts[1]) {
+                        "01" -> "Jan"; "02" -> "Feb"; "03" -> "Mar"; "04" -> "Apr"; "05" -> "May"; "06" -> "Jun";
+                        "07" -> "Jul"; "08" -> "Aug"; "09" -> "Sep"; "10" -> "Oct"; "11" -> "Nov"; "12" -> "Dec";
+                        else -> parts[1]
+                    }
+                }" else item.dateString
+            } catch (e: Exception) { item.dateString }
+
+            // Draw x-axis date indicator labels
+            drawContext.canvas.nativeCanvas.drawText(displayDate, x, canvasHeight - 8.dp.toPx(), textPaint)
+
+            // Draw primary single-day absolute values text label above data point
+            drawContext.canvas.nativeCanvas.drawText("${item.averageGapMinutes}m", x, dailyY - 8.dp.toPx(), textPaint)
+        }
+
+        // 2. Draw Line 1: Connect standard daily averages (Solid Line)
+        if (dailyPoints.size > 1) {
+            for (i in 0 until dailyPoints.size - 1) {
+                drawLine(
+                    color = lineColor,
+                    start = dailyPoints[i],
+                    end = dailyPoints[i + 1],
+                    strokeWidth = 3.dp.toPx()
+                )
+            }
+        }
+
+        // 3. Draw Line 2: Connect rolling averages (Dashed Line)
+        if (rollingPoints.size > 1) {
+            // Find where the index gap offsets align relative to data array starts
+            val shiftOffset = dailyPoints.size - rollingPoints.size
+            for (i in 0 until rollingPoints.size - 1) {
+                drawLine(
+                    color = lineColor.copy(alpha = 0.6f), // Slightly muted color variant
+                    start = rollingPoints[i],
+                    end = rollingPoints[i + 1],
+                    strokeWidth = 2.dp.toPx(),
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        intervals = floatArrayOf(10f, 10f), // 10px dash, 10px gap pattern
+                        phase = 0f
+                    )
+                )
+            }
+        }
+
+        // 4. Render Circular Anchor Nodes (On daily points only to avoid screen clutter)
+        dailyPoints.forEach { offset ->
+            drawCircle(color = lineColor, radius = 4.dp.toPx(), center = offset)
+            drawCircle(color = Color.White, radius = 1.5.dp.toPx(), center = offset)
         }
     }
 }

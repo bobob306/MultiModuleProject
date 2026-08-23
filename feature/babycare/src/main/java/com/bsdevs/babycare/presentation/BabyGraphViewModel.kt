@@ -15,7 +15,8 @@ import javax.inject.Inject
 data class FeedingGraphUiState(
     val hourlyCounts: List<HourlyFeedingCount> = emptyList(),
     val totalFeedsInCache: Int = 0,
-    val analysisResult: FeedingAnalysisResult? = null
+    val analysisResult: FeedingAnalysisResult? = null,
+    val dailyAverageGaps: List<DailyAverageGap> = emptyList(),
 )
 
 data class FeedingAnalysisResult(
@@ -34,6 +35,12 @@ data class HourlyFeedingCount(
     val count: Int
 )
 
+data class DailyAverageGap(
+    val dateString: String,      // e.g., "2026-08-16" for the X-axis label
+    val averageGapMinutes: Int,   // Y-axis value
+    val rolling14DayAverageMinutes: Int?,
+)
+
 @HiltViewModel
 class BabyGraphViewModel @Inject constructor(
     private val repository: BabyCareRepository,
@@ -41,32 +48,31 @@ class BabyGraphViewModel @Inject constructor(
 
     val uiState: StateFlow<FeedingGraphUiState> = repository.cachedDays
         .map { dailyLogs ->
-            // 1. Flatten all events across all cached days into a single list
             val allEvents = dailyLogs.flatMap { it.events }
-
-            // 2. Filter out anything that isn't a feeding event
             val feedingEvents = allEvents.filter { it.type == "FEEDING" }
 
-            // 3. Group the feedings by their extracted hour of the day
             val countsByHour = feedingEvents.groupBy { event ->
                 extractHourFromTime(event.time)
             }.mapValues { it.value.size }
 
-            // 4. Generate a comprehensive 24-element list ensuring empty hours still show 0 counts
             val hourlyGraphData = (0..23).map { hour ->
                 HourlyFeedingCount(
                     hour = hour,
-                    // Simple string formatting to avoid Java Time API compilation issues
                     displayLabel = String.format("%02d:00", hour),
                     count = countsByHour[hour] ?: 0
                 )
             }
+
             val analysis = calculateFeedingGaps(feedingEvents)
+
+            // 🌟 1. Compute the daily average gaps for the new chart
+            val dailyGapsData = calculateDailyAverageGaps(feedingEvents)
 
             FeedingGraphUiState(
                 hourlyCounts = hourlyGraphData,
                 totalFeedsInCache = feedingEvents.size,
-                analysisResult = analysis
+                analysisResult = analysis,
+                dailyAverageGaps = dailyGapsData // 🌟 2. Assign to view state
             )
         }
         .stateIn(
@@ -74,6 +80,61 @@ class BabyGraphViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = FeedingGraphUiState()
         )
+
+    private fun calculateDailyAverageGaps(events: List<UnifiedEventDto>): List<DailyAverageGap> {
+        val onlyFeedings = events.filter { it.type == "FEEDING" && it.dateTimeString.isNotEmpty() }
+        if (onlyFeedings.size < 2) return emptyList()
+
+        val sortedFeeds = onlyFeedings.sortedBy { it.dateTimeString }
+
+        data class DatedGap(val date: String, val gapMinutes: Long)
+        val gapMeasurements = mutableListOf<DatedGap>()
+
+        for (i in 0 until sortedFeeds.size - 1) {
+            val currentFeed = sortedFeeds[i]
+            val nextFeed = sortedFeeds[i + 1]
+
+            val currentMinutes = parseToTotalMinutes(currentFeed.dateTimeString)
+            val nextMinutes = parseToTotalMinutes(nextFeed.dateTimeString)
+
+            if (currentMinutes == -1L || nextMinutes == -1L) continue
+            val gapMinutes = nextMinutes - currentMinutes
+
+            if (gapMinutes in 15..720) {
+                val targetDate = nextFeed.dateTimeString.split(" ").getOrNull(0) ?: continue
+                gapMeasurements.add(DatedGap(targetDate, gapMinutes))
+            }
+        }
+
+        // Step A: First compute standard single-day raw averages chronologically
+        val rawDailyAverages = gapMeasurements
+            .groupBy { it.date }
+            .map { (date, gapsForDay) ->
+                date to gapsForDay.map { it.gapMinutes }.average().toInt()
+            }
+            .sortedBy { it.first } // Ensure historical sequence
+
+        // Step B: Loop over sorted items to calculate rolling windows
+        return rawDailyAverages.mapIndexed { index, (dateStr, dayAvg) ->
+            // To build a true 14-point window, look backwards up to 13 steps + current index step
+            val startIdx = (index - 13).coerceAtLeast(0)
+            val windowItems = rawDailyAverages.subList(startIdx, index + 1)
+
+            // Optional boundary: Only calculate if we have a robust history sample
+            // If you prefer to show a line immediately from Day 1, remove this `if` restriction
+            val rollingAvg = if (windowItems.size >= 3) {
+                windowItems.map { it.second }.average().toInt()
+            } else {
+                null // Not enough history depth yet
+            }
+
+            DailyAverageGap(
+                dateString = dateStr,
+                averageGapMinutes = dayAvg,
+                rolling14DayAverageMinutes = rollingAvg
+            )
+        }
+    }
 
     /**
      * Extracts the hour directly from standard "HH:mm" strings cleanly without relying on LocalTime

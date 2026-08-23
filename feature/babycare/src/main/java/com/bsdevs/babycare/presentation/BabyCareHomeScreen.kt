@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
@@ -38,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -138,13 +142,15 @@ internal fun BabyCareHomeScreen(
             item {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .horizontalScroll(state = rememberScrollState(), enabled = true)
                         .wrapContentHeight(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    Spacer(modifier = Modifier.width(0.dp))
                     BabyCareTile(
                         modifier = Modifier
-                            .weight(1f)
+                            .wrapContentWidth()
+                            .padding(end = 12.dp)
                             .heightIn(max = 120.dp),
                         title = "Nappy Change",
                         subtitle = viewData.lastNappyChange,
@@ -153,7 +159,8 @@ internal fun BabyCareHomeScreen(
                     )
                     BabyCareTile(
                         modifier = Modifier
-                            .weight(1f)
+                            .wrapContentWidth()
+                            .padding(end = 12.dp)
                             .heightIn(max = 120.dp),
                         title = "Feeding",
                         subtitle = viewData.lastFeeding,
@@ -162,13 +169,14 @@ internal fun BabyCareHomeScreen(
                     )
                     BabyCareTile(
                         modifier = Modifier
-                            .weight(1f)
+                            .wrapContentWidth()
                             .heightIn(max = 120.dp),
                         title = "Analysis",
                         subtitle = null,
                         icon = Icons.Default.AutoGraph,
                         onClick = onNavigateToGraph
                     )
+                    Spacer(modifier = Modifier.width(0.dp))
                 }
             }
 
@@ -441,7 +449,7 @@ fun BabyCareTile(
     Card(
         onClick = onClick,
         modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
