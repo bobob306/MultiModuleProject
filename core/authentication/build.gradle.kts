@@ -44,6 +44,6 @@ dependencies {
     ksp(libs.hilt.compiler) // Hilt compiler
 
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 }

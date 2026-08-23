@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="record_nappy_change"
+        android:enabled="true"
+        android:shortcutShortLabel="@string/nappy_shortcut_label"
+        android:shortcutLongLabel="@string/nappy_shortcut_long_label">
+
+        <!-- This intent tells Gemini that this shortcut maps to an AppFunction -->
+        <intent
+            android:action="androidx.appfunctions.intent.ACTION_EXECUTE_APP_FUNCTION"
+            android:targetPackage="com.bsdevs.multimoduleproject"
+            android:targetClass="com.bsdevs.babycare.functions.BabyCareAppFunctionService">
+            <extra android:name="androidx.appfunctions.intent.EXTRA_FUNCTION_ID" android:value="recordNappyChange" />
+        </intent>
+
+        <!-- These categories help Gemini's AI matching -->
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="androidx.appfunctions.category.HEALTH_AND_FITNESS" />
+        <category android:name="androidx.appfunctions.category.PRODUCTIVITY" />
+    </shortcut>
+</shortcuts>

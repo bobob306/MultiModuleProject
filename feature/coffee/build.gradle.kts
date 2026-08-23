@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics) // Or latest
     implementation(libs.androidx.ui.tooling.preview) // Or latest
     implementation(libs.androidx.material3) // Or latest
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.hilt.android) // Hilt compiler
     implementation(libs.kotlinx.serialization.json) // Or latest version
     implementation(libs.kotlinx.coroutines.android) // Or latest version
@@ -67,6 +69,6 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 }

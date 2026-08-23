@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,9 +26,9 @@ fun StarRating(
     Row(modifier = modifier) {
         for (i in 1..5) {
             Icon(
-                imageVector = if (i <= currentRating) Icons.Filled.Star else Icons.Outlined.Star,
+                imageVector = Icons.Default.Star,
                 contentDescription = if (i <= currentRating) "Filled Star $i" else "Empty Star $i",
-                tint = if (i <= currentRating) starColor else Color.Gray.copy(alpha = 0.5f),
+                tint = if (i <= currentRating) starColor else starColor.copy(alpha = 0.2f),
                 modifier = Modifier.clickable {
                     currentRating = i
                     onRatingChanged(currentRating)

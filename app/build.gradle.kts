@@ -48,9 +48,15 @@ android {
     buildFeatures {
         compose = true
     }
+    
     packaging {
         resources.excludes.add("META-INF/gradle/incremental.annotation.processors")
     }
+}
+
+ksp {
+    arg("androidx.appfunctions.generateSelfDescribingConfig", "true")
+    arg("androidx.appfunctions.aggregateAppFunctions", "true")
 }
 
 hilt {
@@ -71,6 +77,7 @@ dependencies {
     implementation(project(":core:navigation"))
     implementation(project(":feature:home"))
     implementation(project(":feature:babycare"))
+    implementation(project(":core:authentication"))
     implementation(project(":feature:coffee"))
     implementation(project(":feature:splashscreen"))
     implementation(project(":feature:login"))
@@ -90,7 +97,11 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose) // Hilt navigation
     ksp(libs.hilt.android.compiler) // Hilt compiler
 
+    implementation(libs.androidx.appfunctions.common)
+    // KSP Compiler compiler targeting tool schemas
+    ksp(libs.androidx.appfunctions.compiler)
+
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.firestore)
     implementation(libs.play.services.base)
 }

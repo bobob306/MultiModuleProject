@@ -63,4 +63,10 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview) // Or latest
     implementation(libs.androidx.ui.tooling) // Or latest
     implementation(libs.androidx.material3.android) // Or latest
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+
+    implementation(libs.androidx.appfunctions.common)
+    // KSP Compiler compiler targeting tool schemas
+    ksp(libs.androidx.appfunctions.compiler)
 }
