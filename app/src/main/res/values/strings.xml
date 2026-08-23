@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">MultiModuleProject</string>
+    <string name="app_description_for_gemini">An app for tracking baby activities like feeding and nappy changes.</string>
+    <string name="nappy_shortcut_label">Nappy Change</string>
+    <string name="nappy_shortcut_long_label">Record a nappy change for the baby</string>
 </resources>

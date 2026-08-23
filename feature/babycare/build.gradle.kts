@@ -35,6 +35,10 @@ android {
     }
 }
 
+ksp {
+    arg("androidx.appfunctions.generateSelfDescribingConfig", "true")
+}
+
 dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:common"))
@@ -57,8 +61,8 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     
     implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore.ktx)
-    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
 
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
@@ -66,6 +70,11 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+
+    // Core Android platform AppFunctions components
+    implementation(libs.androidx.appfunctions.common)
+    // KSP Compiler compiler targeting tool schemas
+    ksp(libs.androidx.appfunctions.compiler)
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

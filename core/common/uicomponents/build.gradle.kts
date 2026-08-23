@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.material)
     implementation(platform(libs.androidx.compose.bom)) // Or latest
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.core)
     implementation(libs.ui.tooling.preview.android)
     debugImplementation(libs.androidx.compose.ui.ui.tooling)
 }

@@ -3,4 +3,5 @@
     <string name="left_feed">Left Feed</string>
     <string name="right_feed">Right Feed</string>
     <string name="nappy">Nappy</string>
+    <string name="app_description_for_gemini">An app for tracking baby activities like feeding and nappy changes.</string>
 </resources>

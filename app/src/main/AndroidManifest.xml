@@ -13,6 +13,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MultiModuleProject"
         tools:targetApi="31">
+
+        <!-- Helping Gemini categorize the app for local execution -->
+        <meta-data
+            android:name="android.app.appfunctions.app_category"
+            android:value="productivity" />
         <activity android:name="com.bsdevs.multimoduleproject.MainActivity"
             android:exported="true">
 
@@ -21,6 +26,10 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -46,6 +55,24 @@
                 -->
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".functions.MMPAppFunctionService"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
+            android:exported="true"
+            tools:targetApi="36">
+            <intent-filter>
+                <action android:name="android.app.appfunctions.AppFunctionService" />
+            </intent-filter>
+
+            <property
+                android:name="android.app.appfunctions.v2"
+                android:value="mmp_app_functions" />
+        </service>
+
+        <property
+            android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
     </application>
 
 </manifest>

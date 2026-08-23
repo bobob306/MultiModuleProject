@@ -291,7 +291,7 @@ fun DailyAverageGapCanvas(
             val rollingPoints = mutableListOf<Offset>()
 
             dailyGaps.forEachIndexed { index, item ->
-                // Apply the scaleFactor multiplier here to shift points dynamically
+                // Calculate the scaled layout track offsets dynamically
                 val scaledStepWidth = baseStepWidth.toPx() * scaleFactor
                 val x = startX + (index * scaledStepWidth) + (scaledStepWidth / 2f)
 
@@ -305,19 +305,39 @@ fun DailyAverageGapCanvas(
                     rollingPoints.add(Offset(x, rollingY))
                 }
 
-                val displayDate = try {
-                    val parts = item.dateString.split("-")
-                    if (parts.size >= 3) "${parts[2]} ${
-                        when (parts[1]) {
-                            "01" -> "Jan"; "02" -> "Feb"; "03" -> "Mar"; "04" -> "Apr"; "05" -> "May"; "06" -> "Jun";
-                            "07" -> "Jul"; "08" -> "Aug"; "09" -> "Sep"; "10" -> "Oct"; "11" -> "Nov"; "12" -> "Dec";
-                            else -> parts[1]
-                        }
-                    }" else item.dateString
-                } catch (e: Exception) { item.dateString }
+                // --- 🌟 CONDITIONAL TEXT LOGIC STARTS HERE ---
+                if (scaleFactor > 0.5f) {
+                    // 1. Zoomed In: Show complete detailed labels normally
+                    val displayDate = try {
+                        val parts = item.dateString.split("-")
+                        if (parts.size >= 3) "${parts[2]} ${
+                            when (parts[1]) {
+                                "01" -> "Jan"; "02" -> "Feb"; "03" -> "Mar"; "04" -> "Apr"; "05" -> "May"; "06" -> "Jun";
+                                "07" -> "Jul"; "08" -> "Aug"; "09" -> "Sep"; "10" -> "Oct"; "11" -> "Nov"; "12" -> "Dec";
+                                else -> parts[1]
+                            }
+                        }" else item.dateString
+                    } catch (e: Exception) { item.dateString }
 
-                drawContext.canvas.nativeCanvas.drawText(displayDate, x, canvasHeight - 8.dp.toPx(), textPaint)
-                drawContext.canvas.nativeCanvas.drawText("${item.averageGapMinutes}m", x, dailyY - 8.dp.toPx(), textPaint)
+                    // Draw standard date text along the x-axis
+                    drawContext.canvas.nativeCanvas.drawText(displayDate, x, canvasHeight - 8.dp.toPx(), textPaint)
+
+                    // Draw the exact minute reading above each node dot
+                    drawContext.canvas.nativeCanvas.drawText("${item.averageGapMinutes}m", x, dailyY - 8.dp.toPx(), textPaint)
+                } else {
+                    // 2. Zoomed Out: De-clutter layout by hiding text and showing clean day indices
+                    val minimalDateMarker = try {
+                        val parts = item.dateString.split("-")
+                        parts.getOrNull(2) ?: "" // Show just the day number (e.g., "16")
+                    } catch (e: Exception) { "" }
+
+                    // Only draw every second or third day number text label to prevent horizontal collisions
+                    if (index % 3 == 0) {
+                        drawContext.canvas.nativeCanvas.drawText(minimalDateMarker, x, canvasHeight - 8.dp.toPx(), textPaint)
+                    }
+
+                    // (Note: The raw "${item.averageGapMinutes}m" text is omitted here to completely un-clutter the canvas background)
+                }
             }
 
             // Draw Paths
