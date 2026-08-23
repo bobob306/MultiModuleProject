@@ -31,7 +31,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -41,8 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,224 +115,237 @@ internal fun BabyCareHomeScreen(
     onNavigateToGraph: () -> Unit,
     onLoadMore: () -> Unit,
 ) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
-    // 1. Direct PullToRefreshBox wrapper at the root level
-    PullToRefreshBox(
-        isRefreshing = viewData.isRefreshing, // Use the localized ui flag
-        onRefresh = {
-            onRefresh() // Trigger your Firebase fetch logic
-        },
-        state = pullToRefreshState,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // 2. The scrollable view MUST be the immediate child so gestures sync perfectly
-        LazyColumn(
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                scrollBehavior = scrollBehavior,
+                title = {
+                    Text(
+                        text = "Baby Care",
+                        style = MaterialTheme.typography.headlineLarge,
+                    )
+                }
+            )
+        }
+    ) { innerPadding ->
+        // 1. Direct PullToRefreshBox wrapper at the root level
+        PullToRefreshBox(
+            isRefreshing = viewData.isRefreshing, // Use the localized ui flag
+            onRefresh = {
+                onRefresh() // Trigger your Firebase fetch logic
+            },
+            state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(innerPadding)
         ) {
-            // Item 1: App Header
-            item {
-                Text(
-                    text = "Baby Care",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            // Item 2: Quick Action Tiles Row
-            item {
-                Row(
-                    modifier = Modifier
-                        .horizontalScroll(state = rememberScrollState(), enabled = true)
-                        .wrapContentHeight(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Spacer(modifier = Modifier.width(0.dp))
-                    BabyCareTile(
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .padding(end = 12.dp)
-                            .heightIn(max = 120.dp),
-                        title = "Nappy Change",
-                        subtitle = viewData.lastNappyChange,
-                        icon = Icons.Default.ChildCare,
-                        onClick = onNavigateToNappyChange
-                    )
-                    BabyCareTile(
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .padding(end = 12.dp)
-                            .heightIn(max = 120.dp),
-                        title = "Feeding",
-                        subtitle = viewData.lastFeeding,
-                        icon = Icons.Default.Restaurant,
-                        onClick = onNavigateToFeeding
-                    )
-                    BabyCareTile(
-                        modifier = Modifier
-                            .wrapContentWidth()
-                            .heightIn(max = 120.dp),
-                        title = "Analysis",
-                        subtitle = null,
-                        icon = Icons.Default.AutoGraph,
-                        onClick = onNavigateToGraph
-                    )
-                    Spacer(modifier = Modifier.width(0.dp))
-                }
-            }
-
-            // Item 3: Activity Feed Label
-            item {
-                Text(
-                    text = "Recent Activity",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                )
-            }
-
-            // 📱 Item 4: High-performance flat-list loop with Native Sticky Headers
-            val activityItems = viewData.activityFeed
-
-            activityItems.forEach { feedItem ->
-                when (feedItem) {
-
-                    // 📌 1. Natively pin headers to the top using stickyHeader
-                    is HomeFeedItem.Header -> {
-                        stickyHeader(key = "header_${feedItem.title}") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .clickable { onToggleHeaderCollapse(feedItem.title) } // 🔄 Click to collapse/expand
-                                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Left Side: Date Title text + Dynamic Chevron state arrow layout
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val isCollapsed =
-                                        viewData.collapsedHeaders.contains(feedItem.title)
-                                    Text(
-                                        text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}", // Inline structural indicator
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-
-                                // Right Side: Quick Totals metrics indicators
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    if (feedItem.feedingCount > 0) {
-                                        Text(
-                                            text = "🍼 ${feedItem.feedingCount}",
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-                                    }
-                                    if (feedItem.nappyCount > 0) {
-                                        Text(
-                                            text = "🍃 ${feedItem.nappyCount}",
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // 📋 2. Render standard rows using individual item slots underneath
-                    is HomeFeedItem.ActivityRow -> {
-                        val currentActivity = feedItem.activity
-
-                        // Extract the unique ID value directly for the primitive key signature reference
-                        val uniqueId = when (currentActivity) {
-                            is BabyActivity.Nappy -> currentActivity.dto.id
-                            is BabyActivity.Feeding -> currentActivity.dto.id
-                        }
-
-                        item(key = "row_${uniqueId}") {
-
-                            // Calculate pagination indices relative to standard rows only
-                            val allRows = remember(activityItems) {
-                                activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
-                            }
-                            val globalIndex = allRows.indexOf(feedItem)
-
-                            if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
-                                LaunchedEffect(Unit) {
-                                    onLoadMore()
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateItem()
-                            ) {
-                                ActivityFeedItem(
-                                    item = currentActivity,
-                                    onEdit = {
-                                        val activityId = when (currentActivity) {
-                                            is BabyActivity.Nappy -> currentActivity.dto.id
-                                            is BabyActivity.Feeding -> currentActivity.dto.id
-                                        }
-                                        activityId?.let {
-                                            when (currentActivity) {
-                                                is BabyActivity.Nappy -> onNavigateToEditNappyChange(
-                                                    activityId
-                                                )
-
-                                                is BabyActivity.Feeding -> onNavigateToEditFeeding(
-                                                    activityId
-                                                )
-                                            }
-                                        }
-                                    },
-                                    onIconClick = {
-                                        val targetFilter = when (currentActivity) {
-                                            is BabyActivity.Nappy -> ActivityFilter.NAPPY
-                                            is BabyActivity.Feeding -> ActivityFilter.FEEDING
-                                        }
-                                        onToggleFilter(targetFilter)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Item 5: Bottom Loading Spinner for Pagination
-            if (viewData.isLoadingMore) {
+            // 2. The scrollable view MUST be the immediate child so gestures sync perfectly
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Item 2: Quick Action Tiles Row
                 item {
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                            .horizontalScroll(state = rememberScrollState(), enabled = true)
+                            .padding(top = 8.dp)
+                            .wrapContentHeight(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(0.dp))
+                        BabyCareTile(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .padding(end = 12.dp)
+                                .heightIn(max = 120.dp),
+                            title = "Nappy Change",
+                            subtitle = viewData.lastNappyChange,
+                            icon = Icons.Default.ChildCare,
+                            onClick = onNavigateToNappyChange
+                        )
+                        BabyCareTile(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .padding(end = 12.dp)
+                                .heightIn(max = 120.dp),
+                            title = "Feeding",
+                            subtitle = viewData.lastFeeding,
+                            icon = Icons.Default.Restaurant,
+                            onClick = onNavigateToFeeding
+                        )
+                        BabyCareTile(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .heightIn(max = 120.dp),
+                            title = "Analysis",
+                            subtitle = null,
+                            icon = Icons.Default.AutoGraph,
+                            onClick = onNavigateToGraph
+                        )
+                        Spacer(modifier = Modifier.width(0.dp))
                     }
                 }
-            }
 
-            // Item 6: Empty Placeholder State
-            if (viewData.activityFeed.isEmpty()) {
+                // Item 3: Activity Feed Label
                 item {
                     Text(
-                        text = "No recent activity recorded.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        text = "Recent Activity",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
                 }
-            }
 
-            // Item 7: Bottom Padding Spacing
-            item { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
+                // 📱 Item 4: High-performance flat-list loop with Native Sticky Headers
+                val activityItems = viewData.activityFeed
+
+                activityItems.forEach { feedItem ->
+                    when (feedItem) {
+
+                        // 📌 1. Natively pin headers to the top using stickyHeader
+                        is HomeFeedItem.Header -> {
+                            stickyHeader(key = "header_${feedItem.title}") {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surface)
+                                        .clickable { onToggleHeaderCollapse(feedItem.title) } // 🔄 Click to collapse/expand
+                                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Left Side: Date Title text + Dynamic Chevron state arrow layout
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val isCollapsed =
+                                            viewData.collapsedHeaders.contains(feedItem.title)
+                                        Text(
+                                            text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}", // Inline structural indicator
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+
+                                    // Right Side: Quick Totals metrics indicators
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        if (feedItem.feedingCount > 0) {
+                                            Text(
+                                                text = "🍼 ${feedItem.feedingCount}",
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                        if (feedItem.nappyCount > 0) {
+                                            Text(
+                                                text = "🍃 ${feedItem.nappyCount}",
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 📋 2. Render standard rows using individual item slots underneath
+                        is HomeFeedItem.ActivityRow -> {
+                            val currentActivity = feedItem.activity
+
+                            // Extract the unique ID value directly for the primitive key signature reference
+                            val uniqueId = when (currentActivity) {
+                                is BabyActivity.Nappy -> currentActivity.dto.id
+                                is BabyActivity.Feeding -> currentActivity.dto.id
+                            }
+
+                            item(key = "row_${uniqueId}") {
+
+                                // Calculate pagination indices relative to standard rows only
+                                val allRows = remember(activityItems) {
+                                    activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
+                                }
+                                val globalIndex = allRows.indexOf(feedItem)
+
+                                if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+                                    LaunchedEffect(Unit) {
+                                        onLoadMore()
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .animateItem()
+                                ) {
+                                    ActivityFeedItem(
+                                        item = currentActivity,
+                                        onEdit = {
+                                            val activityId = when (currentActivity) {
+                                                is BabyActivity.Nappy -> currentActivity.dto.id
+                                                is BabyActivity.Feeding -> currentActivity.dto.id
+                                            }
+                                            activityId?.let {
+                                                when (currentActivity) {
+                                                    is BabyActivity.Nappy -> onNavigateToEditNappyChange(
+                                                        activityId
+                                                    )
+
+                                                    is BabyActivity.Feeding -> onNavigateToEditFeeding(
+                                                        activityId
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onIconClick = {
+                                            val targetFilter = when (currentActivity) {
+                                                is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                                is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                            }
+                                            onToggleFilter(targetFilter)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Item 5: Bottom Loading Spinner for Pagination
+                if (viewData.isLoadingMore) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+
+                // Item 6: Empty Placeholder State
+                if (viewData.activityFeed.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No recent activity recorded.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+                }
+
+                // Item 7: Bottom Padding Spacing
+                item { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
+            }
         }
     }
 }

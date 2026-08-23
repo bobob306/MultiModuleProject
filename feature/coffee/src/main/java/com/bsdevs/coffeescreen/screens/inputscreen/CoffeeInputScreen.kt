@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -27,14 +28,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
@@ -128,6 +134,7 @@ internal fun ErrorScreen() {
     Text("Error")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CoffeeInputScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -186,49 +193,72 @@ private fun CoffeeInputScreenContent(
             }
         }
     }
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .verticalScroll(state = scrollState)
-                .padding(16.dp)
-                .padding(
-                    end = if (isScrollable) 16.dp else 0.dp,
-                )
-        ) {
-            viewData.inputs.forEach { inputViewData ->
-                when (inputViewData) {
-                    is InputViewData.InputVD -> {
-                        InputSection(
-                            inputViewData = inputViewData,
-                            onIntent = onIntent // Pass the main onIntent callback
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                scrollBehavior = scrollBehavior,
+                title = { Text("Coffee Input") },
+                navigationIcon = {
+                    IconButton(onClick = { CoffeeInputScreenIntent.NavigateHome }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Navigate back"
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-
-                    is InputViewData.InputRadioVD -> {
-                        RadioInputRow(inputViewData, onIntent)
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
-            DatePickerSection(viewData.roastDate) { date ->
-                onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(
-                onClick = {
-                    showSnackBar = true
-                    onIntent(CoffeeInputScreenIntent.SubmitCoffee)
-                },
-                enabled = viewData.isButtonEnabled,
-                modifier = Modifier.wrapContentSize()
             )
-            { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
-            Spacer(modifier = Modifier.weight(0.1f))
         }
-    }
-    if (isScrollable) {
-        ScrollBar(scrollState)
+    ) { innerPadding ->
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(state = scrollState)
+                    .padding(16.dp)
+                    .padding(
+                        end = if (isScrollable) 16.dp else 0.dp,
+                    )
+            ) {
+                viewData.inputs.forEach { inputViewData ->
+                    when (inputViewData) {
+                        is InputViewData.InputVD -> {
+                            InputSection(
+                                inputViewData = inputViewData,
+                                onIntent = onIntent // Pass the main onIntent callback
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
+                        is InputViewData.InputRadioVD -> {
+                            RadioInputRow(inputViewData, onIntent)
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                }
+                DatePickerSection(viewData.roastDate) { date ->
+                    onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Button(
+                    onClick = {
+                        showSnackBar = true
+                        onIntent(CoffeeInputScreenIntent.SubmitCoffee)
+                    },
+                    enabled = viewData.isButtonEnabled,
+                    modifier = Modifier.wrapContentSize()
+                )
+                { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
+                Spacer(modifier = Modifier.weight(0.1f))
+            }
+        }
+        if (isScrollable) {
+            ScrollBar(scrollState)
+        }
     }
 }
 
