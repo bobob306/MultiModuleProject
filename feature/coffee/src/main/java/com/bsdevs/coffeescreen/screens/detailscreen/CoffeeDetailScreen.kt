@@ -17,6 +17,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -43,6 +44,7 @@ import com.bsdevs.coffeescreen.screens.detailscreen.components.SecondHalfContent
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
+import java.nio.file.WatchEvent
 import java.time.LocalDate
 import java.util.UUID
 
@@ -121,25 +123,30 @@ fun CoffeeDetailContent(
             )
         }
     }
-    if (isLandscape) {
-        // Landscape mode:
-        CoffeeDetailLandscapeMode(
-            coffeeDetailsViewData,
-            onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
-    } else {
-        // Portrait mode:
-        CoffeeDetailPortraitMode(
-            coffeeDetailsViewData,
-            onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+    Scaffold() { innerPadding ->
+        if (isLandscape) {
+            // Landscape mode:
+            CoffeeDetailLandscapeMode(
+                modifier = Modifier.padding(innerPadding),
+                coffeeDetailsViewData,
+                onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+        } else {
+            // Portrait mode:
+            CoffeeDetailPortraitMode(
+                modifier = Modifier.padding(innerPadding),
+                coffeeDetailsViewData,
+                onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+        }
     }
 }
 
 @Composable
 private fun CoffeeDetailLandscapeMode(
+    modifier: Modifier,
     viewData: CoffeeDetailsViewData,
     onAddShotClicked: () -> Unit = {},
 ) {
-    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = spacedBy(16.dp)) {
+    Row(modifier = modifier.fillMaxSize(), horizontalArrangement = spacedBy(16.dp)) {
         // Left half: Coffee Details Card
         Card(
             modifier = Modifier
@@ -169,11 +176,12 @@ private fun CoffeeDetailLandscapeMode(
 
 @Composable
 private fun CoffeeDetailPortraitMode(
+    modifier: Modifier,
     viewData: CoffeeDetailsViewData,
     onAddShotClicked: () -> Unit = {},
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp)),
         horizontalAlignment = Alignment.CenterHorizontally,

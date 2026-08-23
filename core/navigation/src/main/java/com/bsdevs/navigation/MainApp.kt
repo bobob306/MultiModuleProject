@@ -18,7 +18,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.bsdevs.uicomponents.theme.MultiModuleProjectTheme
 import kotlinx.coroutines.launch
-
 @Composable
 fun MMPApp() {
     val navController = rememberNavController()
@@ -28,7 +27,6 @@ fun MMPApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
-    // 🔄 1. Check if the device is currently in Landscape mode
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -43,25 +41,21 @@ fun MMPApp() {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            // 📥 2. Only show the bottom bar if we are in portrait mode
             bottomBar = {
                 if (shouldShowBottomBar && !isLandscape) {
                     MMPBottomBar(navController)
                 }
             }
         ) { innerPadding ->
-            // 🔀 3. Use a Row layout for landscape mode so the rail and content sit side-by-side
+            // 🌟 THE FIX: Removed .padding(innerPadding) from this Row container
             Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
+                modifier = Modifier.fillMaxSize()
             ) {
-                // 🛤️ 4. Show a Navigation Rail on the left side during landscape mode
                 if (shouldShowBottomBar && isLandscape) {
-                    MMPNavigationRail(navController) // You will need to create this composable!
+                    MMPNavigationRail(navController)
                 }
 
-                // 📱 5. Your main app content goes here
+                // Pass the root innerPadding directly into your NavHost
                 MMPNavHost(
                     navController = navController,
                     onShowSnackBar = { message, action ->
@@ -74,8 +68,10 @@ fun MMPApp() {
                         }
                     },
                     modifier = Modifier.fillMaxSize(),
+                    rootPadding = innerPadding // 🌟 Pass this down to handle system bars/bottom bars safely
                 )
             }
         }
     }
 }
+
