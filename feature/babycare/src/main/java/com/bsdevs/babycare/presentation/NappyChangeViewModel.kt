@@ -81,7 +81,8 @@ class NappyChangeViewModel @Inject constructor(
                             time = nappyEvent.time,
                             // Map the nested custom variant string parameter safely straight back into your radio choice state
                             type = nappyEvent.nappyType ?: "",
-                            isLoading = false
+                            isLoading = false,
+                            comment = nappyEvent.comment ?: ""
                         )
                     }
                 } else {
