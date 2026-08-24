@@ -39,7 +39,8 @@ data class FeedingUiState(
     val isLeftRunning: Boolean = false,
     val isRightRunning: Boolean = false,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val comment: String = "",
 )
 
 enum class FeedingSide { LEFT, RIGHT }
@@ -121,6 +122,9 @@ class FeedingViewModel @Inject constructor(
         }
     }
 
+    fun onCommentChanged(newComment: String) {
+        _uiState.update { it.copy(comment = newComment) }
+    }
 
     fun toggleTimer(side: FeedingSide) {
         val isRunning = when (side) {
@@ -230,6 +234,10 @@ class FeedingViewModel @Inject constructor(
             type = "FEEDING",
             time = currentState.startTime,
             dateTimeString = "${currentState.date} ${currentState.startTime}",
+
+            // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
+            comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
+
             mainFeedingSide = mainFeedingSide,
             leftDuration = currentState.leftDuration,
             rightDuration = currentState.rightDuration,
@@ -248,7 +256,7 @@ class FeedingViewModel @Inject constructor(
                     repository.updateActivityEvent(
                         userId = userId,
                         date = currentState.date,
-                        eventId = currentState.id!!,
+                        eventId = currentState.id,
                         updatedEvent = unifiedFeedingEvent
                     )
                 } else {

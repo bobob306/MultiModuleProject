@@ -18,5 +18,6 @@ data class FeedingDto(
     val rightDuration: Long = 0, // seconds
     val totalDuration: Long = 0, // seconds
     val mainFeedingSide: String? = null, // "Left", "Right", "Both", "Bottle"
-    val bottleAmountMl: Int? = null
+    val bottleAmountMl: Int? = null,
+    val comment: String? = null,
 ) : Parcelable

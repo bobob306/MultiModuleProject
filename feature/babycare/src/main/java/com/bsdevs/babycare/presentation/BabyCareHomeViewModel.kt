@@ -58,8 +58,6 @@ class BabyCareHomeViewModel @Inject constructor(
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
     private val _collapsedHeaders = MutableStateFlow<Set<String>>(emptySet())
 
-    private val _isInitialLoading = MutableStateFlow(false)
-
     private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
@@ -245,7 +243,8 @@ class BabyCareHomeViewModel @Inject constructor(
                     date = parentDate,
                     time = extractedTime, // ✨ Time is now safely populated
                     dateTime = event.dateTimeString,
-                    type = correctedNappyType ?: "Wet"
+                    type = correctedNappyType ?: "Wet",
+                    comment = event.comment,
                 )
             )
         } else {
@@ -259,7 +258,8 @@ class BabyCareHomeViewModel @Inject constructor(
                     leftDuration = event.leftDuration,
                     rightDuration = event.rightDuration,
                     totalDuration = event.totalDuration,
-                    bottleAmountMl = event.bottleAmountMl
+                    bottleAmountMl = event.bottleAmountMl,
+                    comment = event.comment
                 )
             )
         }

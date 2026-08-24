@@ -93,6 +93,7 @@ class BabyCareRepositoryImpl @Inject constructor(
             type = eventMap["type"] as? String ?: "",
             time = eventMap["time"] as? String ?: "",
             dateTimeString = eventMap["dateTimeString"] as? String ?: "",
+            comment = eventMap["comment"] as? String,
 
             // Nappy-specific fields
             nappyType = eventMap["nappyType"] as? String,
@@ -252,7 +253,24 @@ class BabyCareRepositoryImpl @Inject constructor(
                 if (existingEvent.id == eventId) updatedEvent else existingEvent
             }
 
-            transaction.update(docRef, "days.$date", updatedEventsList)
+            // 🌟 CONVERT TO MAPS: Prevents Firestore serialization crash and updates the comment key
+            val firestoreCompatibleList = updatedEventsList.map { event ->
+                mapOf(
+                    "id" to event.id,
+                    "type" to event.type,
+                    "time" to event.time,
+                    "dateTimeString" to event.dateTimeString,
+                    "comment" to event.comment, // 📝 Added comment tracking
+                    "nappyType" to event.nappyType,
+                    "mainFeedingSide" to event.mainFeedingSide,
+                    "leftDuration" to event.leftDuration,
+                    "rightDuration" to event.rightDuration,
+                    "totalDuration" to event.totalDuration,
+                    "bottleAmountMl" to event.bottleAmountMl
+                )
+            }
+
+            transaction.update(docRef, "days.$date", firestoreCompatibleList)
         }.await()
         Log.d("FIRESTORE_EDIT", "Successfully updated event on network.")
 

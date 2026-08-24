@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
+import com.bsdevs.uicomponents.LogCommentInput
 import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +42,7 @@ internal fun FeedingScreen(
     onLeftDurationChanged: (Long) -> Unit,
     onRightDurationChanged: (Long) -> Unit,
     onUpdateBottleAmount: (Int?) -> Unit,
+    onCommentChanged: (String) -> Unit,
     onSave: () -> Unit
 ) {
     var showBottleDialog by rememberSaveable { mutableStateOf(false) }
@@ -126,9 +129,11 @@ internal fun FeedingScreen(
                 modifier = Modifier
                     .weight(0.8f)
                     .fillMaxHeight(),
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                LogCommentInput(uiState.comment, onCommentChanged)
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = "Track Session Live",
                     style = MaterialTheme.typography.titleLarge,
@@ -215,6 +220,8 @@ internal fun FeedingScreen(
                     onLongClick = {}
                 )
             }
+
+            LogCommentInput(uiState.comment, onCommentChanged, modifier = Modifier.padding(vertical = 8.dp))
 
             Spacer(modifier = Modifier.height(48.dp))
 

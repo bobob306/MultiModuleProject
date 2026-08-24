@@ -3,6 +3,7 @@ package com.bsdevs.babycare.presentation
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -17,6 +18,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsdevs.uicomponents.LogCommentInput
 import java.time.LocalTime
 
 import com.bsdevs.uicomponents.MMPScaffold
@@ -61,6 +63,7 @@ fun NappyChangeScreenRoute(
             uiState = uiState,
             onTimeSelected = { hour, minute -> viewModel.onTimeSelected(hour, minute) },
             onTypeChanged = { type -> viewModel.onTypeChanged(type) },
+            onCommentChanged = viewModel::onCommentChanged,
             onSave = { viewModel.submitNappyChange() }
         )
     }
@@ -82,6 +85,7 @@ internal fun NappyChangeScreen(
     uiState: NappyChangeUiState,
     onTimeSelected: (hour: Int, minute: Int) -> Unit,
     onTypeChanged: (String) -> Unit,
+    onCommentChanged: (String) -> Unit,
     onSave: () -> Unit
 ) {
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
@@ -157,10 +161,10 @@ internal fun NappyChangeScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
+                LogCommentInput(uiState.comment, onCommentChanged)
                 if (uiState.error != null) {
                     Text(
                         text = uiState.error,
@@ -231,6 +235,8 @@ internal fun NappyChangeScreen(
                     )
                 }
             }
+
+            LogCommentInput(uiState.comment, onCommentChanged, modifier = Modifier.padding(8.dp))
 
             // Fixed spacer height to prevent layout calculation infinite loop bugs
             Spacer(modifier = Modifier.height(32.dp))
@@ -354,6 +360,7 @@ fun FeedingScreenRoute(
             onLeftDurationChanged = viewModel::onLeftDurationChanged,
             onRightDurationChanged = viewModel::onRightDurationChanged,
             onUpdateBottleAmount = viewModel::updateBottleAmount,
+            onCommentChanged = viewModel::onCommentChanged,
             onSave = viewModel::submitFeeding
         )
     }
