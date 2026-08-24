@@ -15,6 +15,7 @@ data class UnifiedEventDto(
     val type: String = "", // "NAPPY" or "FEEDING"
     val time: String = "",
     val dateTimeString: String = "",
+    val comment: String? = null,
 
     // Nappy-specific fields (nullable)
     val nappyType: String? = null, // "Wet", "Dirty", "Both"

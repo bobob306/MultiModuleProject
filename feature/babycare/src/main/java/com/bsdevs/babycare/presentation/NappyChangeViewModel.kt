@@ -33,7 +33,8 @@ data class NappyChangeUiState(
     val time: String = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
     val type: String = "Wet",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val comment: String = "",
+    val error: String? = null,
 )
 
 sealed class NappyChangeEvent {
@@ -92,6 +93,10 @@ class NappyChangeViewModel @Inject constructor(
         }
     }
 
+    fun onCommentChanged(newComment: String) {
+        _uiState.update { it.copy(comment = newComment) }
+    }
+
     fun onTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format("%02d:%02d", hour, minute)
         _uiState.update { it.copy(time = formattedTime, error = null) }
@@ -120,7 +125,8 @@ class NappyChangeViewModel @Inject constructor(
             time = currentState.time,
             dateTimeString = "${currentState.date} ${currentState.time}",
             type = "NAPPY",
-            nappyType = currentState.type // e.g., "Wet", "Dirty", "Both"
+            nappyType = currentState.type, // e.g., "Wet", "Dirty", "Both"
+            comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
         )
 
         viewModelScope.launch {
@@ -132,7 +138,7 @@ class NappyChangeViewModel @Inject constructor(
                         userId = userId,
                         date = currentState.date,
                         eventId = nappyId,
-                        updatedEvent = unifiedNappyEvent
+                        updatedEvent = unifiedNappyEvent,
                     )
                 } else {
                     // 🚀 Execute clean atomic insert push using arrayUnion tokens

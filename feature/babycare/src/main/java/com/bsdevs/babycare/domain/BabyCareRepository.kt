@@ -1,12 +1,8 @@
 package com.bsdevs.babycare.domain
 
 import com.bsdevs.babycare.network.DailyLogDto
-import com.bsdevs.babycare.network.FeedingDto
-import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.UnifiedEventDto
-import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.StateFlow
-import java.time.LocalDate
 import java.time.YearMonth
 
 data class RepositoryFetchResult(

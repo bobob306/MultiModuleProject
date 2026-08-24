@@ -406,20 +406,22 @@ fun ActivityFeedItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
                 )
-                Text(
-                    text = formatActivityDate(item.date),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                item.comment?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Text(
                 text = item.time ?: "",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
             )
         }
     }
