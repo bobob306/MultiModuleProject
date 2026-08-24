@@ -2,7 +2,6 @@ plugins {
     id("mmp.android.feature")
     alias(libs.plugins.kotlin.serialization)
     id("kotlin-parcelize")
-    alias(libs.plugins.google.ksp)
 }
 
 android {
