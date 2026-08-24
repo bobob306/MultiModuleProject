@@ -11,6 +11,7 @@ dependencies {
     compileOnly(libs.android.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
+    compileOnly(libs.hiltandroidgradle)
 }
 
 gradlePlugin {
@@ -30,6 +31,10 @@ gradlePlugin {
         register("androidFeature") {
             id = "mmp.android.feature"
             implementationClass = "AndroidFeatureConventionPlugin"
+        }
+        register("androidHilt") {
+            id = "mmp.android.hilt"
+            implementationClass = "AndroidHiltConventionPlugin"
         }
     }
 }

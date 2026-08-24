@@ -9,13 +9,11 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
         with(target) {
             pluginManager.apply("mmp.android.library")
             pluginManager.apply("mmp.android.compose")
-            pluginManager.apply("com.google.devtools.ksp")
+            pluginManager.apply("mmp.android.hilt")
             
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
             dependencies {
-                add("implementation", libs.findLibrary("hilt-android").get())
-                add("ksp", libs.findLibrary("hilt-compiler").get())
                 add("implementation", libs.findLibrary("androidx-hilt-navigation-compose").get())
                 add("implementation", libs.findLibrary("androidx-navigation-compose").get())
                 add("implementation", libs.findLibrary("androidx-adaptive-android").get())

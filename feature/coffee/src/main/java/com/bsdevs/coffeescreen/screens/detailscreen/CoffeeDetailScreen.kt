@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -48,6 +49,8 @@ import java.nio.file.WatchEvent
 import java.time.LocalDate
 import java.util.UUID
 
+import com.bsdevs.uicomponents.MMPScaffold
+
 @Composable
 fun CoffeeDetailScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -57,8 +60,7 @@ fun CoffeeDetailScreenRoute(
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
@@ -100,6 +102,7 @@ fun CoffeeDetailContent(
     val isLandscape =
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                 || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true // Good for input forms
@@ -123,19 +126,28 @@ fun CoffeeDetailContent(
             )
         }
     }
-    Scaffold() { innerPadding ->
-        if (isLandscape) {
-            // Landscape mode:
-            CoffeeDetailLandscapeMode(
-                modifier = Modifier.padding(innerPadding),
-                coffeeDetailsViewData,
-                onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
-        } else {
-            // Portrait mode:
-            CoffeeDetailPortraitMode(
-                modifier = Modifier.padding(innerPadding),
-                coffeeDetailsViewData,
-                onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+    MMPScaffold(
+        title = "Coffee Details"
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
+        ) {
+            if (isLandscape) {
+                // Landscape mode:
+                CoffeeDetailLandscapeMode(
+                    modifier = Modifier,
+                    coffeeDetailsViewData,
+                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+            } else {
+                // Portrait mode:
+                CoffeeDetailPortraitMode(
+                    modifier = Modifier,
+                    coffeeDetailsViewData,
+                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+            }
         }
     }
 }

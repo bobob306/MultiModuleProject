@@ -55,8 +55,7 @@ internal fun FeedingScreen(
     if (isLandscape) {
         Row(
             modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp),
+                .fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Left Column: Scrollable Inputs & Timer Buttons
@@ -162,7 +161,6 @@ internal fun FeedingScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(16.dp)
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top

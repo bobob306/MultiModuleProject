@@ -1,5 +1,6 @@
 package com.bsdevs.coffeescreen.screens.inputscreen
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -54,6 +54,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
@@ -71,6 +72,8 @@ import com.bsdevs.common.result.Result
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
 fun CoffeeInputScreenRoute(
@@ -194,35 +197,24 @@ private fun CoffeeInputScreenContent(
         }
     }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = { Text("Coffee Input") },
-                navigationIcon = {
-                    IconButton(onClick = { CoffeeInputScreenIntent.NavigateHome }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
-                    }
-                }
-            )
-        }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Coffee Input",
+        onBackClick = { onIntent(CoffeeInputScreenIntent.NavigateHome) },
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
+        ) {
             Column(
                 modifier = Modifier
                     .verticalScroll(state = scrollState)
-                    .padding(16.dp)
-                    .padding(
-                        end = if (isScrollable) 16.dp else 0.dp,
-                    )
+                    .padding(end = if (isScrollable) 16.dp else 0.dp)
             ) {
                 viewData.inputs.forEach { inputViewData ->
                     when (inputViewData) {

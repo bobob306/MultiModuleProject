@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.time.LocalTime
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,28 +45,19 @@ fun NappyChangeScreenRoute(
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MediumTopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = { Text("Nappy Change", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Nappy Change",
+        onBackClick = onNavigateBack,
+        scrollBehavior = scrollBehavior
     ) { padding ->
 
         NappyChangeScreen(
-            modifier = Modifier.padding(padding),
+            modifier = Modifier
+                .padding(padding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             uiState = uiState,
             onTimeSelected = { hour, minute -> viewModel.onTimeSelected(hour, minute) },
             onTypeChanged = { type -> viewModel.onTypeChanged(type) },
@@ -102,8 +94,7 @@ internal fun NappyChangeScreen(
     if (isLandscape) {
         Row(
             modifier = modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // Left Column: Scrollable Inputs
@@ -195,7 +186,6 @@ internal fun NappyChangeScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(16.dp)
                 .verticalScroll(portraitScrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -344,27 +334,18 @@ fun FeedingScreenRoute(
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MediumTopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = { Text("Feeding Session", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Feeding Session",
+        onBackClick = onNavigateBack,
+        scrollBehavior = scrollBehavior
     ) { padding ->
         FeedingScreen(
-            modifier = Modifier.padding(padding),
+            modifier = Modifier
+                .padding(padding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             uiState = uiState,
             // 🔄 Map your old explicit arguments to the commonised enum trigger function
             onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },

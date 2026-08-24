@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -50,11 +51,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
 fun BabyGraphRoute(
@@ -77,36 +81,25 @@ fun BabyFeedingGraphScreen(
     onBackClick: () -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MediumTopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = { Text("Feeding Routine") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
-                        )
-                    }
-                }
-            )
-        }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Feeding Routine",
+        onBackClick = onBackClick,
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
 
         // Pass innerPadding directly to contentPadding so the content scrolls UNDER the top bar space
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-
-            ) {
+        ) {
             item {
                 Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(

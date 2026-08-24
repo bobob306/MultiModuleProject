@@ -1,5 +1,6 @@
 package com.bsdevs.homescreen
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,6 +34,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
 fun HomeScreenRoute(
@@ -91,29 +95,22 @@ internal fun HomeScreen(
     )
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = {
-                    Text(
-                        text = "Welcome to the Hub",
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
-                }
-            )
-        }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Welcome to the Hub",
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-
-            ) {
+        ) {
             item {
                 Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
 
