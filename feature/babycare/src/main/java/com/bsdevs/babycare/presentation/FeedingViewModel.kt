@@ -107,7 +107,8 @@ class FeedingViewModel @Inject constructor(
                             bottleAmountMl = feedingEvent.bottleAmountMl,
                             leftDuration = feedingEvent.leftDuration,
                             rightDuration = feedingEvent.rightDuration,
-                            isLoading = false
+                            isLoading = false,
+                            comment = feedingEvent.comment ?: ""
                         )
                     }
                     // Seed your commonised base duration maps cleanly
