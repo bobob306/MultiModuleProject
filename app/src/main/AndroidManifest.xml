@@ -66,8 +66,11 @@
             </intent-filter>
 
             <property
+                android:name="android.app.appfunctions.schema"
+                android:value="app_functions_schema.xsd" />
+            <property
                 android:name="android.app.appfunctions.v2"
-                android:value="mmp_app_functions" />
+                android:value="mmp_app_functions.xml" />
         </service>
 
         <property
