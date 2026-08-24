@@ -5,29 +5,51 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.text.input.KeyboardType
-
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.style.TextAlign
+import com.bsdevs.babycare.presentation.animation.MilkSplodgeAnimation
 import com.bsdevs.uicomponents.LogCommentInput
 import java.time.LocalTime
 
@@ -53,25 +75,145 @@ internal fun FeedingScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
+    var showSplodge by remember { mutableStateOf(false) }
+    var isPlayingSplodge by remember { mutableStateOf(false) }
 
     // 📱 OPTION A: LANDSCAPE MODE (Two-Column Side-by-Side Layout)
-    if (isLandscape) {
-        Row(
-            modifier = modifier
-                .fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // Left Column: Scrollable Inputs & Timer Buttons
-            Column(
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight()
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isLandscape) {
+            Row(
+                modifier = modifier
+                    .fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Start Time Field
-                Box(modifier = Modifier.fillMaxWidth()) {
+                // Left Column: Scrollable Inputs & Timer Buttons
+                Column(
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .fillMaxHeight()
+                        .verticalScroll(scrollState),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // Start Time Field
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = uiState.startTime,
+                            onValueChange = {},
+                            label = { Text("Start Time") },
+                            readOnly = true,
+                            enabled = !uiState.isLoading,
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Select Time"
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+                        )
+                    }
+
+                    // Row of Timer Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        val showEdit = uiState.id != null
+                        FeedingTimerButton(
+                            label = "Left",
+                            content = formatDuration(uiState.leftDuration),
+                            isSelected = uiState.isLeftRunning,
+                            onClick = onToggleLeft,
+                            onLongClick = {
+                                if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                            },
+                            showEditButton = showEdit,
+                            onEditClick = {
+                                if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                            }
+                        )
+                        FeedingTimerButton(
+                            label = "Right",
+                            content = formatDuration(uiState.rightDuration),
+                            isSelected = uiState.isRightRunning,
+                            onClick = onToggleRight,
+                            onLongClick = {
+                                if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                            },
+                            showEditButton = showEdit,
+                            onEditClick = {
+                                if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                            }
+                        )
+                        FeedingTimerButton(
+                            label = "Bottle",
+                            content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
+                            isSelected = uiState.bottleAmountMl != null,
+                            onClick = { showBottleDialog = true },
+                            onLongClick = {}
+                        )
+                    }
+                }
+
+                // Right Column: Summary Panel & Active Action Button Layout
+                Column(
+                    modifier = Modifier
+                        .weight(0.8f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.Top,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    LogCommentInput(uiState.comment, onCommentChanged)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Track Session Live",
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (uiState.error != null) {
+                        Text(
+                            text = uiState.error,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            // 2. Instead of navigating away instantly, trigger the animation flag first!
+                            isPlayingSplodge = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
+                    ) {
+                        Text("Save Feeding Session")
+                    }
+                }
+            }
+        }
+        // 📱 OPTION B: PORTRAIT MODE (Original Single Stack Column)
+        else {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp)
+                ) {
                     OutlinedTextField(
                         value = uiState.startTime,
                         onValueChange = {},
@@ -79,7 +221,10 @@ internal fun FeedingScreen(
                         readOnly = true,
                         enabled = !uiState.isLoading,
                         trailingIcon = {
-                            Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Select Time"
+                            )
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -90,7 +235,6 @@ internal fun FeedingScreen(
                     )
                 }
 
-                // Row of Timer Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -101,18 +245,26 @@ internal fun FeedingScreen(
                         content = formatDuration(uiState.leftDuration),
                         isSelected = uiState.isLeftRunning,
                         onClick = onToggleLeft,
-                        onLongClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" },
+                        onLongClick = {
+                            if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                        },
                         showEditButton = showEdit,
-                        onEditClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" }
+                        onEditClick = {
+                            if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                        }
                     )
                     FeedingTimerButton(
                         label = "Right",
                         content = formatDuration(uiState.rightDuration),
                         isSelected = uiState.isRightRunning,
                         onClick = onToggleRight,
-                        onLongClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" },
+                        onLongClick = {
+                            if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                        },
                         showEditButton = showEdit,
-                        onEditClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" }
+                        onEditClick = {
+                            if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                        }
                     )
                     FeedingTimerButton(
                         label = "Bottle",
@@ -122,25 +274,14 @@ internal fun FeedingScreen(
                         onLongClick = {}
                     )
                 }
-            }
 
-            // Right Column: Summary Panel & Active Action Button Layout
-            Column(
-                modifier = Modifier
-                    .weight(0.8f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                LogCommentInput(uiState.comment, onCommentChanged)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Track Session Live",
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
+                LogCommentInput(
+                    uiState.comment,
+                    onCommentChanged,
+                    modifier = Modifier.padding(vertical = 8.dp)
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(48.dp))
 
                 if (uiState.error != null) {
                     Text(
@@ -152,249 +293,185 @@ internal fun FeedingScreen(
                 }
 
                 Button(
-                    onClick = onSave,
+                    onClick = {
+                        // 2. Instead of navigating away instantly, trigger the animation flag first!
+                        isPlayingSplodge = true
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading
+                    enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
                 ) {
                     Text("Save Feeding Session")
                 }
             }
         }
-    }
-    // 📱 OPTION B: PORTRAIT MODE (Original Single Stack Column)
-    else {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
-            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-                OutlinedTextField(
-                    value = uiState.startTime,
-                    onValueChange = {},
-                    label = { Text("Start Time") },
-                    readOnly = true,
-                    enabled = !uiState.isLoading,
-                    trailingIcon = {
-                        Icon(imageVector = Icons.Default.DateRange, contentDescription = "Select Time")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
+
+        // 🍼 Bottle Entry Dialog
+        if (showBottleDialog) {
+            var amountText by rememberSaveable {
+                mutableStateOf(
+                    uiState.bottleAmountMl?.toString() ?: ""
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                val showEdit = uiState.id != null
-                FeedingTimerButton(
-                    label = "Left",
-                    content = formatDuration(uiState.leftDuration),
-                    isSelected = uiState.isLeftRunning,
-                    onClick = onToggleLeft,
-                    onLongClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" },
-                    showEditButton = showEdit,
-                    onEditClick = { if (!uiState.isLeftRunning) showDurationDialogForSide = "Left" }
-                )
-                FeedingTimerButton(
-                    label = "Right",
-                    content = formatDuration(uiState.rightDuration),
-                    isSelected = uiState.isRightRunning,
-                    onClick = onToggleRight,
-                    onLongClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" },
-                    showEditButton = showEdit,
-                    onEditClick = { if (!uiState.isRightRunning) showDurationDialogForSide = "Right" }
-                )
-                FeedingTimerButton(
-                    label = "Bottle",
-                    content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
-                    isSelected = uiState.bottleAmountMl != null,
-                    onClick = { showBottleDialog = true },
-                    onLongClick = {}
-                )
-            }
-
-            LogCommentInput(uiState.comment, onCommentChanged, modifier = Modifier.padding(vertical = 8.dp))
-
-            Spacer(modifier = Modifier.height(48.dp))
-
-            if (uiState.error != null) {
-                Text(
-                    text = uiState.error,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
-
-            Button(
-                onClick = onSave,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading
-            ) {
-                Text("Save Feeding Session")
-            }
-        }
-    }
-
-    // 🍼 Bottle Entry Dialog
-    if (showBottleDialog) {
-        var amountText by rememberSaveable { mutableStateOf(uiState.bottleAmountMl?.toString() ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showBottleDialog = false },
-            title = { Text("Bottle Amount (ml)") },
-            text = {
-                OutlinedTextField(
-                    value = amountText,
-                    onValueChange = {
-                        if (it.isEmpty() || (it.all { char -> char.isDigit() } && it.toInt() <= 999)) {
-                            amountText = it
+            AlertDialog(
+                onDismissRequest = { showBottleDialog = false },
+                title = { Text("Bottle Amount (ml)") },
+                text = {
+                    OutlinedTextField(
+                        value = amountText,
+                        onValueChange = {
+                            if (it.isEmpty() || (it.all { char -> char.isDigit() } && it.toInt() <= 999)) {
+                                amountText = it
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        label = { Text("Amount in ml") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onUpdateBottleAmount(amountText.toIntOrNull())
+                            showBottleDialog = false
                         }
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    label = { Text("Amount in ml") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onUpdateBottleAmount(amountText.toIntOrNull())
-                        showBottleDialog = false
+                    ) {
+                        Text("OK")
                     }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        onUpdateBottleAmount(null)
-                        showBottleDialog = false
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            onUpdateBottleAmount(null)
+                            showBottleDialog = false
+                        }
+                    ) {
+                        Text("Clear")
                     }
-                ) {
-                    Text("Clear")
                 }
-            }
-        )
-    }
-
-    if (showTimePicker) {
-        val initialTime = try {
-            LocalTime.parse(uiState.startTime)
-        } catch (e: Exception) {
-            LocalTime.now()
+            )
         }
 
-        val timePickerState = rememberTimePickerState(
-            initialHour = initialTime.hour,
-            initialMinute = initialTime.minute,
-            is24Hour = true
-        )
+        if (showTimePicker) {
+            val initialTime = try {
+                LocalTime.parse(uiState.startTime)
+            } catch (e: Exception) {
+                LocalTime.now()
+            }
 
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onStartTimeSelected(timePickerState.hour, timePickerState.minute)
-                        showTimePicker = false
+            val timePickerState = rememberTimePickerState(
+                initialHour = initialTime.hour,
+                initialMinute = initialTime.minute,
+                is24Hour = true
+            )
+
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onStartTimeSelected(timePickerState.hour, timePickerState.minute)
+                            showTimePicker = false
+                        }
+                    ) {
+                        Text("OK")
                     }
-                ) {
-                    Text("OK")
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) {
+                        Text("Cancel")
+                    }
+                },
+                text = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // 🔄 Dynamic toggle: Uses smaller text fields in landscape so it doesn't break the layout
+                        if (isLandscape) {
+                            Text(
+                                text = "Enter time",
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            TimeInput(state = timePickerState)
+                        } else {
+                            TimePicker(state = timePickerState)
+                        }
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancel")
-                }
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    // 🔄 Dynamic toggle: Uses smaller text fields in landscape so it doesn't break the layout
-                    if (isLandscape) {
-                        Text(
-                            text = "Enter time",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        if (showDurationDialogForSide != null) {
+            val side = showDurationDialogForSide!!
+            val currentDuration =
+                if (side == "Left") uiState.leftDuration else uiState.rightDuration
+            var minutesText by remember { mutableStateOf((currentDuration / 60).toString()) }
+            var secondsText by remember { mutableStateOf((currentDuration % 60).toString()) }
+
+            AlertDialog(
+                onDismissRequest = { showDurationDialogForSide = null },
+                title = { Text("Edit $side Duration") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = minutesText,
+                            onValueChange = {
+                                if (it.isEmpty() || (it.all { c -> c.isDigit() } && it.toLong() <= 99)) {
+                                    minutesText = it
+                                }
+                            },
+                            label = { Text("Min") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        TimeInput(state = timePickerState)
-                    } else {
-                        TimePicker(state = timePickerState)
+                        Text(":", modifier = Modifier.padding(horizontal = 8.dp))
+                        OutlinedTextField(
+                            value = secondsText,
+                            onValueChange = {
+                                if (it.isEmpty() || (it.all { char -> char.isDigit() } && it.toLong() <= 59)) {
+                                    secondsText = it
+                                }
+                            },
+                            label = { Text("Sec") },
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                },
+                confirmButton = {
+                    // 🛠️ FIXED: Re-added the complete missing action block cleanly here
+                    TextButton(
+                        onClick = {
+                            val mins = minutesText.toLongOrNull() ?: 0L
+                            val secs = secondsText.toLongOrNull() ?: 0L
+                            val total = (mins * 60) + secs
+                            if (side == "Left") onLeftDurationChanged(total) else onRightDurationChanged(
+                                total
+                            )
+                            showDurationDialogForSide = null
+                        }
+                    ) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDurationDialogForSide = null }) {
+                        Text("Cancel")
                     }
                 }
-            }
-        )
-    }
-
-    if (showDurationDialogForSide != null) {
-        val side = showDurationDialogForSide!!
-        val currentDuration = if (side == "Left") uiState.leftDuration else uiState.rightDuration
-        var minutesText by remember { mutableStateOf((currentDuration / 60).toString()) }
-        var secondsText by remember { mutableStateOf((currentDuration % 60).toString()) }
-
-        AlertDialog(
-            onDismissRequest = { showDurationDialogForSide = null },
-            title = { Text("Edit $side Duration") },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = minutesText,
-                        onValueChange = {
-                            if (it.isEmpty() || (it.all { c -> c.isDigit() } && it.toLong() <= 99)) {
-                                minutesText = it
-                            }
-                        },
-                        label = { Text("Min") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    Text(":", modifier = Modifier.padding(horizontal = 8.dp))
-                    OutlinedTextField(
-                        value = secondsText,
-                        onValueChange = {
-                            if (it.isEmpty() || (it.all { char -> char.isDigit() } && it.toLong() <= 59)) {
-                                secondsText = it
-                            }
-                        },
-                        label = { Text("Sec") },
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
+            )
+        }
+        if (isPlayingSplodge) {
+            MilkSplodgeAnimation(
+                onAnimationEnd = {
+                    isPlayingSplodge = false // 🌟 Reset flag and proceed/navigate back
+                    onSave()
                 }
-            },
-            confirmButton = {
-                // 🛠️ FIXED: Re-added the complete missing action block cleanly here
-                TextButton(
-                    onClick = {
-                        val mins = minutesText.toLongOrNull() ?: 0L
-                        val secs = secondsText.toLongOrNull() ?: 0L
-                        val total = (mins * 60) + secs
-                        if (side == "Left") onLeftDurationChanged(total) else onRightDurationChanged(total)
-                        showDurationDialogForSide = null
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDurationDialogForSide = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
+            )
+        }
     }
 }
 
@@ -409,11 +486,17 @@ fun FeedingTimerButton(
     showEditButton: Boolean = false,
     onEditClick: () -> Unit = {}
 ) {
-    val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    val backgroundColor =
+        if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor =
+        if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Box(
             modifier = Modifier
                 .size(100.dp)
