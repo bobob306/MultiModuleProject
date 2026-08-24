@@ -18,10 +18,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -29,7 +27,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,6 +40,8 @@ import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.common.result.Result
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
@@ -58,8 +57,7 @@ fun CoffeeHomeScreenRoute(
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
@@ -105,25 +103,20 @@ fun CoffeeHomeScreenContent(
                 || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = {
-                    Text(
-                        text = "Coffee Home Screen",
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
-                }
-            )
-        }
+    MMPScaffold(
+        title = "Coffee Home Screen",
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
 
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.TopCenter) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
             Column {
                 CoffeeHomeButtons(onIntent, isLandscape)
                 LazyVerticalGrid(

@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":feature:babycare"))
     implementation(project(":core:common:uicomponents"))
 
+    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.appfunctions.common)
     ksp(libs.androidx.appfunctions.compiler)
 }

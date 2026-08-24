@@ -1,6 +1,6 @@
 plugins {
     id("mmp.android.library")
-    id("com.google.devtools.ksp")
+    id("mmp.android.hilt")
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -10,6 +10,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)

@@ -1,6 +1,6 @@
 plugins {
     id("mmp.android.library")
-    id("com.google.devtools.ksp")
+    id("mmp.android.hilt")
     alias(libs.plugins.kotlin.serialization)
 }
 

@@ -12,6 +12,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         with(target) {
             with(pluginManager) {
                 apply("com.android.application")
+                apply("mmp.android.hilt")
             }
 
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
@@ -31,8 +32,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             }
 
             dependencies {
-                add("implementation", libs.findLibrary("hilt-android").get())
-                
                 add("implementation", libs.findLibrary("androidx-core-ktx").get())
                 add("implementation", libs.findLibrary("androidx-appcompat").get())
                 add("implementation", libs.findLibrary("material").get())

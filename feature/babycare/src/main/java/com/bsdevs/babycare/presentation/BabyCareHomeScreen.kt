@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation
 
+import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,7 +32,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +57,8 @@ import com.bsdevs.common.result.Result
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
 fun BabyCareHomeScreenRoute(
@@ -117,22 +120,12 @@ internal fun BabyCareHomeScreen(
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = {
-                    Text(
-                        text = "Baby Care",
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
-                }
-            )
-        }
+    MMPScaffold(
+        title = "Baby Care",
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
         // 1. Direct PullToRefreshBox wrapper at the root level
         PullToRefreshBox(
@@ -149,7 +142,7 @@ internal fun BabyCareHomeScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Item 2: Quick Action Tiles Row

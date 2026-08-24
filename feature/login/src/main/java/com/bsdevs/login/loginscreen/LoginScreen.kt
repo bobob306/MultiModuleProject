@@ -62,6 +62,8 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
 
+import com.bsdevs.uicomponents.MMPScaffold
+
 @Composable
 fun LoginScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -139,22 +141,11 @@ fun LoginScreenContent(
         }
     }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            TopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = {
-                    Text(
-                        text = "Login Screen",
-                        style = MaterialTheme.typography.headlineLarge,
-                    )
-                }
-            )
-        }
+    MMPScaffold(
+        title = "Login Screen",
+        scrollBehavior = scrollBehavior
     ) { innerPadding ->
         Surface(
             Modifier
@@ -166,7 +157,7 @@ fun LoginScreenContent(
                 Box(
                     Modifier
                         .fillMaxSize()
-                        .padding(16.dp)
+                        .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
                         .padding(end = if (isScrollable) 16.dp else 0.dp)
                         .verticalScroll(scrollState)
                 ) {
