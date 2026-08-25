@@ -148,11 +148,28 @@ class BabyCareHomeViewModel @Inject constructor(
     ): BabyCareHomeViewData {
         val finalizedFeed = mutableListOf<HomeFeedItem>()
 
-        var absoluteLastNappy: String? = null
-        var absoluteLastFeeding: String? = null
-        var absoluteLastTemperature: String? = null
+        // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
+        val allEventsFlattened = dailyLogs.flatMap { day ->
+            day.events.sortedByDescending { it.dateTimeString }
+        }
 
-        dailyLogs.forEachIndexed { index, dayLog ->
+        val absoluteLastNappy = allEventsFlattened.firstOrNull { 
+            it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" 
+        }?.let { "Last nappy: ${it.time}" }
+
+        val absoluteLastFeeding = allEventsFlattened.firstOrNull { 
+            it.type == "FEEDING" 
+        }?.let { "Last feed: ${it.time}" }
+
+        val lastTempEvent = allEventsFlattened.firstOrNull { 
+            it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
+        }
+
+        val absoluteLastTemperature = lastTempEvent?.let { 
+            "Last temp: ${it.temperature}°C" 
+        }
+        
+        dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
             val sortedDayEvents = dayLog.events.sortedByDescending { it.dateTimeString }
@@ -173,16 +190,6 @@ class BabyCareHomeViewModel @Inject constructor(
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
             finalizedFeed.add(HomeFeedItem.Header(displayHeaderTitle, feedingCount, nappyCount, temperatureCount))
-
-            // Capture your summary tiles from the top sorted item of the most recent day block
-            if (index == 0) {
-                absoluteLastNappy = sortedDayEvents.firstOrNull { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
-                    ?.let { "Last nappy: ${it.time}" }
-                absoluteLastFeeding = sortedDayEvents.firstOrNull { it.type == "FEEDING" }
-                    ?.let { "Last feed: ${it.time}" }
-                absoluteLastTemperature = sortedDayEvents.firstOrNull { it.type == "TEMPERATURE" }
-                    ?.let { "Last temp: ${it.temperature}°C" }
-            }
 
             if (!collapsed.contains(displayHeaderTitle)) {
                 visibleEvents.forEach { unifiedEvent ->

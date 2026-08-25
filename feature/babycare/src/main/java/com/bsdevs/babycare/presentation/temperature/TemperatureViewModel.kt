@@ -57,7 +57,7 @@ class TemperatureViewModel @Inject constructor(
                         id = event.id,
                         date = day.date,
                         time = event.time,
-                        temperature = event.temperature ?: 0.0,
+                        temperature = event.temperature ?: 37.0,
                         comment = event.comment
                     )
                 }
@@ -87,6 +87,7 @@ class TemperatureViewModel @Inject constructor(
                         it.copy(
                             id = event.id,
                             date = extractedDate,
+                            originalDate = extractedDate,
                             time = event.time,
                             temperature = temp.toString(),
                             temperatureValue = tempInt,
@@ -110,6 +111,10 @@ class TemperatureViewModel @Inject constructor(
 
     fun onCommentChanged(newComment: String) {
         _uiState.update { it.copy(comment = newComment) }
+    }
+
+    fun onDateSelected(newDate: String) {
+        _uiState.update { it.copy(date = newDate) }
     }
 
     fun onTimeSelected(hour: Int, minute: Int) {
@@ -149,12 +154,22 @@ class TemperatureViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 if (isEditing) {
-                    repository.updateActivityEvent(
-                        userId = userId,
-                        date = currentState.date,
-                        eventId = temperatureId,
-                        updatedEvent = unifiedEvent,
-                    )
+                    val originalDate = currentState.originalDate
+                    
+                    if (originalDate != null && originalDate != currentState.date) {
+                        // 1. Delete from old date
+                        repository.deleteActivityEvent(userId, originalDate, temperatureId)
+                        // 2. Save to new date
+                        repository.saveActivityEvent(userId, currentState.date, unifiedEvent)
+                    } else {
+                        // Just update in place
+                        repository.updateActivityEvent(
+                            userId = userId,
+                            date = currentState.date,
+                            eventId = temperatureId,
+                            updatedEvent = unifiedEvent,
+                        )
+                    }
                 } else {
                     repository.saveActivityEvent(
                         userId = userId,
