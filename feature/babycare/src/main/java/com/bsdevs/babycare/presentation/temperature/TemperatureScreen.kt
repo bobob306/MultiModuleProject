@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation.temperature
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -134,6 +136,9 @@ fun TemperatureScreen(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     // Re-open sheet if id is set (e.g. from navigation)
     LaunchedEffect(uiState.id) {
         if (uiState.id != null) {
@@ -168,87 +173,101 @@ fun TemperatureScreen(
                     val date = uiState.dates[pageIndex]
                     val readings = uiState.dailyReadings[date] ?: emptyList()
 
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    if (isLandscape) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                            // Left Column: Navigation + List
+                            Column(modifier = Modifier.weight(1f)) {
+                                DayNavigationHeader(
+                                    date = date,
+                                    pagerState = pagerState,
+                                    datesCount = uiState.dates.size,
+                                    onNavigate = { page ->
+                                        scope.launch { pagerState.animateScrollToPage(page) }
                                     }
-                                },
-                                enabled = pagerState.currentPage > 0
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Previous Day",
-                                    tint = if (pagerState.currentPage > 0) 
-                                        MaterialTheme.colorScheme.primary 
-                                    else 
-                                        MaterialTheme.colorScheme.outline
                                 )
+
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                                    contentPadding = PaddingValues(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(readings) { item ->
+                                        TemperatureHistoryItem(item = item, onClick = {
+                                            onEditItem(item.id)
+                                            showSheet = true
+                                        })
+                                    }
+                                }
+                            }
+
+                            // Right Column: Chart
+                            Column(
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .fillMaxHeight(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "Daily Trend",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(vertical = 16.dp)
+                                )
+
+                                TemperatureChart(
+                                    readings = readings,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            DayNavigationHeader(
+                                date = date,
+                                pagerState = pagerState,
+                                datesCount = uiState.dates.size,
+                                onNavigate = { page ->
+                                    scope.launch { pagerState.animateScrollToPage(page) }
+                                }
+                            )
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainer),
+                                contentPadding = PaddingValues(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(readings) { item ->
+                                    TemperatureHistoryItem(item = item, onClick = {
+                                        onEditItem(item.id)
+                                        showSheet = true
+                                    })
+                                }
                             }
 
                             Text(
-                                text = date,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                text = "Daily Trend",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
 
-                            IconButton(
-                                onClick = {
-                                    scope.launch {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                    }
-                                },
-                                enabled = pagerState.currentPage < uiState.dates.size - 1
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Next Day",
-                                    tint = if (pagerState.currentPage < uiState.dates.size - 1) 
-                                        MaterialTheme.colorScheme.primary 
-                                    else 
-                                        MaterialTheme.colorScheme.outline
-                                )
-                            }
+                            TemperatureChart(
+                                readings = readings,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .clip(MaterialTheme.shapes.medium)
-                                .background(MaterialTheme.colorScheme.surfaceContainer),
-                            contentPadding = PaddingValues(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(readings) { item ->
-                                TemperatureHistoryItem(item = item, onClick = {
-                                    onEditItem(item.id)
-                                    showSheet = true
-                                })
-                            }
-                        }
-
-                        Text(
-                            text = "Daily Trend",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-
-                        TemperatureChart(
-                            readings = readings,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -357,6 +376,56 @@ fun TemperatureScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun DayNavigationHeader(
+    date: String,
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    datesCount: Int,
+    onNavigate: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = { onNavigate(pagerState.currentPage - 1) },
+            enabled = pagerState.currentPage > 0
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Previous Day",
+                tint = if (pagerState.currentPage > 0)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.outline
+            )
+        }
+
+        Text(
+            text = date,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+
+        IconButton(
+            onClick = { onNavigate(pagerState.currentPage + 1) },
+            enabled = pagerState.currentPage < datesCount - 1
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Next Day",
+                tint = if (pagerState.currentPage < datesCount - 1)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.outline
+            )
+        }
     }
 }
 
