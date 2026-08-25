@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager

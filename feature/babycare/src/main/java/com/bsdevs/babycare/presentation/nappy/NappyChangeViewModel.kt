@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.nappy
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -7,9 +7,7 @@ import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
-import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.UnifiedEventDto
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,29 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.reflect.typeOf
-
-data class NappyChangeUiState(
-    val id: String? = null,
-    val originalDocId: String? = null,
-    val date: String = LocalDate.now().toString(),
-    val time: String = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
-    val type: String = "Wet",
-    val isLoading: Boolean = false,
-    val comment: String = "",
-    val error: String? = null,
-)
-
-sealed class NappyChangeEvent {
-    object SaveSuccess : NappyChangeEvent()
-    data class SaveError(val message: String) : NappyChangeEvent()
-}
 
 @HiltViewModel
 class NappyChangeViewModel @Inject constructor(
@@ -154,6 +131,23 @@ class NappyChangeViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
                 _events.send(NappyChangeEvent.SaveError(e.message ?: "Failed to save nappy record change."))
+            }
+        }
+    }
+
+    fun deleteNappyChange() {
+        val currentState = _uiState.value
+        val userId = accountService.currentUserId
+        val eventId = currentState.id ?: return
+        val date = currentState.date
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                repository.deleteActivityEvent(userId, date, eventId)
+                _events.send(NappyChangeEvent.DeleteSuccess)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
