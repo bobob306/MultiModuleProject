@@ -1,28 +1,53 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.nappy
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.animation.TurdSplodgeAnimation
 import com.bsdevs.uicomponents.LogCommentInput
-import java.time.LocalTime
-
+import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPScaffold
+import com.bsdevs.uicomponents.MMPTimePickerDialog
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +65,10 @@ fun NappyChangeScreenRoute(
                     onShowSnackBar("Nappy change saved", null)
                     onNavigateBack()
                 }
+                is NappyChangeEvent.DeleteSuccess -> {
+                    onShowSnackBar("Nappy change deleted", null)
+                    onNavigateBack()
+                }
                 is NappyChangeEvent.SaveError -> {
                     onShowSnackBar("Error saving nappy change: ${event.message}", null)
                 }
@@ -54,7 +83,7 @@ fun NappyChangeScreenRoute(
     MMPScaffold(
         title = "Nappy Change",
         onBackClick = onNavigateBack,
-        scrollBehavior = scrollBehavior
+        scrollBehavior = scrollBehavior,
     ) { padding ->
 
         NappyChangeScreen(
@@ -65,7 +94,8 @@ fun NappyChangeScreenRoute(
             onTimeSelected = { hour, minute -> viewModel.onTimeSelected(hour, minute) },
             onTypeChanged = { type -> viewModel.onTypeChanged(type) },
             onCommentChanged = viewModel::onCommentChanged,
-            onSave = { viewModel.submitNappyChange() }
+            onSave = { viewModel.submitNappyChange() },
+            onDelete = { viewModel.deleteNappyChange() }
         )
     }
 
@@ -87,9 +117,11 @@ internal fun NappyChangeScreen(
     onTimeSelected: (hour: Int, minute: Int) -> Unit,
     onTypeChanged: (String) -> Unit,
     onCommentChanged: (String) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     // 🔄 Detect device screen orientation
     val configuration = LocalConfiguration.current
@@ -124,27 +156,14 @@ internal fun NappyChangeScreen(
                     )
 
                     // Time Field with click layer
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = uiState.time,
-                            onValueChange = {},
-                            label = { Text("Time") },
-                            readOnly = true,
-                            enabled = !uiState.isLoading,
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Select Time"
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
-                        )
-                    }
+                    MMPClickableTextField(
+                        value = uiState.time,
+                        label = "Time",
+                        onClick = { showTimePicker = true },
+                        enabled = !uiState.isLoading,
+                        trailingIcon = Icons.Default.DateRange,
+                        contentDescription = "Select Time"
+                    )
 
                     // Segmented Nappy Category Chips
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -185,10 +204,21 @@ internal fun NappyChangeScreen(
                             // Trigger the poop animation burst overlay instead of navigating away instantly
                             isPlayingTurdAnimation = true
                         },
-                        modifier = Modifier.fillMaxWidth(0.8f), // Keeps button neatly sized matching your specification
-                        enabled = !uiState.isLoading && !isPlayingTurdAnimation // Prevent duplicate double-clicks
+                        modifier = Modifier.fillMaxWidth(0.8f),
+                        enabled = !uiState.isLoading && !isPlayingTurdAnimation
                     ) {
                         Text("Save Nappy Change")
+                    }
+
+                    if (uiState.id != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = { showDeleteConfirmation = true },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text("Delete Record")
+                        }
                     }
                 }
             }
@@ -200,7 +230,8 @@ internal fun NappyChangeScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .verticalScroll(portraitScrollState),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 OutlinedTextField(
                     value = uiState.date,
@@ -211,29 +242,16 @@ internal fun NappyChangeScreen(
                     enabled = !uiState.isLoading
                 )
 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = uiState.time,
-                        onValueChange = {},
-                        label = { Text("Time") },
-                        readOnly = true,
-                        enabled = !uiState.isLoading,
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "Select Time"
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
-                    )
-                }
+                MMPClickableTextField(
+                    value = uiState.time,
+                    label = "Time",
+                    onClick = { showTimePicker = true },
+                    enabled = !uiState.isLoading,
+                    trailingIcon = Icons.Default.DateRange,
+                    contentDescription = "Select Time"
+                )
 
-                Text("Type:", style = MaterialTheme.typography.titleMedium)
+                Text("Type:", style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.Start))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -271,10 +289,21 @@ internal fun NappyChangeScreen(
                         // Trigger the poop animation burst overlay instead of navigating away instantly
                         isPlayingTurdAnimation = true
                     },
-                    modifier = Modifier.fillMaxWidth(0.8f), // Keeps button neatly sized matching your specification
-                    enabled = !uiState.isLoading && !isPlayingTurdAnimation // Prevent duplicate double-clicks
+                    modifier = Modifier.fillMaxWidth(0.8f),
+                    enabled = !uiState.isLoading && !isPlayingTurdAnimation
                 ) {
                     Text("Save Nappy Change")
+                }
+
+                if (uiState.id != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Delete Record")
+                    }
                 }
             }
         }
@@ -287,51 +316,36 @@ internal fun NappyChangeScreen(
                 LocalTime.now()
             }
 
-            val timePickerState = rememberTimePickerState(
-                initialHour = initialTime.hour,
-                initialMinute = initialTime.minute,
-                is24Hour = true
-            )
-
-            AlertDialog(
+            MMPTimePickerDialog(
                 onDismissRequest = { showTimePicker = false },
+                initialTime = initialTime,
+                onTimeSelected = onTimeSelected
+            )
+        }
+
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Delete Nappy Change") },
+                text = { Text("Are you sure you want to delete this record?") },
                 confirmButton = {
                     TextButton(
                         onClick = {
-                            onTimeSelected(timePickerState.hour, timePickerState.minute)
-                            showTimePicker = false
+                            onDelete()
+                            showDeleteConfirmation = false
                         }
                     ) {
-                        Text("OK")
+                        Text("Delete")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
                         Text("Cancel")
-                    }
-                },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        // 🔄 Smart UI Swap based on orientation
-                        if (isLandscape) {
-                            Text(
-                                text = "Enter time",
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(bottom = 12.dp)
-                            )
-                            // 🎹 Sleek horizontal text boxes for Landscape
-                            TimeInput(state = timePickerState)
-                        } else {
-                            // 🕒 Classic clock wheel for Portrait
-                            TimePicker(state = timePickerState)
-                        }
                     }
                 }
             )
         }
+
         if (isPlayingTurdAnimation) {
             TurdSplodgeAnimation(
                 onAnimationEnd = {
@@ -339,66 +353,6 @@ internal fun NappyChangeScreen(
                     onSave() // Fire your Firestore update and navigate away
                 }
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FeedingScreenRoute(
-    onShowSnackBar: suspend (String, String?) -> Unit,
-    onNavigateBack: () -> Unit,
-    viewModel: FeedingViewModel = hiltViewModel()
-) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
-            when (event) {
-                is FeedingEvent.SaveSuccess -> {
-                    onShowSnackBar("Feeding session saved", null)
-                    onNavigateBack()
-                }
-                is FeedingEvent.SaveError -> {
-                    onShowSnackBar("Error saving feeding: ${event.message}", null)
-                }
-            }
-        }
-    }
-
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
-    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
-
-    MMPScaffold(
-        title = "Feeding Session",
-        onBackClick = onNavigateBack,
-        scrollBehavior = scrollBehavior
-    ) { padding ->
-        FeedingScreen(
-            modifier = Modifier
-                .padding(padding)
-                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
-            uiState = uiState,
-            // 🔄 Map your old explicit arguments to the commonised enum trigger function
-            onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },
-            onToggleRight = { viewModel.toggleTimer(FeedingSide.RIGHT) },
-            onStartTimeSelected = viewModel::onStartTimeSelected,
-            onLeftDurationChanged = viewModel::onLeftDurationChanged,
-            onRightDurationChanged = viewModel::onRightDurationChanged,
-            onUpdateBottleAmount = viewModel::updateBottleAmount,
-            onCommentChanged = viewModel::onCommentChanged,
-            onSave = viewModel::submitFeeding
-        )
-    }
-
-    if (uiState.isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
         }
     }
 }

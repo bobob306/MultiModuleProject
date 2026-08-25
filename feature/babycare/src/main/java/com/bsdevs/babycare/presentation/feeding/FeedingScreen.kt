@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.feeding
 
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -25,16 +25,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,9 +48,74 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.animation.MilkSplodgeAnimation
 import com.bsdevs.uicomponents.LogCommentInput
+import com.bsdevs.uicomponents.MMPClickableTextField
+import com.bsdevs.uicomponents.MMPScaffold
+import com.bsdevs.uicomponents.MMPTimePickerDialog
 import java.time.LocalTime
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FeedingScreenRoute(
+    onShowSnackBar: suspend (String, String?) -> Unit,
+    onNavigateBack: () -> Unit,
+    viewModel: FeedingViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is FeedingEvent.SaveSuccess -> {
+                    onShowSnackBar("Feeding session saved", null)
+                    onNavigateBack()
+                }
+                is FeedingEvent.SaveError -> {
+                    onShowSnackBar("Error saving feeding: ${event.message}", null)
+                }
+            }
+        }
+    }
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+
+    MMPScaffold(
+        title = "Feeding Session",
+        onBackClick = onNavigateBack,
+        scrollBehavior = scrollBehavior
+    ) { padding ->
+        FeedingScreen(
+            modifier = Modifier
+                .padding(padding)
+                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
+            uiState = uiState,
+            // 🔄 Map your old explicit arguments to the commonised enum trigger function
+            onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },
+            onToggleRight = { viewModel.toggleTimer(FeedingSide.RIGHT) },
+            onStartTimeSelected = viewModel::onStartTimeSelected,
+            onLeftDurationChanged = viewModel::onLeftDurationChanged,
+            onRightDurationChanged = viewModel::onRightDurationChanged,
+            onUpdateBottleAmount = viewModel::updateBottleAmount,
+            onCommentChanged = viewModel::onCommentChanged,
+            onSave = viewModel::submitFeeding
+        )
+    }
+
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,7 +139,6 @@ internal fun FeedingScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
-    var showSplodge by remember { mutableStateOf(false) }
     var isPlayingSplodge by remember { mutableStateOf(false) }
 
     // 📱 OPTION A: LANDSCAPE MODE (Two-Column Side-by-Side Layout)
@@ -96,27 +159,14 @@ internal fun FeedingScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Start Time Field
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = uiState.startTime,
-                            onValueChange = {},
-                            label = { Text("Start Time") },
-                            readOnly = true,
-                            enabled = !uiState.isLoading,
-                            trailingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.DateRange,
-                                    contentDescription = "Select Time"
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
-                        )
-                    }
+                    MMPClickableTextField(
+                        value = uiState.startTime,
+                        label = "Start Time",
+                        onClick = { showTimePicker = true },
+                        enabled = !uiState.isLoading,
+                        trailingIcon = Icons.Default.DateRange,
+                        contentDescription = "Select Time"
+                    )
 
                     // Row of Timer Buttons
                     Row(
@@ -209,31 +259,15 @@ internal fun FeedingScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp)
-                ) {
-                    OutlinedTextField(
-                        value = uiState.startTime,
-                        onValueChange = {},
-                        label = { Text("Start Time") },
-                        readOnly = true,
-                        enabled = !uiState.isLoading,
-                        trailingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.DateRange,
-                                contentDescription = "Select Time"
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable(enabled = !uiState.isLoading) { showTimePicker = true }
-                    )
-                }
+                MMPClickableTextField(
+                    value = uiState.startTime,
+                    label = "Start Time",
+                    onClick = { showTimePicker = true },
+                    enabled = !uiState.isLoading,
+                    trailingIcon = Icons.Default.DateRange,
+                    contentDescription = "Select Time",
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -360,47 +394,10 @@ internal fun FeedingScreen(
                 LocalTime.now()
             }
 
-            val timePickerState = rememberTimePickerState(
-                initialHour = initialTime.hour,
-                initialMinute = initialTime.minute,
-                is24Hour = true
-            )
-
-            AlertDialog(
+            MMPTimePickerDialog(
                 onDismissRequest = { showTimePicker = false },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            onStartTimeSelected(timePickerState.hour, timePickerState.minute)
-                            showTimePicker = false
-                        }
-                    ) {
-                        Text("OK")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showTimePicker = false }) {
-                        Text("Cancel")
-                    }
-                },
-                text = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        // 🔄 Dynamic toggle: Uses smaller text fields in landscape so it doesn't break the layout
-                        if (isLandscape) {
-                            Text(
-                                text = "Enter time",
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            TimeInput(state = timePickerState)
-                        } else {
-                            TimePicker(state = timePickerState)
-                        }
-                    }
-                }
+                initialTime = initialTime,
+                onTimeSelected = onStartTimeSelected
             )
         }
 

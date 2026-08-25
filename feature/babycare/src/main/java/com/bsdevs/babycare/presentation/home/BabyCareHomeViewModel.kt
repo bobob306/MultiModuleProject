@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.home
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -9,42 +9,18 @@ import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
-
-sealed class HomeFeedItem {
-    data class Header(val title: String, val feedingCount: Int, val nappyCount: Int) :
-        HomeFeedItem()
-
-    data class ActivityRow(val activity: BabyActivity) : HomeFeedItem()
-}
-
-data class BabyCareHomeViewData(
-    val lastNappyChange: String? = null,
-    val lastFeeding: String? = null,
-    val activityFeed: List<HomeFeedItem> = emptyList(),
-    val canLoadMore: Boolean = true,
-    val isLoadingMore: Boolean = false,
-    val isRefreshing: Boolean = false,
-    val currentFilter: ActivityFilter = ActivityFilter.NONE,
-    val collapsedHeaders: Set<String> = emptySet(),
-)
-
-enum class ActivityFilter { NONE, NAPPY, FEEDING }
 
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(

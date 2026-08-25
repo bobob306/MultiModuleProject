@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.presentation
+package com.bsdevs.babycare.presentation.graph
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -10,36 +10,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.Locale
 import javax.inject.Inject
-
-data class FeedingGraphUiState(
-    val hourlyCounts: List<HourlyFeedingCount> = emptyList(),
-    val totalFeedsInCache: Int = 0,
-    val analysisResult: FeedingAnalysisResult? = null,
-    val dailyAverageGaps: List<DailyAverageGap> = emptyList(),
-)
-
-data class FeedingAnalysisResult(
-    val bucketGaps: List<FeedingBucketData> = emptyList()
-)
-
-data class FeedingBucketData(
-    val rangeLabel: String,     // e.g., "10-20 min"
-    val averageGapMinutes: Int, // Average resting gap following this feed length
-    val totalCount: Int         // Number of instances found in history
-)
-
-data class HourlyFeedingCount(
-    val hour: Int,         // 0 to 23
-    val displayLabel: String, // e.g., "02:00"
-    val count: Int
-)
-
-data class DailyAverageGap(
-    val dateString: String,      // e.g., "2026-08-16" for the X-axis label
-    val averageGapMinutes: Int,   // Y-axis value
-    val rolling14DayAverageMinutes: Int?,
-)
 
 @HiltViewModel
 class BabyGraphViewModel @Inject constructor(
@@ -58,7 +30,7 @@ class BabyGraphViewModel @Inject constructor(
             val hourlyGraphData = (0..23).map { hour ->
                 HourlyFeedingCount(
                     hour = hour,
-                    displayLabel = String.format("%02d:00", hour),
+                    displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
                     count = countsByHour[hour] ?: 0
                 )
             }

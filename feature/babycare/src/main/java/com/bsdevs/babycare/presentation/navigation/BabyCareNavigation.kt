@@ -6,10 +6,10 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.navDeepLink
-import com.bsdevs.babycare.presentation.BabyCareHomeScreenRoute
-import com.bsdevs.babycare.presentation.BabyGraphRoute
-import com.bsdevs.babycare.presentation.FeedingScreenRoute
-import com.bsdevs.babycare.presentation.NappyChangeScreenRoute
+import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
+import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
+import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
+import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
