@@ -177,7 +177,10 @@ fun TemperatureScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = "Previous Day",
-                                    tint = if (pagerState.currentPage > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    tint = if (pagerState.currentPage > 0) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                             }
 
@@ -198,7 +201,10 @@ fun TemperatureScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = "Next Day",
-                                    tint = if (pagerState.currentPage < uiState.dates.size - 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                    tint = if (pagerState.currentPage < uiState.dates.size - 1) 
+                                        MaterialTheme.colorScheme.primary 
+                                    else 
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                             }
                         }

@@ -57,7 +57,7 @@ class TemperatureViewModel @Inject constructor(
                         id = event.id,
                         date = day.date,
                         time = event.time,
-                        temperature = event.temperature ?: 0.0,
+                        temperature = event.temperature ?: 37.0,
                         comment = event.comment
                     )
                 }

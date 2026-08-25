@@ -108,7 +108,12 @@ class BabyCareRepositoryImpl @Inject constructor(
             bottleAmountMl = (eventMap["bottleAmountMl"] as? Long)?.toInt(),
 
             // Temperature-specific field
-            temperature = eventMap["temperature"] as? Double
+            temperature = when (val t = eventMap["temperature"]) {
+                is Double -> t
+                is Long -> t.toDouble()
+                is Number -> t.toDouble()
+                else -> null
+            }
         )
     }
 
