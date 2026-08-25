@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,9 +61,11 @@ fun BabyCareHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
+    onNavigateToTemperature: () -> Unit,
     onNavigateToGraph: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
+    onNavigateToEditTemperature: (String) -> Unit,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
 ) {
     val result by viewModel.viewData.collectAsStateWithLifecycle()
@@ -75,8 +78,10 @@ fun BabyCareHomeScreenRoute(
                 onRefresh = { viewModel.refreshData() }, // Make sure your ViewModel exposes a refresh method
                 onNavigateToNappyChange = onNavigateToNappyChange,
                 onNavigateToFeeding = onNavigateToFeeding,
+                onNavigateToTemperature = onNavigateToTemperature,
                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
+                onNavigateToEditTemperature = onNavigateToEditTemperature,
                 onToggleFilter = viewModel::toggleActivityFilter,
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore,
@@ -106,8 +111,10 @@ internal fun BabyCareHomeScreen(
     onRefresh: () -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
+    onNavigateToTemperature: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
+    onNavigateToEditTemperature: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onToggleHeaderCollapse: (String) -> Unit,
     onNavigateToGraph: () -> Unit,
@@ -169,6 +176,16 @@ internal fun BabyCareHomeScreen(
                             subtitle = viewData.lastFeeding,
                             icon = Icons.Default.Restaurant,
                             onClick = onNavigateToFeeding
+                        )
+                        BabyCareTile(
+                            modifier = Modifier
+                                .wrapContentWidth()
+                                .padding(end = 12.dp)
+                                .heightIn(max = 120.dp),
+                            title = "Temperature",
+                            subtitle = viewData.lastTemperature,
+                            icon = Icons.Default.Thermostat,
+                            onClick = onNavigateToTemperature
                         )
                         BabyCareTile(
                             modifier = Modifier
@@ -238,6 +255,12 @@ internal fun BabyCareHomeScreen(
                                                 style = MaterialTheme.typography.labelMedium
                                             )
                                         }
+                                        if (feedItem.temperatureCount > 0) {
+                                            Text(
+                                                text = "🌡️ ${feedItem.temperatureCount}",
+                                                style = MaterialTheme.typography.labelMedium
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -251,6 +274,7 @@ internal fun BabyCareHomeScreen(
                             val uniqueId = when (currentActivity) {
                                 is BabyActivity.Nappy -> currentActivity.dto.id
                                 is BabyActivity.Feeding -> currentActivity.dto.id
+                                is BabyActivity.Temperature -> currentActivity.dto.id
                             }
 
                             item(key = "row_${uniqueId}") {
@@ -278,6 +302,7 @@ internal fun BabyCareHomeScreen(
                                             val activityId = when (currentActivity) {
                                                 is BabyActivity.Nappy -> currentActivity.dto.id
                                                 is BabyActivity.Feeding -> currentActivity.dto.id
+                                                is BabyActivity.Temperature -> currentActivity.dto.id
                                             }
                                             activityId?.let {
                                                 when (currentActivity) {
@@ -288,6 +313,9 @@ internal fun BabyCareHomeScreen(
                                                     is BabyActivity.Feeding -> onNavigateToEditFeeding(
                                                         activityId
                                                     )
+                                                    is BabyActivity.Temperature -> onNavigateToEditTemperature(
+                                                        activityId
+                                                    )
                                                 }
                                             }
                                         },
@@ -295,6 +323,7 @@ internal fun BabyCareHomeScreen(
                                             val targetFilter = when (currentActivity) {
                                                 is BabyActivity.Nappy -> ActivityFilter.NAPPY
                                                 is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                                is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
                                             }
                                             onToggleFilter(targetFilter)
                                         }
@@ -348,6 +377,7 @@ fun ActivityFeedItem(
     val icon = when (item) {
         is BabyActivity.Nappy -> Icons.Default.ChildCare
         is BabyActivity.Feeding -> Icons.Default.Restaurant
+        is BabyActivity.Temperature -> Icons.Default.Thermostat
     }
 
     val title = when (item) {
@@ -360,6 +390,7 @@ fun ActivityFeedItem(
                 "Feeding: $side (${formatDuration(item.dto.totalDuration)})"
             }
         }
+        is BabyActivity.Temperature -> "Temperature: ${item.dto.temperature}°C"
     }
 
     Card(

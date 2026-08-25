@@ -23,8 +23,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +75,10 @@ fun FeedingScreenRoute(
                     onShowSnackBar("Feeding session saved", null)
                     onNavigateBack()
                 }
+                is FeedingEvent.DeleteSuccess -> {
+                    onShowSnackBar("Feeding session deleted", null)
+                    onNavigateBack()
+                }
                 is FeedingEvent.SaveError -> {
                     onShowSnackBar("Error saving feeding: ${event.message}", null)
                 }
@@ -103,7 +109,8 @@ fun FeedingScreenRoute(
             onRightDurationChanged = viewModel::onRightDurationChanged,
             onUpdateBottleAmount = viewModel::updateBottleAmount,
             onCommentChanged = viewModel::onCommentChanged,
-            onSave = viewModel::submitFeeding
+            onSave = viewModel::submitFeeding,
+            onDelete = viewModel::deleteFeeding
         )
     }
 
@@ -129,11 +136,13 @@ internal fun FeedingScreen(
     onRightDurationChanged: (Long) -> Unit,
     onUpdateBottleAmount: (Int?) -> Unit,
     onCommentChanged: (String) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onDelete: () -> Unit
 ) {
     var showBottleDialog by rememberSaveable { mutableStateOf(false) }
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var showDurationDialogForSide by rememberSaveable { mutableStateOf<String?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     // 🔄 1. Detect screen orientation
     val configuration = LocalConfiguration.current
@@ -247,6 +256,17 @@ internal fun FeedingScreen(
                     ) {
                         Text("Save Feeding Session")
                     }
+
+                    if (uiState.id != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(
+                            onClick = { showDeleteConfirmation = true },
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            enabled = !uiState.isLoading
+                        ) {
+                            Text("Delete Record")
+                        }
+                    }
                 }
             }
         }
@@ -335,6 +355,17 @@ internal fun FeedingScreen(
                     enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
                 ) {
                     Text("Save Feeding Session")
+                }
+
+                if (uiState.id != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { showDeleteConfirmation = true },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        enabled = !uiState.isLoading
+                    ) {
+                        Text("Delete Record")
+                    }
                 }
             }
         }
@@ -461,6 +492,30 @@ internal fun FeedingScreen(
                 }
             )
         }
+
+        if (showDeleteConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmation = false },
+                title = { Text("Delete Feeding Session") },
+                text = { Text("Are you sure you want to delete this record?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDelete()
+                            showDeleteConfirmation = false
+                        }
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
         if (isPlayingSplodge) {
             MilkSplodgeAnimation(
                 onAnimationEnd = {

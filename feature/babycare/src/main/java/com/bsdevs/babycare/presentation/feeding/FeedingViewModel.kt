@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 
@@ -173,7 +174,7 @@ class FeedingViewModel @Inject constructor(
     }
 
     fun onStartTimeSelected(hour: Int, minute: Int) {
-        val formattedTime = String.format("%02d:%02d", hour, minute)
+        val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
         _uiState.update { it.copy(startTime = formattedTime) }
     }
 
@@ -242,6 +243,23 @@ class FeedingViewModel @Inject constructor(
                 }
 
                 _events.send(FeedingEvent.SaveSuccess)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
+            }
+        }
+    }
+
+    fun deleteFeeding() {
+        val currentState = _uiState.value
+        val userId = accountService.currentUserId
+        val eventId = currentState.id ?: return
+        val date = currentState.date
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                repository.deleteActivityEvent(userId, date, eventId)
+                _events.send(FeedingEvent.DeleteSuccess)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }

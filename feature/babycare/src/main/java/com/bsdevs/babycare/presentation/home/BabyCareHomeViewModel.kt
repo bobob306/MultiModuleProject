@@ -8,6 +8,7 @@ import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.NappyChangeDto
+import com.bsdevs.babycare.network.TemperatureDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
@@ -149,6 +150,7 @@ class BabyCareHomeViewModel @Inject constructor(
 
         var absoluteLastNappy: String? = null
         var absoluteLastFeeding: String? = null
+        var absoluteLastTemperature: String? = null
 
         dailyLogs.forEachIndexed { index, dayLog ->
 
@@ -159,23 +161,27 @@ class BabyCareHomeViewModel @Inject constructor(
             val visibleEvents = sortedDayEvents.filter { event ->
                 when (filter) {
                     ActivityFilter.NONE -> true
-                    ActivityFilter.NAPPY -> event.type == "NAPPY"
+                    ActivityFilter.NAPPY -> event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
                     ActivityFilter.FEEDING -> event.type == "FEEDING"
+                    ActivityFilter.TEMPERATURE -> event.type == "TEMPERATURE"
                 }
             }
 
             val feedingCount = visibleEvents.count { it.type == "FEEDING" }
-            val nappyCount = visibleEvents.count { it.type == "NAPPY" }
+            val nappyCount = visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
+            val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
-            finalizedFeed.add(HomeFeedItem.Header(displayHeaderTitle, feedingCount, nappyCount))
+            finalizedFeed.add(HomeFeedItem.Header(displayHeaderTitle, feedingCount, nappyCount, temperatureCount))
 
             // Capture your summary tiles from the top sorted item of the most recent day block
             if (index == 0) {
-                absoluteLastNappy = sortedDayEvents.firstOrNull { it.type == "NAPPY" }
+                absoluteLastNappy = sortedDayEvents.firstOrNull { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
                     ?.let { "Last nappy: ${it.time}" }
                 absoluteLastFeeding = sortedDayEvents.firstOrNull { it.type == "FEEDING" }
                     ?.let { "Last feed: ${it.time}" }
+                absoluteLastTemperature = sortedDayEvents.firstOrNull { it.type == "TEMPERATURE" }
+                    ?.let { "Last temp: ${it.temperature}°C" }
             }
 
             if (!collapsed.contains(displayHeaderTitle)) {
@@ -189,6 +195,7 @@ class BabyCareHomeViewModel @Inject constructor(
         return BabyCareHomeViewData(
             lastNappyChange = absoluteLastNappy,
             lastFeeding = absoluteLastFeeding,
+            lastTemperature = absoluteLastTemperature,
             activityFeed = finalizedFeed,
             currentFilter = filter,
             collapsedHeaders = collapsed
@@ -207,6 +214,7 @@ class BabyCareHomeViewModel @Inject constructor(
         // 🔄 Fix 2: If the type field was corrupted (e.g., set to "Wet"), recognize it as a nappy activity
         val isNappy =
             event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
+        val isTemperature = event.type == "TEMPERATURE"
 
         return if (isNappy) {
             // Fallback: If nappyType is missing because it was saved under 'type', recover it here
@@ -221,6 +229,17 @@ class BabyCareHomeViewModel @Inject constructor(
                     dateTime = event.dateTimeString,
                     type = correctedNappyType ?: "Wet",
                     comment = event.comment,
+                )
+            )
+        } else if (isTemperature) {
+            BabyActivity.Temperature(
+                TemperatureDto(
+                    id = event.id,
+                    date = parentDate,
+                    time = extractedTime,
+                    dateTime = event.dateTimeString,
+                    temperature = event.temperature,
+                    comment = event.comment
                 )
             )
         } else {

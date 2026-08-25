@@ -105,7 +105,10 @@ class BabyCareRepositoryImpl @Inject constructor(
             totalDuration = eventMap["totalDuration"] as? Long ?: 0L,
 
             // Safe conversion from Firestore Long to your DTO's Int?
-            bottleAmountMl = (eventMap["bottleAmountMl"] as? Long)?.toInt()
+            bottleAmountMl = (eventMap["bottleAmountMl"] as? Long)?.toInt(),
+
+            // Temperature-specific field
+            temperature = eventMap["temperature"] as? Double
         )
     }
 
@@ -139,18 +142,47 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) {
-        val docRef = firestore.collection("babyLogs").document(userId).collection("days").document(date)
+        val monthDocId = extractMonthString(date)
+        val docRef = firestore.collection("babyLogs").document(userId).collection("months").document(monthDocId)
 
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
-            val dailyLog = snapshot.toObject(DailyLogDto::class.java) ?: return@runTransaction
+            if (!snapshot.exists()) return@runTransaction
+
+            val rawDaysMap = snapshot.get("days") as? Map<String, List<Map<String, Any?>>> ?: return@runTransaction
+            val dayEvents = rawDaysMap[date]?.map { parseUnifiedEvent(it) } ?: emptyList()
 
             // ✂️ Filter out the item matching your targeted delete identifier string
-            val updatedEventsList = dailyLog.events.filterNot { it.id == eventId }
+            val updatedEventsList = dayEvents.filterNot { it.id == eventId }
 
-            transaction.update(docRef, "events", updatedEventsList)
+            // 🌟 CONVERT TO MAPS: Prevents Firestore serialization crash
+            val firestoreCompatibleList = updatedEventsList.map { event ->
+                toFirestoreMap(event)
+            }
+
+            transaction.update(docRef, "days.$date", firestoreCompatibleList)
         }.await()
-        Log.d("FIRESTORE_DELETE", "Successfully deleted event: $eventId from day block doc: $date")
+        Log.d("FIRESTORE_DELETE", "Successfully deleted event: $eventId from month doc: $monthDocId")
+
+        // 🌟 FORCE UI REFRESH: Remove the entry from the local cache stream
+        updateLocalCacheWithDeletedEvent(date, eventId)
+    }
+
+    private fun toFirestoreMap(event: UnifiedEventDto): Map<String, Any?> {
+        return mapOf(
+            "id" to event.id,
+            "type" to event.type,
+            "time" to event.time,
+            "dateTimeString" to event.dateTimeString,
+            "comment" to event.comment,
+            "nappyType" to event.nappyType,
+            "mainFeedingSide" to event.mainFeedingSide,
+            "leftDuration" to event.leftDuration,
+            "rightDuration" to event.rightDuration,
+            "totalDuration" to event.totalDuration,
+            "bottleAmountMl" to event.bottleAmountMl,
+            "temperature" to event.temperature
+        )
     }
 
 
@@ -185,7 +217,7 @@ class BabyCareRepositoryImpl @Inject constructor(
         val db = firestore.collection("babyLogs").document(userId).collection("months").document(monthDocId)
 
         try {
-            db.update("days.$date", FieldValue.arrayUnion(event)).await()
+            db.update("days.$date", FieldValue.arrayUnion(toFirestoreMap(event))).await()
             Log.d("FIRESTORE_WRITE", "Successfully saved event to network.")
 
             // 🌟 FORCE UI REFRESH: Insert the new event into the local cache stream
@@ -193,7 +225,7 @@ class BabyCareRepositoryImpl @Inject constructor(
 
         } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
             if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
-                val initialPayload = mapOf("days" to mapOf(date to listOf(event)))
+                val initialPayload = mapOf("days" to mapOf(date to listOf(toFirestoreMap(event))))
                 db.set(initialPayload, SetOptions.merge()).await()
 
                 // 🌟 FORCE UI REFRESH: Insert the new event into the local cache stream
@@ -212,12 +244,16 @@ class BabyCareRepositoryImpl @Inject constructor(
 
         if (cachedEvent != null) return cachedEvent
 
-        // 📡 2. Cloud Server Fallback via the new 'months' collection group layout
-        Log.w("FIRESTORE_METRICS", "Activity not found in cache. Querying network server...")
+        // 📡 2. Targeted Cloud Server Fallback
+        Log.w("FIRESTORE_METRICS", "Activity not found in cache. Querying user months...")
         return try {
-            val snapshot = firestore.collectionGroup("months").get().await()
+            val snapshot = firestore.collection("babyLogs")
+                .document(userId)
+                .collection("months")
+                .get()
+                .await()
 
-            // Loop through all documents, extract and parse fields manually to isolate the ID matches
+            // Loop through user's monthly documents to find the matching event ID
             snapshot.documents.flatMap { doc ->
                 val daysMap = doc.get("days") as? Map<String, List<Map<String, Any?>>> ?: emptyMap()
                 daysMap.values.flatten().map { parseUnifiedEvent(it) }
@@ -255,19 +291,7 @@ class BabyCareRepositoryImpl @Inject constructor(
 
             // 🌟 CONVERT TO MAPS: Prevents Firestore serialization crash and updates the comment key
             val firestoreCompatibleList = updatedEventsList.map { event ->
-                mapOf(
-                    "id" to event.id,
-                    "type" to event.type,
-                    "time" to event.time,
-                    "dateTimeString" to event.dateTimeString,
-                    "comment" to event.comment, // 📝 Added comment tracking
-                    "nappyType" to event.nappyType,
-                    "mainFeedingSide" to event.mainFeedingSide,
-                    "leftDuration" to event.leftDuration,
-                    "rightDuration" to event.rightDuration,
-                    "totalDuration" to event.totalDuration,
-                    "bottleAmountMl" to event.bottleAmountMl
-                )
+                toFirestoreMap(event)
             }
 
             transaction.update(docRef, "days.$date", firestoreCompatibleList)
@@ -308,6 +332,20 @@ class BabyCareRepositoryImpl @Inject constructor(
             val updatedEvents = targetDay.events.map { existingEvent ->
                 if (existingEvent.id == eventId) updatedEvent else existingEvent
             }
+            currentList[existingDayIndex] = targetDay.copy(events = updatedEvents)
+
+            // Push the update to emit to all active screen viewers instantly
+            _cachedDays.value = currentList
+        }
+    }
+
+    private fun updateLocalCacheWithDeletedEvent(date: String, eventId: String) {
+        val currentList = _cachedDays.value.toMutableList()
+        val existingDayIndex = currentList.indexOfFirst { it.date == date }
+
+        if (existingDayIndex != -1) {
+            val targetDay = currentList[existingDayIndex]
+            val updatedEvents = targetDay.events.filterNot { it.id == eventId }
             currentList[existingDayIndex] = targetDay.copy(events = updatedEvents)
 
             // Push the update to emit to all active screen viewers instantly

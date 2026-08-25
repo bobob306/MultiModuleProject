@@ -10,6 +10,7 @@ import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
 import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
+import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -20,6 +21,9 @@ data object BabyCareHomeRoute
 
 @Serializable
 data object BabyGraphRoute
+
+@Serializable
+data class TemperatureRoute(val activityId: String? = null)
 
 @Serializable
 data class NappyChangeRoute(val activityId: String? = null)
@@ -39,6 +43,9 @@ fun NavController.navigateToNappyChange(activityId: String? = null, navOptions: 
 fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavOptions? = null) =
     navigate(route = FeedingRoute(activityId), navOptions = navOptions)
 
+fun NavController.navigateToTemperature(activityId: String? = null, navOptions: NavOptions? = null) =
+    navigate(route = TemperatureRoute(activityId), navOptions = navOptions)
+
 fun NavGraphBuilder.babyCareSection(
     navController: NavController,
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -49,8 +56,10 @@ fun NavGraphBuilder.babyCareSection(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateToNappyChange = { navController.navigateToNappyChange() },
                 onNavigateToFeeding = { navController.navigateToFeeding() },
+                onNavigateToTemperature = { navController.navigateToTemperature() },
                 onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
+                onNavigateToEditTemperature = { id -> navController.navigateToTemperature(id) },
                 onNavigateToGraph = {navController.navigateToGraph()}
             )
         }
@@ -80,6 +89,16 @@ fun NavGraphBuilder.babyCareSection(
             )
         ) {
             BabyGraphRoute(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable<TemperatureRoute>(
+            deepLinks = listOf(
+                navDeepLink<TemperatureRoute>(basePath = "babycare://temperature")
+            )
+        ) {
+            TemperatureScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() }
             )
