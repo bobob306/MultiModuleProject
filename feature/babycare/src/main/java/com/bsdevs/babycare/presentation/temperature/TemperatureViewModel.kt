@@ -44,7 +44,7 @@ class TemperatureViewModel @Inject constructor(
         }
 
         route.activityId?.let { id ->
-            loadTemperature(id)
+            onEditTemperature(id)
         }
     }
 
@@ -72,7 +72,7 @@ class TemperatureViewModel @Inject constructor(
         ) }
     }
 
-    private fun loadTemperature(id: String) {
+    fun onEditTemperature(id: String) {
         val userId = accountService.currentUserId
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
