@@ -25,5 +25,8 @@ data class UnifiedEventDto(
     val leftDuration: Long = 0,
     val rightDuration: Long = 0,
     val totalDuration: Long = 0,
-    val bottleAmountMl: Int? = null
+    val bottleAmountMl: Int? = null,
+
+    // Temperature-specific fields (nullable)
+    val temperature: Double? = null
 )

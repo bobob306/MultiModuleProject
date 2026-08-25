@@ -52,7 +52,7 @@ fun HorizontalWheelPicker(
     startNumber: Int,
     endNumber: Int,
     initialSelectedItem: Int,
-    lineWidth: Dp = 2.dp,
+    lineWidth: Dp = 3.dp,
     selectedLineHeight: Dp = 64.dp,
     multipleOfOneLineHeight: Dp = 35.dp,
     multipleOfFiveLineHeight: Dp = 40.dp,
@@ -63,9 +63,9 @@ fun HorizontalWheelPicker(
     lineSpacing: Dp = 8.dp,
     lineRoundedCorners: Dp = 2.dp,
     selectedLineColor: Color = MaterialTheme.colorScheme.primary,
-    unselectedLineColor: Color = MaterialTheme.colorScheme.outlineVariant,
+    unselectedLineColor: Color = MaterialTheme.colorScheme.outline,
     fadeOutLinesCount: Int = 4,
-    maxFadeTransparency: Float = 0.7f,
+    maxFadeTransparency: Float = 0.9f,
     onItemSelected: (Int) -> Unit,
 ) {
     val isDecimal = isDecimal
@@ -256,7 +256,7 @@ fun HorizontalWheelPicker(
     startNumber: Int,
     endNumber: Int,
     initialSelectedItem: Int,
-    lineThickness: Dp = 2.dp,
+    lineThickness: Dp = 3.dp,
     focusedIndicatorHeight: Dp = 64.dp,
     ofFiveLineHeight: Dp = 40.dp,
     normalLineHeight: Dp = 30.dp,
@@ -266,9 +266,9 @@ fun HorizontalWheelPicker(
     interItemSpace: Dp = 8.dp,
     lineRoundedCorners: Dp = 2.dp,
     focusedLineColour: Color = MaterialTheme.colorScheme.primary,
-    unfocusedLineColour: Color = MaterialTheme.colorScheme.outlineVariant,
+    unfocusedLineColour: Color = MaterialTheme.colorScheme.outline,
     fadeOutCount: Int = 4,
-    maxFadeAlpha: Float = 0.7f,
+    maxFadeAlpha: Float = 0.9f,
     onItemSelected: (Int) -> Unit
 ) {
     val screenWidthDp = LocalContext.current.resources.displayMetrics.run {

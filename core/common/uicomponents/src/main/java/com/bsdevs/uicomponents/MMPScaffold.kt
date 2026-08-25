@@ -38,6 +38,7 @@ fun MMPScaffold(
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(),
+    floatingActionButton: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     val configuration = LocalConfiguration.current
@@ -84,6 +85,7 @@ fun MMPScaffold(
                 ),
             )
         },
+        floatingActionButton = floatingActionButton,
         content = content
     )
 }
