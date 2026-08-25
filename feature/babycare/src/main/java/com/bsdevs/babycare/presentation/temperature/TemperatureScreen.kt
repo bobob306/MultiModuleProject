@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.AlertDialog
@@ -31,6 +32,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -42,6 +45,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,7 +68,10 @@ import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.MMPTimePickerDialog
 import com.bsdevs.uicomponents.WheelInput
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 
 @Composable
 fun TemperatureScreenRoute(
@@ -95,6 +102,7 @@ fun TemperatureScreenRoute(
         onNavigateBack = onNavigateBack,
         onTemperatureValueSelected = viewModel::onTemperatureValueSelected,
         onCommentChanged = viewModel::onCommentChanged,
+        onDateSelected = viewModel::onDateSelected,
         onTimeSelected = viewModel::onTimeSelected,
         onSave = viewModel::submitTemperature,
         onDelete = viewModel::deleteTemperature,
@@ -110,6 +118,7 @@ fun TemperatureScreen(
     onNavigateBack: () -> Unit,
     onTemperatureValueSelected: (Int) -> Unit,
     onCommentChanged: (String) -> Unit,
+    onDateSelected: (String) -> Unit,
     onTimeSelected: (Int, Int) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -121,6 +130,7 @@ fun TemperatureScreen(
     val pagerState = rememberPagerState { uiState.dates.size }
     var showSheet by rememberSaveable { mutableStateOf(uiState.id != null) }
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -180,7 +190,7 @@ fun TemperatureScreen(
                                     tint = if (pagerState.currentPage > 0) 
                                         MaterialTheme.colorScheme.primary 
                                     else 
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        MaterialTheme.colorScheme.outline
                                 )
                             }
 
@@ -204,7 +214,7 @@ fun TemperatureScreen(
                                     tint = if (pagerState.currentPage < uiState.dates.size - 1) 
                                         MaterialTheme.colorScheme.primary 
                                     else 
-                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                        MaterialTheme.colorScheme.outline
                                 )
                             }
                         }
@@ -259,6 +269,7 @@ fun TemperatureScreen(
                     uiState = uiState,
                     onTemperatureValueSelected = onTemperatureValueSelected,
                     onCommentChanged = onCommentChanged,
+                    onDateSelected = { showDatePicker = true },
                     onTimeSelected = { showTimePicker = true },
                     onSave = {
                         onSave()
@@ -269,6 +280,39 @@ fun TemperatureScreen(
                     onDelete = { showDeleteConfirmation = true }
                 )
             }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = LocalDate.parse(uiState.date)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        val selectedDate = Instant.ofEpochMilli(it)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                        onDateSelected(selectedDate.toString())
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 
@@ -361,6 +405,7 @@ fun TemperatureForm(
     uiState: TemperatureUiState,
     onTemperatureValueSelected: (Int) -> Unit,
     onCommentChanged: (String) -> Unit,
+    onDateSelected: () -> Unit,
     onTimeSelected: () -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit
@@ -379,13 +424,13 @@ fun TemperatureForm(
         
         HorizontalDivider()
 
-        OutlinedTextField(
+        MMPClickableTextField(
             value = uiState.date,
-            onValueChange = {},
-            label = { Text("Date") },
-            readOnly = true,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !uiState.isLoading
+            label = "Date",
+            onClick = onDateSelected,
+            enabled = !uiState.isLoading,
+            trailingIcon = Icons.Default.DateRange,
+            contentDescription = "Select Date"
         )
 
         MMPClickableTextField(

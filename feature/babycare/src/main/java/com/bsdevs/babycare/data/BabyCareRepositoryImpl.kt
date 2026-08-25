@@ -112,6 +112,7 @@ class BabyCareRepositoryImpl @Inject constructor(
                 is Double -> t
                 is Long -> t.toDouble()
                 is Number -> t.toDouble()
+                is String -> t.toDoubleOrNull()
                 else -> null
             }
         )

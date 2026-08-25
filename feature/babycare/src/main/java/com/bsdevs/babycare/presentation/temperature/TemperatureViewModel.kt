@@ -112,6 +112,10 @@ class TemperatureViewModel @Inject constructor(
         _uiState.update { it.copy(comment = newComment) }
     }
 
+    fun onDateSelected(newDate: String) {
+        _uiState.update { it.copy(date = newDate) }
+    }
+
     fun onTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
         _uiState.update { it.copy(time = formattedTime, error = null) }

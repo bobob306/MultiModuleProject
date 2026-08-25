@@ -161,10 +161,14 @@ class BabyCareHomeViewModel @Inject constructor(
             it.type == "FEEDING" 
         }?.let { "Last feed: ${it.time}" }
 
-        val absoluteLastTemperature = allEventsFlattened.firstOrNull { 
-            it.type == "TEMPERATURE" 
-        }?.let { "Last temp: ${it.temperature}°C" }
+        val lastTempEvent = allEventsFlattened.firstOrNull { 
+            it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
+        }
 
+        val absoluteLastTemperature = lastTempEvent?.let { 
+            "Last temp: ${it.temperature}°C" 
+        }
+        
         dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
