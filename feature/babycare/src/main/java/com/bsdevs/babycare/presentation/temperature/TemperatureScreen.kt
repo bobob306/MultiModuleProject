@@ -98,7 +98,8 @@ fun TemperatureScreenRoute(
         onTimeSelected = viewModel::onTimeSelected,
         onSave = viewModel::submitTemperature,
         onDelete = viewModel::deleteTemperature,
-        onResetForm = viewModel::resetForm
+        onResetForm = viewModel::resetForm,
+        onEditItem = viewModel::onEditTemperature
     )
 }
 
@@ -112,7 +113,8 @@ fun TemperatureScreen(
     onTimeSelected: (Int, Int) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
-    onResetForm: () -> Unit
+    onResetForm: () -> Unit,
+    onEditItem: (String) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -213,7 +215,8 @@ fun TemperatureScreen(
                         ) {
                             items(readings) { item ->
                                 TemperatureHistoryItem(item = item, onClick = {
-                                    // Trigger edit if needed
+                                    onEditItem(item.id)
+                                    showSheet = true
                                 })
                             }
                         }

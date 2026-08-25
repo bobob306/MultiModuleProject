@@ -238,7 +238,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     date = parentDate,
                     time = extractedTime,
                     dateTime = event.dateTimeString,
-                    temperature = event.temperature,
+                    temperature = event.temperature ?: 37.0,
                     comment = event.comment
                 )
             )

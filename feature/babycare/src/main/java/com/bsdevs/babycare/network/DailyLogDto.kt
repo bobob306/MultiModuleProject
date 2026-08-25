@@ -12,7 +12,7 @@ data class DailyLogDto(
 @IgnoreExtraProperties
 data class UnifiedEventDto(
     val id: String = "",
-    val type: String = "", // "NAPPY" or "FEEDING"
+    val type: String = "", // "NAPPY", "FEEDING", or "TEMPERATURE"
     val time: String = "",
     val dateTimeString: String = "",
     val comment: String? = null,
