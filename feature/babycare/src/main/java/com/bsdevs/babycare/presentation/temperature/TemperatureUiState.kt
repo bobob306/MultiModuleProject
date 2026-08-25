@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter
 data class TemperatureUiState(
     val id: String? = null,
     val date: String = LocalDate.now().toString(),
+    val originalDate: String? = null,
     val time: String = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
     val temperature: String = "37.0",
     val temperatureValue: Int = 370,
