@@ -6,16 +6,19 @@ import com.bsdevs.babycare.domain.RepositoryFetchResult
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.common.DispatcherProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BabyCareRepositoryImpl @Inject constructor(
-    private val apiService: BabyCareFirestoreService
+    private val apiService: BabyCareFirestoreService,
+    private val dispatchers: DispatcherProvider,
 ) : BabyCareRepository {
 
     private val _cachedDays = MutableStateFlow<List<DailyLogDto>>(emptyList())
@@ -23,14 +26,14 @@ class BabyCareRepositoryImpl @Inject constructor(
 
     private var currentAnchorMonth: YearMonth? = null
 
-    override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult {
-        return try {
+    override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
+        try {
             val latestMonthId = apiService.getLatestMonthId(userId)
 
             if (latestMonthId == null) {
                 _cachedDays.value = emptyList()
                 currentAnchorMonth = null
-                return RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
+                return@withContext RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
             }
 
             val monthlyDays = fetchMonthFromService(userId, latestMonthId)
@@ -88,8 +91,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         return loadInitialData(userId, pageSize)
     }
 
-    override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult {
-        val anchor = currentAnchorMonth ?: return RepositoryFetchResult(null, false)
+    override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
+        val anchor = currentAnchorMonth ?: return@withContext RepositoryFetchResult(null, false)
         val monthId = formatYearMonth(anchor)
 
         val newMonthlyDays = fetchMonthFromService(userId, monthId)
@@ -98,33 +101,33 @@ class BabyCareRepositoryImpl @Inject constructor(
         val nextMonthId = apiService.getMonthIdBefore(userId, monthId)
         currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
 
-        return RepositoryFetchResult(currentAnchorMonth, currentAnchorMonth != null)
+        RepositoryFetchResult(currentAnchorMonth, currentAnchorMonth != null)
     }
 
-    override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) {
+    override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) = withContext(dispatchers.io) {
         val monthId = extractMonthString(date)
         apiService.saveEvent(userId, monthId, date, toMap(event))
         updateLocalCacheWithNewEvent(date, userId, event)
     }
 
-    override suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto) {
+    override suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto) = withContext(dispatchers.io) {
         val monthId = extractMonthString(date)
         apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
         updateLocalCacheWithModifiedEvent(date, eventId, updatedEvent)
     }
 
-    override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) {
+    override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) = withContext(dispatchers.io) {
         val monthId = extractMonthString(date)
         apiService.deleteEvent(userId, monthId, date, eventId)
         updateLocalCacheWithDeletedEvent(date, eventId)
     }
 
-    override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? {
+    override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? = withContext(dispatchers.io) {
         val cached = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == activityId }
-        if (cached != null) return cached
+        if (cached != null) return@withContext cached
         
         // 📡 Network Fallback: Scan all months for the event ID
-        return apiService.getAllMonthIds(userId).firstNotNullOfOrNull { monthId ->
+        apiService.getAllMonthIds(userId).firstNotNullOfOrNull { monthId ->
             fetchMonthFromService(userId, monthId).flatMap { it.events }.firstOrNull { it.id == activityId }
         }
     }

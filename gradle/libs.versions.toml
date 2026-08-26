@@ -8,6 +8,7 @@ gson = "2.14.0"
 hiltAndroidCompiler = "2.60.1"
 hiltCompiler = "2.60.1"
 hiltNavigationCompose = "1.4.0"
+javaxInject = "1"
 kotlin = "2.4.10"
 coreKtx = "1.19.0"
 junit = "4.13.2"
@@ -38,6 +39,7 @@ baselineprofile = "1.5.0-rc02"
 
 [libraries]
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
+javax-inject = { module = "javax.inject:javax.inject", version.ref = "javaxInject" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version = "2.1.0-1.0.29" }
 androidx-appfunctions-common = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }

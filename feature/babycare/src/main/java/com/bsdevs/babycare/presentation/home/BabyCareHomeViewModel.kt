@@ -11,6 +11,7 @@ import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.TemperatureDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -32,6 +34,7 @@ class BabyCareHomeViewModel @Inject constructor(
     private val accountService: AccountService,
     private val screenRepository: ScreenRepository,
     private val mapper: ScreenDataMapper,
+    private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     private val pageSize = 20
@@ -66,7 +69,10 @@ class BabyCareHomeViewModel @Inject constructor(
             launch {
                 screenRepository.getScreenFlow("baby_home").collect { result ->
                     if (result is Result.Success) {
-                        _dynamicUi.value = mapper.mapToData(result.data)
+                        val mappedData = withContext(dispatchers.default) {
+                            mapper.mapToData(result.data)
+                        }
+                        _dynamicUi.value = mappedData
                         // Trigger update to include dynamic UI in state if already initialized
                         if (_viewData.value is Result.Success) {
                             updateDisplayFeed(repository.cachedDays.value)
@@ -87,7 +93,7 @@ class BabyCareHomeViewModel @Inject constructor(
             }
         }
     }
-    private fun updateDisplayFeed(dailyLogs: List<DailyLogDto>, canLoadMore: Boolean = true) {
+    private suspend fun updateDisplayFeed(dailyLogs: List<DailyLogDto>, canLoadMore: Boolean = true) {
         val processedFeed = processFeed(
             dailyLogs = dailyLogs,
             filter = _currentFilter.value,
@@ -160,11 +166,11 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    private fun processFeed(
+    private suspend fun processFeed(
         dailyLogs: List<DailyLogDto>,
         filter: ActivityFilter,
         collapsed: Set<String>
-    ): BabyCareHomeViewData {
+    ): BabyCareHomeViewData = withContext(dispatchers.default) {
         val finalizedFeed = mutableListOf<HomeFeedItem>()
 
         // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
@@ -218,7 +224,7 @@ class BabyCareHomeViewModel @Inject constructor(
             }
         }
 
-        return BabyCareHomeViewData(
+        BabyCareHomeViewData(
             lastNappyChange = absoluteLastNappy,
             lastFeeding = absoluteLastFeeding,
             lastTemperature = absoluteLastTemperature,
@@ -320,7 +326,9 @@ class BabyCareHomeViewModel @Inject constructor(
             if (current.contains(title)) current - title else current + title
         }
         // 🌟 FORCE UI REFRESH: Immediately push the recalculated state to the screen
-        updateDisplayFeed(repository.cachedDays.value)
+        viewModelScope.launch {
+            updateDisplayFeed(repository.cachedDays.value)
+        }
     }
 
     fun toggleActivityFilter(filter: ActivityFilter) {
@@ -328,7 +336,9 @@ class BabyCareHomeViewModel @Inject constructor(
             if (current == filter) ActivityFilter.NONE else filter
         }
         // 🌟 FORCE UI REFRESH: Immediately push the filtered state to the screen
-        updateDisplayFeed(repository.cachedDays.value)
+        viewModelScope.launch {
+            updateDisplayFeed(repository.cachedDays.value)
+        }
     }
 
     private fun setLoadingMoreState(value: Boolean) {

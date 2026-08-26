@@ -1,5 +1,6 @@
 package com.bsdevs.network.repository
 
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.ScreenDtoMapper
 import com.bsdevs.network.dto.ScreenDto
@@ -10,6 +11,8 @@ import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 interface ScreenRepository {
     suspend fun getScreen(screen: String): Task<DocumentSnapshot>
@@ -20,27 +23,26 @@ interface ScreenRepository {
 class ScreenRepositoryImpl @Inject constructor(
     private val scr: CollectionReference,
     private val mapper: ScreenDtoMapper,
+    private val dispatchers: DispatcherProvider,
 ) : ScreenRepository {
-    private val cacheFlowMap = mutableMapOf<String, List<ScreenDto>>()
+    private val cacheFlowMap = ConcurrentHashMap<String, List<ScreenDto>>()
 
     override suspend fun getScreen(screen: String): Task<DocumentSnapshot> {
         return scr.document(screen).get()
     }
 
-    override suspend fun getScreenFlow(screen: String): Flow<Result<List<ScreenDto>>> {
+    override suspend fun getScreenFlow(screen: String): Flow<Result<List<ScreenDto>>> = withContext(dispatchers.io) {
         val cached = cacheFlowMap[screen]
         if (cached != null) {
-            return flowOf(Result.Success(cached))
+            flowOf(Result.Success(cached))
         } else {
             try {
                 val document = scr.document(screen).get().await().data
-                println("document = $document")
                 val dto = mapper.mapToDto(document as HashMap)
                 cacheFlowMap[screen] = dto
-                return flowOf(Result.Success(dto))
+                flowOf(Result.Success(dto))
             } catch (e: Exception) {
-                println(e.message)
-                return flowOf(Result.Error(e))
+                flowOf(Result.Error(e))
             }
         }
     }

@@ -7,6 +7,7 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.FakeAccountService
 import com.bsdevs.coffeescreen.screens.inputscreen.FakeCoffeeApiService
 import com.bsdevs.coffeescreen.navigation.CoffeeDetailScreenRoute
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ class CoffeeDetailsViewModelTest {
     private lateinit var fakeService: FakeCoffeeApiService
     private lateinit var accountService: FakeAccountService
     private lateinit var viewModel: CoffeeDetailsViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
     private val coffeeId = "c1"
@@ -35,6 +37,12 @@ class CoffeeDetailsViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
         
         fakeService = FakeCoffeeApiService()
         accountService = FakeAccountService(userId)
@@ -53,7 +61,7 @@ class CoffeeDetailsViewModelTest {
         mockkStatic("androidx.navigation.SavedStateHandleKt")
         every { savedStateHandle.toRoute<CoffeeDetailScreenRoute>() } returns CoffeeDetailScreenRoute(coffeeId)
         
-        viewModel = CoffeeDetailsViewModel(savedStateHandle, accountService, fakeService)
+        viewModel = CoffeeDetailsViewModel(savedStateHandle, accountService, fakeService, dispatchers)
     }
 
     private suspend fun ensureReady() {

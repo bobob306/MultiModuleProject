@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -21,7 +22,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RegisterScreenViewModel @Inject constructor(
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<RegisterScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<RegisterScreenViewData>> = _viewData.onStart {

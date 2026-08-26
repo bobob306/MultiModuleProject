@@ -9,6 +9,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.navigation.CoffeeDetailScreenRoute
 import com.bsdevs.coffeescreen.network.CoffeeApiService
 import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Loading
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -35,7 +37,8 @@ data class CoffeeDetailsViewData(
 class CoffeeDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val accountService: AccountService,
-    private val apiService: CoffeeApiService
+    private val apiService: CoffeeApiService,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     
     private val detailsRoute: CoffeeDetailScreenRoute = savedStateHandle.toRoute()
@@ -62,13 +65,15 @@ class CoffeeDetailsViewModel @Inject constructor(
             val label = coffee.label ?: throw Exception("Coffee label missing")
             val shots = apiService.getShotsForCoffee(label)
             
-            val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-            val sortedShots = shots.sortedByDescending { shotDto ->
-                shotDto.date?.let { dateString ->
-                    try {
-                        LocalDate.parse(dateString, formatter)
-                    } catch (e: Exception) {
-                        null
+            val sortedShots = withContext(dispatchers.default) {
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                shots.sortedByDescending { shotDto ->
+                    shotDto.date?.let { dateString ->
+                        try {
+                            LocalDate.parse(dateString, formatter)
+                        } catch (e: Exception) {
+                            null
+                        }
                     }
                 }
             }
@@ -132,9 +137,12 @@ class CoffeeDetailsViewModel @Inject constructor(
                         apiService.uploadShot(label, shotDto)
                         
                         val updatedShots = apiService.getShotsForCoffee(label)
-                        val sortedShots = updatedShots.sortedByDescending { s ->
-                            s.date?.let { 
-                                try { LocalDate.parse(it, formatter) } catch(e: Exception) { null }
+                        val sortedShots = withContext(dispatchers.default) {
+                            val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                            updatedShots.sortedByDescending { s ->
+                                s.date?.let { 
+                                    try { LocalDate.parse(it, formatter) } catch(e: Exception) { null }
+                                }
                             }
                         }
 

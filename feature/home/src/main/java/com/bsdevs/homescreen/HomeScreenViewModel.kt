@@ -2,6 +2,7 @@ package com.bsdevs.homescreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
@@ -14,12 +15,14 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     private val repository: ScreenRepository,
-    private val mapper: ScreenDataMapper
+    private val mapper: ScreenDataMapper,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
     private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)
@@ -36,7 +39,10 @@ class HomeScreenViewModel @Inject constructor(
             repository.getScreenFlow("home").collect { result ->
                 when (result) {
                     is Result.Success -> {
-                        _viewData.update { Result.Success(mapper.mapToData(result.data)) }
+                        val mappedData = withContext(dispatchers.default) {
+                            mapper.mapToData(result.data)
+                        }
+                        _viewData.update { Result.Success(mappedData) }
                     }
 
                     is Result.Error -> {

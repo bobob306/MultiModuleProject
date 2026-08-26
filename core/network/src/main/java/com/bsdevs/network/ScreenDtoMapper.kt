@@ -11,12 +11,9 @@ interface ScreenDtoMapper : FirebaseMapper<HashMap<*, *>, List<ScreenDto>>
 
 class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
     override fun mapToDto(map: HashMap<*, *>): List<ScreenDto> {
-        println("map = $map")
         val listOfLists = map.map {
             val listedItems = it.value as List<HashMap<*, *>>
-            println(("listedItems size = " + listedItems.size + map.toString()))
             listedItems.map { item ->
-                println("type = " + item["type"])
                 when (item["type"]) {
                     "CARD" -> {
                         val image = item["IMAGE"] as HashMap<*, *>

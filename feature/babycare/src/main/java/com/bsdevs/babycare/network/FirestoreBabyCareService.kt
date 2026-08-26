@@ -1,24 +1,26 @@
 package com.bsdevs.babycare.network
 
 import android.util.Log
+import com.bsdevs.common.DispatcherProvider
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class FirestoreBabyCareService @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val dispatchers: DispatcherProvider,
 ) : BabyCareFirestoreService {
 
     private fun getMonthsCollection(userId: String) = 
         firestore.collection("babyLogs").document(userId).collection("months")
 
-    override suspend fun getLatestMonthId(userId: String): String? {
-        return try {
+    override suspend fun getLatestMonthId(userId: String): String? = withContext(dispatchers.io) {
+        try {
             // Fetching all IDs in the collection to avoid descending index requirement
             // This is efficient as month IDs are very small strings
             getMonthsCollection(userId)
@@ -34,8 +36,8 @@ class FirestoreBabyCareService @Inject constructor(
         }
     }
 
-    override suspend fun getMonthIdBefore(userId: String, monthId: String): String? {
-        return try {
+    override suspend fun getMonthIdBefore(userId: String, monthId: String): String? = withContext(dispatchers.io) {
+        try {
             getMonthsCollection(userId)
                 .get()
                 .await()
@@ -50,8 +52,8 @@ class FirestoreBabyCareService @Inject constructor(
         }
     }
 
-    override suspend fun getAllMonthIds(userId: String): List<String> {
-        return try {
+    override suspend fun getAllMonthIds(userId: String): List<String> = withContext(dispatchers.io) {
+        try {
             getMonthsCollection(userId)
                 .get()
                 .await()
@@ -63,12 +65,12 @@ class FirestoreBabyCareService @Inject constructor(
         }
     }
 
-    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? {
+    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? = withContext(dispatchers.io) {
         val snapshot = getMonthsCollection(userId).document(monthId).get().await()
-        return if (snapshot.exists()) snapshot.data else null
+        if (snapshot.exists()) snapshot.data else null
     }
 
-    override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) {
+    override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) = withContext(dispatchers.io) {
         val docRef = getMonthsCollection(userId).document(monthId)
         try {
             docRef.update("days.$date", FieldValue.arrayUnion(event)).await()
@@ -77,9 +79,10 @@ class FirestoreBabyCareService @Inject constructor(
                 docRef.set(mapOf("days" to mapOf(date to listOf(event))), SetOptions.merge()).await()
             } else throw e
         }
+        Unit
     }
 
-    override suspend fun updateEvent(userId: String, monthId: String, date: String, eventId: String, updatedEvent: Map<String, Any?>) {
+    override suspend fun updateEvent(userId: String, monthId: String, date: String, eventId: String, updatedEvent: Map<String, Any?>) = withContext(dispatchers.io) {
         val docRef = getMonthsCollection(userId).document(monthId)
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
@@ -88,9 +91,10 @@ class FirestoreBabyCareService @Inject constructor(
             val updatedList = events.map { if (it["id"] == eventId) updatedEvent else it }
             transaction.update(docRef, "days.$date", updatedList)
         }.await()
+        Unit
     }
 
-    override suspend fun deleteEvent(userId: String, monthId: String, date: String, eventId: String) {
+    override suspend fun deleteEvent(userId: String, monthId: String, date: String, eventId: String) = withContext(dispatchers.io) {
         val docRef = getMonthsCollection(userId).document(monthId)
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
@@ -99,5 +103,6 @@ class FirestoreBabyCareService @Inject constructor(
             val updatedList = events.filterNot { it["id"] == eventId }
             transaction.update(docRef, "days.$date", updatedList)
         }.await()
+        Unit
     }
 }

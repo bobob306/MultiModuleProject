@@ -7,6 +7,8 @@ import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
+import com.bsdevs.common.DispatcherProvider
+import java.util.UUID
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
@@ -29,6 +31,7 @@ class NappyChangeViewModelTest {
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
     private lateinit var viewModel: NappyChangeViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
 
@@ -37,8 +40,14 @@ class NappyChangeViewModelTest {
         Dispatchers.setMain(testDispatcher)
         mockkStatic("androidx.navigation.SavedStateHandleKt")
         
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService)
+        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
         accountService = FakeAccountService(userId)
     }
 
@@ -54,13 +63,13 @@ class NappyChangeViewModelTest {
         
         repository.loadInitialData(userId, 20)
         
-        viewModel = NappyChangeViewModel(accountService, repository, savedStateHandle)
+        viewModel = NappyChangeViewModel(accountService, repository, dispatchers, savedStateHandle)
     }
 
     @Test
     fun `init with activityId loads nappy change data`() = runTest {
         // Given
-        val eventId = java.util.UUID.randomUUID().toString()
+        val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
         val rawData = mapOf("days" to mapOf(date to listOf(
             mapOf(
@@ -119,7 +128,7 @@ class NappyChangeViewModelTest {
     @Test
     fun `deleteNappyChange removes record successfully`() = runTest {
         // Given
-        val eventId = java.util.UUID.randomUUID().toString()
+        val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
         fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(
             mapOf("id" to eventId, "type" to "NAPPY", "time" to "11:00", "dateTimeString" to "$date 11:00")

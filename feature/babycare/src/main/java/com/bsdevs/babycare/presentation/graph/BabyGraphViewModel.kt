@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -16,36 +18,39 @@ import javax.inject.Inject
 @HiltViewModel
 class BabyGraphViewModel @Inject constructor(
     private val repository: BabyCareRepository,
+    private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     val uiState: StateFlow<FeedingGraphUiState> = repository.cachedDays
         .map { dailyLogs ->
-            val allEvents = dailyLogs.flatMap { it.events }
-            val feedingEvents = allEvents.filter { it.type == "FEEDING" }
+            withContext(dispatchers.default) {
+                val allEvents = dailyLogs.flatMap { it.events }
+                val feedingEvents = allEvents.filter { it.type == "FEEDING" }
 
-            val countsByHour = feedingEvents.groupBy { event ->
-                extractHourFromTime(event.time)
-            }.mapValues { it.value.size }
+                val countsByHour = feedingEvents.groupBy { event ->
+                    extractHourFromTime(event.time)
+                }.mapValues { it.value.size }
 
-            val hourlyGraphData = (0..23).map { hour ->
-                HourlyFeedingCount(
-                    hour = hour,
-                    displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
-                    count = countsByHour[hour] ?: 0
+                val hourlyGraphData = (0..23).map { hour ->
+                    HourlyFeedingCount(
+                        hour = hour,
+                        displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
+                        count = countsByHour[hour] ?: 0
+                    )
+                }
+
+                val analysis = calculateFeedingGaps(feedingEvents)
+
+                // 🌟 1. Compute the daily average gaps for the new chart
+                val dailyGapsData = calculateDailyAverageGaps(feedingEvents)
+
+                FeedingGraphUiState(
+                    hourlyCounts = hourlyGraphData,
+                    totalFeedsInCache = feedingEvents.size,
+                    analysisResult = analysis,
+                    dailyAverageGaps = dailyGapsData // 🌟 2. Assign to view state
                 )
             }
-
-            val analysis = calculateFeedingGaps(feedingEvents)
-
-            // 🌟 1. Compute the daily average gaps for the new chart
-            val dailyGapsData = calculateDailyAverageGaps(feedingEvents)
-
-            FeedingGraphUiState(
-                hourlyCounts = hourlyGraphData,
-                totalFeedsInCache = feedingEvents.size,
-                analysisResult = analysis,
-                dailyAverageGaps = dailyGapsData // 🌟 2. Assign to view state
-            )
         }
         .stateIn(
             scope = viewModelScope,
@@ -158,8 +163,8 @@ class BabyGraphViewModel @Inject constructor(
 
             // Filter out bad calculations (negative) or giant gaps across unlogged days (over 12 hours)
             if (gapMinutes in 15..720) {
-                // Determine the current feed's length. Fall back to 15 mins for standard bottle inputs
-                val duration = if (currentFeed.totalDuration > 0) currentFeed.totalDuration else 15L
+                // Determine the current feed's length. Fall back to 15 mins (900s) for standard bottle inputs
+                val duration = if (currentFeed.totalDuration > 0) currentFeed.totalDuration else 900L
                 pairs.add(FeedGapPair(duration, gapMinutes))
             }
         }
@@ -231,11 +236,15 @@ class BabyGraphViewModel @Inject constructor(
             val hour = timeParts[0].toLong()
             val minute = timeParts[1].toLong()
 
-            // Combine operations using uniform Long math to eliminate any type variance errors
+            // Cumulative days at start of each month (non-leap year)
+            val monthOffsets = longArrayOf(0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
+            val safeMonth = month.toInt().coerceIn(1..12)
+
+            // Combine operations using uniform Long math
             val minutesInDay = (hour * 60L) + minute
             val minutesInYear = year * 365L * 24L * 60L
-            val minutesInMonth = month * 30L * 24L * 60L
-            val minutesInDays = day * 24L * 60L
+            val minutesInMonth = monthOffsets[safeMonth] * 24L * 60L
+            val minutesInDays = (day - 1) * 24L * 60L
 
             minutesInYear + minutesInMonth + minutesInDays + minutesInDay
         } catch (e: Exception) {

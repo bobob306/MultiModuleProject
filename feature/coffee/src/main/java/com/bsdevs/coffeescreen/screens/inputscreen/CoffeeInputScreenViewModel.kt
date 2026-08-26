@@ -16,6 +16,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeBeanTypes
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeRoasters
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesList
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
 import com.google.firebase.firestore.PropertyName
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -38,7 +40,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
     private val accountService: AccountService,
-    private val apiService: CoffeeApiService
+    private val apiService: CoffeeApiService,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<CoffeeScreenViewData>> = _viewData.onStart {
@@ -199,7 +202,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
     fun onEnterPress() {
         viewModelScope.launch {
             val currentViewData = _viewData.value as? Success<CoffeeScreenViewData> ?: return@launch
-            val coffeeDto = mapToCoffeeDto(currentViewData.data)
+            val coffeeDto = withContext(dispatchers.default) {
+                mapToCoffeeDto(currentViewData.data)
+            }
             apiService.uploadCoffee(accountService.currentUserId, coffeeDto)
             _navigationEvent.send(NavigationEvent.NavigateToHome)
         }

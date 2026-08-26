@@ -8,7 +8,9 @@ import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
+import com.bsdevs.common.DispatcherProvider
 import io.mockk.*
+import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filter
@@ -29,6 +31,7 @@ class FeedingViewModelTest {
     private lateinit var accountService: FakeAccountService
     private lateinit var timeProvider: com.bsdevs.babycare.presentation.common.TimeProvider
     private lateinit var viewModel: FeedingViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
 
@@ -39,8 +42,14 @@ class FeedingViewModelTest {
         mockkStatic(SystemClock::class)
         mockkStatic("androidx.navigation.SavedStateHandleKt")
         
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService)
+        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
         accountService = FakeAccountService(userId)
         timeProvider = mockk()
         every { timeProvider.elapsedRealtime() } returns 0L
@@ -62,13 +71,13 @@ class FeedingViewModelTest {
         // Populate cache to ensure repository updates work
         repository.loadInitialData(userId, 20)
         
-        viewModel = FeedingViewModel(accountService, repository, timeProvider, savedStateHandle)
+        viewModel = FeedingViewModel(accountService, repository, timeProvider, dispatchers, savedStateHandle)
     }
 
     @Test
     fun `init with activityId loads feeding data`() = runTest {
         // Given
-        val eventId = java.util.UUID.randomUUID().toString()
+        val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
         val rawData = mapOf("days" to mapOf(date to listOf(
             mapOf(
@@ -141,7 +150,7 @@ class FeedingViewModelTest {
     @Test
     fun `submitFeeding updates existing feeding successfully`() = runTest {
         // Given
-        val eventId = java.util.UUID.randomUUID().toString()
+        val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
         val rawData = mapOf("days" to mapOf(date to listOf(
             mapOf("id" to eventId, "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")
@@ -169,7 +178,7 @@ class FeedingViewModelTest {
     @Test
     fun `deleteFeeding removes event and triggers success`() = runTest {
         // Given
-        val eventId = java.util.UUID.randomUUID().toString()
+        val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
         fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(
             mapOf("id" to eventId, "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")

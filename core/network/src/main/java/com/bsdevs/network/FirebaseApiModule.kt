@@ -2,6 +2,7 @@ package com.bsdevs.network
 
 import com.bsdevs.network.repository.ScreenRepository
 import com.bsdevs.network.repository.ScreenRepositoryImpl
+import com.bsdevs.common.DispatcherProvider
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
@@ -32,7 +33,11 @@ object FirebaseApiModule {
 
     @Provides
     @Singleton
-    fun provideScreenRepository(scr: CollectionReference, mapper: ScreenDtoMapper): ScreenRepository {
-        return ScreenRepositoryImpl(scr, mapper)
+    fun provideScreenRepository(
+        scr: CollectionReference,
+        mapper: ScreenDtoMapper,
+        dispatchers: DispatcherProvider
+    ): ScreenRepository {
+        return ScreenRepositoryImpl(scr, mapper, dispatchers)
     }
 }
