@@ -99,6 +99,29 @@ sealed class NetworkScreenData(
         val imageUrl: String?,
         val checked: Boolean,
     ) : NetworkScreenData(index)
+
+    data class SmallTitleDataNetwork(
+        override val index: Int,
+        val content: String,
+    ) : NetworkScreenData(index)
+
+    data class ActivityFeedDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
+    data class TileRowDataNetwork(
+        override val index: Int,
+        val tiles: List<TileDataNetwork>,
+    ) : NetworkScreenData(index)
+
+    data class TileDataNetwork(
+        val index: Int,
+        val title: String,
+        val iconName: String,
+        val destination: String,
+        val subtitleType: String? = null,
+        val sharedElementKey: String? = null,
+    )
 }
 
 data class RadioButtonLabelData(

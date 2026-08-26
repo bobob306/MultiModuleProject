@@ -38,6 +38,23 @@ class ScreenDtoMapperTest {
     }
 
     @Test
+    fun `mapToDto converts SmallTitleHashMap correctly`() {
+        val titleMap = hashMapOf(
+            "type" to "SMALL_TITLE",
+            "index" to 0,
+            "content" to "Small Title"
+        )
+        val rootMap = hashMapOf("items" to listOf(titleMap))
+
+        val result = mapper.mapToDto(rootMap)
+
+        assertEquals(1, result.size)
+        val titleDto = result[0] as ScreenDto.SmallTitleDto
+        assertEquals(0, titleDto.index)
+        assertEquals("Small Title", titleDto.content)
+    }
+
+    @Test
     fun `mapToDto converts SpacerHashMap correctly`() {
         // [type, value]
         val sizeList = arrayListOf("HEIGHT", 24)
@@ -121,6 +138,48 @@ class ScreenDtoMapperTest {
         val imageDto = result[0] as ScreenDto.ImageDto
         assertEquals("url", imageDto.url)
         assertEquals(50, imageDto.height)
+    }
+
+    @Test
+    fun `mapToDto converts ActivityFeedHashMap correctly`() {
+        val feedMap = hashMapOf(
+            "type" to "ACTIVITY_FEED",
+            "index" to 5
+        )
+        val rootMap = hashMapOf("items" to listOf(feedMap))
+
+        val result = mapper.mapToDto(rootMap)
+
+        assertEquals(1, result.size)
+        val feedDto = result[0] as ScreenDto.ActivityFeedDto
+        assertEquals(5, feedDto.index)
+    }
+
+    @Test
+    fun `mapToDto converts TileRowHashMap correctly`() {
+        val tile1 = hashMapOf(
+            "index" to 0,
+            "title" to "T1",
+            "iconName" to "I1",
+            "destination" to "D1",
+            "subtitleType" to "S1",
+            "sharedElementKey" to "K1"
+        )
+        val tileRowMap = hashMapOf(
+            "type" to "TILE_ROW",
+            "index" to 6,
+            "tiles" to listOf(tile1)
+        )
+        val rootMap = hashMapOf("items" to listOf(tileRowMap))
+
+        val result = mapper.mapToDto(rootMap)
+
+        assertEquals(1, result.size)
+        val tileRowDto = result[0] as ScreenDto.TileRowDto
+        assertEquals(6, tileRowDto.index)
+        assertEquals(1, tileRowDto.tiles.size)
+        assertEquals("T1", tileRowDto.tiles[0].title)
+        assertEquals("K1", tileRowDto.tiles[0].sharedElementKey)
     }
 
     @Test

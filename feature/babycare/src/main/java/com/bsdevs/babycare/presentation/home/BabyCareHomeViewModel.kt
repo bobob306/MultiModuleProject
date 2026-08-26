@@ -12,6 +12,9 @@ import com.bsdevs.babycare.network.TemperatureDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.data.ScreenDataMapper
+import com.bsdevs.network.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +29,9 @@ import javax.inject.Inject
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val screenRepository: ScreenRepository,
+    private val mapper: ScreenDataMapper
 ) : ViewModel() {
 
     private val pageSize = 20
@@ -34,6 +39,7 @@ class BabyCareHomeViewModel @Inject constructor(
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
     private val _collapsedHeaders = MutableStateFlow<Set<String>>(emptySet())
+    private val _dynamicUi = MutableStateFlow<List<NetworkScreenData>>(emptyList())
 
     private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
@@ -56,6 +62,19 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private fun initialLoad() {
         viewModelScope.launch {
+            // Load dynamic UI config from Firebase
+            launch {
+                screenRepository.getScreenFlow("baby_home").collect { result ->
+                    if (result is Result.Success) {
+                        _dynamicUi.value = mapper.mapToData(result.data)
+                        // Trigger update to include dynamic UI in state if already initialized
+                        if (_viewData.value is Result.Success) {
+                            updateDisplayFeed(repository.cachedDays.value)
+                        }
+                    }
+                }
+            }
+
             try {
                 // Fetch the current month document from Firestore
                 val fetchResult = repository.loadInitialData(accountService.currentUserId, pageSize)
@@ -204,6 +223,7 @@ class BabyCareHomeViewModel @Inject constructor(
             lastFeeding = absoluteLastFeeding,
             lastTemperature = absoluteLastTemperature,
             activityFeed = finalizedFeed,
+            dynamicUi = _dynamicUi.value,
             currentFilter = filter,
             collapsedHeaders = collapsed
         )

@@ -71,6 +71,29 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                     location = item.location.toLocationTypeData,
                     sort = item.sort.toButtonTypeData,
                 )
+
+                is ScreenDto.SmallTitleDto -> NetworkScreenData.SmallTitleDataNetwork(
+                    index = item.index,
+                    content = item.content
+                )
+
+                is ScreenDto.ActivityFeedDto -> NetworkScreenData.ActivityFeedDataNetwork(
+                    index = item.index
+                )
+
+                is ScreenDto.TileRowDto -> NetworkScreenData.TileRowDataNetwork(
+                    index = item.index,
+                    tiles = item.tiles.map { tile ->
+                        NetworkScreenData.TileDataNetwork(
+                            index = tile.index,
+                            title = tile.title,
+                            iconName = tile.iconName,
+                            destination = tile.destination,
+                            subtitleType = tile.subtitleType,
+                            sharedElementKey = tile.sharedElementKey
+                        )
+                    }
+                )
             }
         }
         return listOfData

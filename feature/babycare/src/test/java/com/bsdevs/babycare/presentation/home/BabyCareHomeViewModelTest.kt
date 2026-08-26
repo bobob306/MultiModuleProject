@@ -7,11 +7,16 @@ import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.ScreenDataMapper
+import com.bsdevs.network.repository.ScreenRepository
+import io.mockk.coEvery
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -26,6 +31,8 @@ class BabyCareHomeViewModelTest {
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
+    private lateinit var screenRepository: ScreenRepository
+    private lateinit var mapper: ScreenDataMapper
     private lateinit var viewModel: BabyCareHomeViewModel
 
     private val userId = "testUser"
@@ -42,8 +49,14 @@ class BabyCareHomeViewModelTest {
         repository = BabyCareRepositoryImpl(fakeService)
         accountService = FakeAccountService(userId)
         
+        screenRepository = mockk(relaxed = true)
+        mapper = mockk(relaxed = true)
+        
+        coEvery { screenRepository.getScreenFlow("baby_home") } returns flowOf(Result.Success(emptyList()))
+        every { mapper.mapToData(any()) } returns emptyList()
+        
         // viewModel init triggers initialLoad which uses repository
-        viewModel = BabyCareHomeViewModel(repository, accountService)
+        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper)
     }
 
     @After
@@ -69,6 +82,30 @@ class BabyCareHomeViewModelTest {
             val data = (result as Result.Success).data
             assertEquals(1, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
             assertEquals("Last feed: 10:00", data.lastFeeding)
+        }
+    }
+
+    @Test
+    fun `viewModel loads dynamic UI configuration on init`() = runTest {
+        // Given
+        val mockData = mockk<com.bsdevs.data.NetworkScreenData>()
+        val dynamicUi = listOf(mockData)
+        every { mapper.mapToData(any()) } returns dynamicUi
+        coEvery { screenRepository.getScreenFlow("baby_home") } returns flowOf(Result.Success(listOf(mockk())))
+        
+        // When recreating VM to trigger init
+        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper)
+        
+        // Then
+        vm.viewData.test {
+            // It should eventually reach a Success state containing our dynamic UI
+            // We use a timeout-safe check by waiting for the Success state
+            var result = awaitItem()
+            while (result !is Result.Success) {
+                result = awaitItem()
+            }
+            
+            assertEquals(dynamicUi, (result as Result.Success).data.dynamicUi)
         }
     }
 
@@ -250,7 +287,7 @@ class BabyCareHomeViewModelTest {
         val errorRepo = BabyCareRepositoryImpl(crashingService)
         
         // We need to wait for the viewModelScope to finish the initialLoad call
-        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService)
+        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper)
 
         // Then
         errorViewModel.viewData.test {
