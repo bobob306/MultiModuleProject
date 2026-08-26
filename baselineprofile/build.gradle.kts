@@ -27,7 +27,7 @@ android {
                 register("pixel6Api31") {
                     device = "Pixel 6"
                     apiLevel = 31
-                    systemImageSource = "aosp"
+                    systemImageSource = "aosp-atd"
                 }
             }
         }
@@ -41,6 +41,9 @@ dependencies {
 }
 
 baselineProfile {
-    managedDevices.add("pixel6Api31")
-    useConnectedDevices = false
+    val isCi = System.getenv("GITHUB_ACTIONS") == "true"
+    if (!isCi) {
+        managedDevices.add("pixel6Api31")
+    }
+    useConnectedDevices = true
 }
