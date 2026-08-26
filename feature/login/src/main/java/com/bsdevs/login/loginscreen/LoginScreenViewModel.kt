@@ -38,7 +38,7 @@ class LoginScreenViewModel @Inject constructor(
     }
 
     private val _navigationEvent = Channel<NavigationEvent>()
-    val navigationEvent = _navigationEvent.receiveAsFlow() // Expose as Flow
+    val navigationEvent = _navigationEvent.receiveAsFlow()
 
     fun processIntent(intent: LoginScreenIntent) {
         when (intent) {
@@ -47,7 +47,6 @@ class LoginScreenViewModel @Inject constructor(
             LoginScreenIntent.Login -> onLoginClick()
             LoginScreenIntent.Register -> onRegisterClick()
             LoginScreenIntent.UpdatePasswordVisibility -> handleUpdatePasswordVisibility()
-
         }
     }
 
@@ -61,94 +60,35 @@ class LoginScreenViewModel @Inject constructor(
         }
     }
 
-//    val isEnabled = {
-//        if (viewData.value is Result.Success) {
-//            val currentViewData = viewData.value as Result.Success
-//            if (currentViewData.data.email.isNotEmpty() && currentViewData.data.password.isNotEmpty()) {
-//                _viewData.update {
-//                    Result.Success(
-//                        LoginViewData(
-//                            email = currentViewData.data.email,
-//                            password = currentViewData.data.password,
-//                            isLoading = currentViewData.data.isLoading,
-//                            isEnabled = true
-//                        )
-//                    )
-//                }
-//            }
-//        }
-//    }
-
-//    private fun onLoginClick() {
-//        println("start to do something")
-//        if (_viewData.value is Result.Success) {
-//            println("do something")
-//            viewModelScope.launch {
-//                CoroutineExceptionHandler { _, throwable ->
-//                    Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())
-//                    println("COFFEE_ERROR_TAG " + throwable.message.orEmpty())
-//                }
-//                val currentViewData = _viewData.value as Result.Success
-//                accountService.signIn(
-//                    email = currentViewData.data.email,
-//                    password = currentViewData.data.password
-//                )
-//            }.invokeOnCompletion {
-//                it?.let {
-//                    println("COFFEE_ERROR_TAG " + it.toString())
-//                } ?: runCatching{
-//                    println("COFFEE_ERROR_TAG " + "success???")
-//                }
-//                if (it == null) {
-//                    viewModelScope.launch {
-//                        println("COFFEE_ERROR_TAG " + "success???")
-//                        _navigationEvent.send(NavigationEvent.NavigateToCoffeeHome)
-//                    }
-//                } else {
-//                    println(it)
-//                    println("fail to do something")
-//                    _viewData.update {
-//                        Result.Success(
-//                            LoginViewData(
-//                                email = (it as Result.Success).data.email,
-//                                password = it.data.password,
-//                                isLoading = false,
-//                                isEnabled = it.data.isEnabled
-//                            )
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//    }
-
     private fun onLoginClick() {
-        if (_viewData.value is Result.Success) {
-            val currentViewData = _viewData.value as Result.Success
+        val currentResult = _viewData.value
+        if (currentResult is Result.Success) {
+            val data = currentResult.data
             launchCatching {
-                _viewData.update {
-                    currentViewData.copy(
-                        currentViewData.data.copy(
-                            isLoading = true
-                        )
-                    )
+                _viewData.update { res ->
+                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = true)) else res
                 }
                 accountService.signIn(
-                    email = currentViewData.data.email,
-                    password = currentViewData.data.password,
+                    email = data.email,
+                    password = data.password,
                 )
                 _navigationEvent.send(NavigationEvent.NavigateToCoffeeHome)
-            }.invokeOnCompletion {
-                it?.let { throwable ->
-                    _viewData.update {
-                        Result.Success(
-                            LoginViewData(
-                                email = currentViewData.data.email,
-                                password = currentViewData.data.password,
-                                isLoading = false,
-                                emailError = "The details you have provided do not match our records."
+                _viewData.update { res ->
+                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = false)) else res
+                }
+            }.invokeOnCompletion { throwable ->
+                if (throwable != null) {
+                    _viewData.update { res ->
+                        if (res is Result.Success) {
+                            Result.Success(
+                                res.data.copy(
+                                    isLoading = false,
+                                    emailError = "The details you have provided do not match our records."
+                                )
                             )
-                        )
+                        } else {
+                            res
+                        }
                     }
                 }
             }
@@ -169,28 +109,10 @@ class LoginScreenViewModel @Inject constructor(
         }
     }
 
-    private fun onUpdateEmail(email: String) {
-        if (_viewData.value is Result.Success) {
-            val currentViewData = _viewData.value as Result.Success
-            _viewData.value =
-                Result.Success(
-                    LoginViewData(
-                        email = email,
-                        password = currentViewData.data.password,
-                        isLoading = currentViewData.data.isLoading,
-                        isEnabled = currentViewData.data.isEnabled
-                    )
-                )
-
-        }
-    }
-
     private fun handleUpdateEmail(email: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                val currentViewData = currentResult.data
-                val updatedViewData = currentViewData.copy(email = email, emailError = null)
-                Result.Success(updatedViewData)
+                Result.Success(currentResult.data.copy(email = email, emailError = null))
             } else {
                 currentResult
             }
@@ -200,12 +122,9 @@ class LoginScreenViewModel @Inject constructor(
     private fun onUpdatePassword(password: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                val currentViewData = currentResult.data
-                val visible = if (password.isEmpty()) false else currentViewData.isPasswordVisible
-                val updatedViewData =
-                    currentViewData.copy(password = password, isPasswordVisible = visible, emailError = null)
-                Result.Success(updatedViewData)
-
+                val data = currentResult.data
+                val visible = if (password.isEmpty()) false else data.isPasswordVisible
+                Result.Success(data.copy(password = password, isPasswordVisible = visible, emailError = null))
             } else {
                 currentResult
             }

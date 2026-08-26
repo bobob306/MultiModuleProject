@@ -33,7 +33,7 @@ class RegisterScreenViewModel @Inject constructor(
         )
 
     private val _navigationEvent = Channel<RegisterNavigationEvent>()
-    val navigationEvent = _navigationEvent.receiveAsFlow() // Expose as Flow
+    val navigationEvent = _navigationEvent.receiveAsFlow()
 
     private fun getInitialViewData() {
         if (_viewData.value is Result.Success) return
@@ -47,7 +47,6 @@ class RegisterScreenViewModel @Inject constructor(
             is RegisterScreenIntent.UpdatePasswordConfirmation -> handleUpdatePasswordConfirmation(
                 intent.passwordConfirmation
             )
-
             RegisterScreenIntent.Register -> onRegisterClick()
             RegisterScreenIntent.UpdatePasswordVisibility -> handleUpdatePasswordVisibility()
             RegisterScreenIntent.UpdatePasswordConfirmationVisibility -> handleUpdatePasswordConfirmationVisibility()
@@ -56,43 +55,39 @@ class RegisterScreenViewModel @Inject constructor(
     }
 
     private fun onRegisterClick() {
-        if (_viewData.value is Result.Success) {
-            val currentViewData = _viewData.value as Result.Success
+        val currentResult = _viewData.value
+        if (currentResult is Result.Success) {
+            val data = currentResult.data
             launchCatching {
-                _viewData.update {
-                    currentViewData.copy(
-                        currentViewData.data.copy(
-                            isLoading = true
-                        )
-                    )
+                _viewData.update { res ->
+                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = true)) else res
                 }
                 accountService.signUp(
-                    email = currentViewData.data.email,
-                    password = currentViewData.data.password
+                    email = data.email,
+                    password = data.password
                 )
-            }.invokeOnCompletion {
-                if (it == null) {
-                    viewModelScope.launch {
-                        _navigationEvent.send(RegisterNavigationEvent.NavigateToLogin)
-                    }
+                _navigationEvent.send(RegisterNavigationEvent.NavigateToLogin)
+                _viewData.update { res ->
+                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = false)) else res
                 }
-                it?.let { throwable ->
-                    _viewData.update {
-                        Result.Success(
-                            RegisterScreenViewData(
-                                email = currentViewData.data.email,
-                                password = currentViewData.data.password,
-                                passwordConfirmation = currentViewData.data.passwordConfirmation,
-                                isLoading = false,
-                                emailError = "Please ensure this is a valid email and not already in use.",
-                                passwordError = "Please ensure the passwords match and are valid."
+            }.invokeOnCompletion { throwable ->
+                if (throwable != null) {
+                    _viewData.update { res ->
+                        if (res is Result.Success) {
+                            Result.Success(
+                                res.data.copy(
+                                    isLoading = false,
+                                    emailError = "Please ensure this is a valid email and not already in use.",
+                                    passwordError = "Please ensure the passwords match and are valid."
+                                )
                             )
-                        )
+                        } else {
+                            res
+                        }
                     }
                 }
             }
         }
-
     }
 
     private fun launchCatching(block: suspend CoroutineScope.() -> Unit) =
@@ -106,9 +101,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateEmail(email: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                val currentViewData = currentResult.data
-                val updatedViewData = currentViewData.copy(email = email)
-                Result.Success(updatedViewData)
+                Result.Success(currentResult.data.copy(email = email, emailError = null))
             } else {
                 currentResult
             }
@@ -118,9 +111,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdatePassword(password: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                val currentViewData = currentResult.data
-                val updatedViewData = currentViewData.copy(password = password)
-                Result.Success(updatedViewData)
+                Result.Success(currentResult.data.copy(password = password, passwordError = null))
             } else {
                 currentResult
             }
@@ -130,9 +121,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdatePasswordConfirmation(password: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                val currentViewData = currentResult.data
-                val updatedViewData = currentViewData.copy(passwordConfirmation = password)
-                Result.Success(updatedViewData)
+                Result.Success(currentResult.data.copy(passwordConfirmation = password, passwordError = null))
             } else {
                 currentResult
             }
