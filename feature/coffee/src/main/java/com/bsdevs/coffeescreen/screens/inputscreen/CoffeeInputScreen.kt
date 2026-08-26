@@ -1,6 +1,8 @@
 package com.bsdevs.coffeescreen.screens.inputscreen
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,17 +71,23 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
 import com.bsdevs.uicomponents.MMPScaffold
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeInputScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
+    navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CoffeeInputScreenViewModel = hiltViewModel(),
-    navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
@@ -94,6 +102,8 @@ fun CoffeeInputScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeScreenViewData>).data,
                 onIntent = viewModel::processIntent,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }
@@ -119,11 +129,17 @@ fun CoffeeInputScreenRoute(
 @Composable
 fun CoffeeInputScreenContentPreview() {
     MaterialTheme {
-        CoffeeInputScreenContent(
-            onShowSnackBar = { _, _ -> },
-            viewData = generateSampleCoffeeScreenViewData(),
-            onIntent = {}
-        )
+        SharedTransitionLayout {
+            AnimatedVisibility(visible = true) {
+                CoffeeInputScreenContent(
+                    onShowSnackBar = { _, _ -> },
+                    viewData = generateSampleCoffeeScreenViewData(),
+                    onIntent = {},
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@AnimatedVisibility
+                )
+            }
+        }
     }
 }
 
@@ -137,12 +153,14 @@ internal fun ErrorScreen() {
     Text("Error")
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CoffeeInputScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeScreenViewData,
     onIntent: (CoffeeInputScreenIntent) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     var showSnackBar by remember { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
@@ -205,12 +223,17 @@ private fun CoffeeInputScreenContent(
         onBackClick = { onIntent(CoffeeInputScreenIntent.NavigateHome) },
         scrollBehavior = scrollBehavior
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
-        ) {
+        with(sharedTransitionScope) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "coffee_input_box"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                    .padding(innerPadding)
+                    .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
+            ) {
             Column(
                 modifier = Modifier
                     .verticalScroll(state = scrollState)
@@ -247,6 +270,7 @@ private fun CoffeeInputScreenContent(
                 { Text("Enter coffee details", modifier = Modifier.wrapContentSize()) }
                 Spacer(modifier = Modifier.weight(0.1f))
             }
+        }
         }
         if (isScrollable) {
             ScrollBar(scrollState)

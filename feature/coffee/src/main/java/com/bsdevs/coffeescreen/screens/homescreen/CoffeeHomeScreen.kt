@@ -132,7 +132,12 @@ fun CoffeeHomeScreenContent(
             contentAlignment = Alignment.TopCenter
         ) {
             Column {
-                CoffeeHomeButtons(onIntent, isLandscape)
+                CoffeeHomeButtons(
+                    onIntent = onIntent,
+                    isLandscape = isLandscape,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
                 LazyVerticalGrid(
                     columns = if (isLandscape) GridCells.Fixed(2) else GridCells.Fixed(1),
                     modifier = Modifier.fillMaxSize(),
@@ -159,33 +164,48 @@ fun CoffeeHomeScreenContent(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeHomeButtons(
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     if (isLandscape) {
         Row {
-            Button(
-                onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
-                modifier = Modifier
-                    .wrapContentSize()
-                    .padding(
-                        end = 16.dp
-                    )
-            ) { Text("Click to navigate to coffee input") }
+            with(sharedTransitionScope) {
+                Button(
+                    onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
+                    modifier = Modifier
+                        .sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "coffee_input_box"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                        .wrapContentSize()
+                        .padding(
+                            end = 16.dp
+                        )
+                ) { Text("Click to navigate to coffee input") }
+            }
             Button(
                 onClick = { onIntent.invoke(CoffeeHomeScreenIntent.Logout) },
                 modifier = Modifier.wrapContentSize()
             ) { Text("Logout") }
         }
     } else Column {
-        Button(
-            onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(bottom = 8.dp)
-        ) { Text("Click to navigate to coffee input") }
+        with(sharedTransitionScope) {
+            Button(
+                onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
+                modifier = Modifier
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "coffee_input_box"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                    .wrapContentSize()
+                    .padding(bottom = 8.dp)
+            ) { Text("Click to navigate to coffee input") }
+        }
         Button(
             onClick = { onIntent.invoke(CoffeeHomeScreenIntent.Logout) },
             modifier = Modifier

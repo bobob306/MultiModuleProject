@@ -64,6 +64,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPScaffold
@@ -75,10 +78,13 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun TemperatureScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: TemperatureViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -109,11 +115,13 @@ fun TemperatureScreenRoute(
         onSave = viewModel::submitTemperature,
         onDelete = viewModel::deleteTemperature,
         onResetForm = viewModel::resetForm,
-        onEditItem = viewModel::onEditTemperature
+        onEditItem = viewModel::onEditTemperature,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun TemperatureScreen(
     uiState: TemperatureUiState,
@@ -125,7 +133,9 @@ fun TemperatureScreen(
     onSave: () -> Unit,
     onDelete: () -> Unit,
     onResetForm: () -> Unit,
-    onEditItem: (String) -> Unit
+    onEditItem: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -159,27 +169,83 @@ fun TemperatureScreen(
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            if (uiState.dates.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No temperature records found.")
-                }
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.Top
-                ) { pageIndex ->
-                    val date = uiState.dates[pageIndex]
-                    val readings = uiState.dailyReadings[date] ?: emptyList()
+        with(sharedTransitionScope) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "tile_temperature_tile"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .padding(innerPadding)
+            ) {
+                if (uiState.dates.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No temperature records found.")
+                    }
+                } else {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.Top
+                    ) { pageIndex ->
+                        val date = uiState.dates[pageIndex]
+                        val readings = uiState.dailyReadings[date] ?: emptyList()
 
-                    if (isLandscape) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // Left Column: Navigation + List
-                            Column(modifier = Modifier.weight(1f)) {
+                        if (isLandscape) {
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Left Column: Navigation + List
+                                Column(modifier = Modifier.weight(1f)) {
+                                    DayNavigationHeader(
+                                        date = date,
+                                        pagerState = pagerState,
+                                        datesCount = uiState.dates.size,
+                                        onNavigate = { page ->
+                                            scope.launch { pagerState.animateScrollToPage(page) }
+                                        }
+                                    )
+
+                                    LazyColumn(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .clip(MaterialTheme.shapes.medium)
+                                            .background(MaterialTheme.colorScheme.surfaceContainer),
+                                        contentPadding = PaddingValues(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        items(readings) { item ->
+                                            TemperatureHistoryItem(item = item, onClick = {
+                                                onEditItem(item.id)
+                                                showSheet = true
+                                            })
+                                        }
+                                    }
+                                }
+
+                                // Right Column: Chart
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1.2f)
+                                        .fillMaxHeight(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Daily Trend",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(vertical = 16.dp)
+                                    )
+
+                                    TemperatureChart(
+                                        readings = readings,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            }
+                        } else {
+                            Column(modifier = Modifier.fillMaxSize()) {
                                 DayNavigationHeader(
                                     date = date,
                                     pagerState = pagerState,
@@ -193,6 +259,7 @@ fun TemperatureScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
                                         .clip(MaterialTheme.shapes.medium)
                                         .background(MaterialTheme.colorScheme.surfaceContainer),
                                     contentPadding = PaddingValues(12.dp),
@@ -205,75 +272,27 @@ fun TemperatureScreen(
                                         })
                                     }
                                 }
-                            }
 
-                            // Right Column: Chart
-                            Column(
-                                modifier = Modifier
-                                    .weight(1.2f)
-                                    .fillMaxHeight(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
                                 Text(
                                     text = "Daily Trend",
                                     style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(vertical = 16.dp)
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                                 )
 
                                 TemperatureChart(
                                     readings = readings,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxWidth()
                                 )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
-                        }
-                    } else {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            DayNavigationHeader(
-                                date = date,
-                                pagerState = pagerState,
-                                datesCount = uiState.dates.size,
-                                onNavigate = { page ->
-                                    scope.launch { pagerState.animateScrollToPage(page) }
-                                }
-                            )
-
-                            LazyColumn(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clip(MaterialTheme.shapes.medium)
-                                    .background(MaterialTheme.colorScheme.surfaceContainer),
-                                contentPadding = PaddingValues(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(readings) { item ->
-                                    TemperatureHistoryItem(item = item, onClick = {
-                                        onEditItem(item.id)
-                                        showSheet = true
-                                    })
-                                }
-                            }
-
-                            Text(
-                                text = "Daily Trend",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-
-                            TemperatureChart(
-                                readings = readings,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            
-                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
-            }
 
-            if (uiState.isLoading && !showSheet) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                if (uiState.isLoading && !showSheet) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                }
             }
         }
 

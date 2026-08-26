@@ -56,7 +56,12 @@ fun NavGraphBuilder.coffeeScreenSection(
 ) {
     navigation<CoffeeScreenBaseRoute>(startDestination = CoffeeHomeScreenRoute) {
         composable<CoffeeInputScreenRoute> {
-            CoffeeInputScreenRoute(onShowSnackBar, navigateToCoffeeHome = navigateToCoffeeHome)
+            CoffeeInputScreenRoute(
+                onShowSnackBar, 
+                navigateToCoffeeHome = navigateToCoffeeHome,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
+            )
         }
         composable<CoffeeHomeScreenRoute>(
             deepLinks = listOf(navDeepLink { uriPattern = "app://com.bsdevs.multimoduleproject/coffeehome" })

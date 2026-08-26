@@ -1,20 +1,18 @@
 package com.bsdevs.babycare.presentation.navigation
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
-import androidx.navigation.navigation
 import androidx.navigation.navDeepLink
-import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
-import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
+import androidx.navigation.navigation
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
+import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
+import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
 import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
 import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -41,13 +39,19 @@ fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
 fun NavController.navigateToGraph(navOptions: NavOptions? = null) =
     navigate(route = BabyGraphRoute, navOptions = navOptions)
 
-fun NavController.navigateToNappyChange(activityId: String? = null, navOptions: NavOptions? = null) =
+fun NavController.navigateToNappyChange(
+    activityId: String? = null,
+    navOptions: NavOptions? = null
+) =
     navigate(route = NappyChangeRoute(activityId), navOptions = navOptions)
 
 fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavOptions? = null) =
     navigate(route = FeedingRoute(activityId), navOptions = navOptions)
 
-fun NavController.navigateToTemperature(activityId: String? = null, navOptions: NavOptions? = null) =
+fun NavController.navigateToTemperature(
+    activityId: String? = null,
+    navOptions: NavOptions? = null
+) =
     navigate(route = TemperatureRoute(activityId), navOptions = navOptions)
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -66,7 +70,7 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
                 onNavigateToEditTemperature = { id -> navController.navigateToTemperature(id) },
-                onNavigateToGraph = {navController.navigateToGraph()},
+                onNavigateToGraph = { navController.navigateToGraph() },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
             )
@@ -102,7 +106,9 @@ fun NavGraphBuilder.babyCareSection(
         ) {
             BabyGraphRoute(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
         composable<TemperatureRoute>(
@@ -112,7 +118,9 @@ fun NavGraphBuilder.babyCareSection(
         ) {
             TemperatureScreenRoute(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
     }
