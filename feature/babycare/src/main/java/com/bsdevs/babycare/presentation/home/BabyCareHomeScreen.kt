@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.MMPScaffold
+import com.bsdevs.uicomponents.shimmer
 
 @Composable
 fun BabyCareHomeScreenRoute(
@@ -90,9 +92,7 @@ fun BabyCareHomeScreenRoute(
         }
 
         is Result.Loading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            BabyCareHomeLoading()
         }
 
         is Result.Error -> {
@@ -513,3 +513,55 @@ fun BabyCareTile(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BabyCareHomeLoading() {
+    MMPScaffold(
+        title = "Baby Care"
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Tiles Shimmer
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .shimmer()
+                    )
+                }
+            }
+
+            Text(
+                text = "Recent Activity",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // Feed Shimmer
+            repeat(5) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shimmer()
+                )
+            }
+        }
+    }
+}
+
