@@ -4,6 +4,9 @@ import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -53,11 +56,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -341,36 +346,63 @@ internal fun BabyCareHomeScreen(
                                         .fillMaxWidth()
                                         .animateItem()
                                 ) {
-                                    ActivityFeedItem(
-                                        item = currentActivity,
-                                        onEdit = {
-                                            val activityId = when (currentActivity) {
-                                                is BabyActivity.Nappy -> currentActivity.dto.id
-                                                is BabyActivity.Feeding -> currentActivity.dto.id
-                                                is BabyActivity.Temperature -> currentActivity.dto.id
-                                            }
-                                            activityId?.let {
-                                                when (currentActivity) {
-                                                    is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
-                                                    is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
-                                                    is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
+                                    val index = activityItems.indexOf(feedItem)
+                                    val animatedOffset = remember { Animatable(100f) }
+                                    val animatedAlpha = remember { Animatable(0f) }
+
+
+                                    LaunchedEffect(key1 = true) {
+                                        kotlinx.coroutines.delay((index % 10) * 50L)
+                                        animatedOffset.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                        )
+                                    }
+                                    LaunchedEffect(key1 = true) {
+                                        kotlinx.coroutines.delay((index % 10) * 50L)
+                                        animatedAlpha.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = tween(durationMillis = 400)
+                                        )
+                                    }
+
+                                    Box(modifier = Modifier
+                                        .graphicsLayer {
+                                            translationY = animatedOffset.value
+                                            alpha = animatedAlpha.value
+                                        }
+                                    ) {
+                                        ActivityFeedItem(
+                                            item = currentActivity,
+                                            onEdit = {
+                                                val activityId = when (currentActivity) {
+                                                    is BabyActivity.Nappy -> currentActivity.dto.id
+                                                    is BabyActivity.Feeding -> currentActivity.dto.id
+                                                    is BabyActivity.Temperature -> currentActivity.dto.id
                                                 }
-                                            }
-                                        },
-                                        onIconClick = {
-                                            val targetFilter = when (currentActivity) {
-                                                is BabyActivity.Nappy -> ActivityFilter.NAPPY
-                                                is BabyActivity.Feeding -> ActivityFilter.FEEDING
-                                                is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
-                                            }
-                                            onToggleFilter(targetFilter)
-                                        },
-                                        onDelete = {
-                                            activityToDelete = currentActivity
-                                        },
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    )
+                                                activityId?.let {
+                                                    when (currentActivity) {
+                                                        is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
+                                                        is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
+                                                        is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
+                                                    }
+                                                }
+                                            },
+                                            onIconClick = {
+                                                val targetFilter = when (currentActivity) {
+                                                    is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                                    is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                                    is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
+                                                }
+                                                onToggleFilter(targetFilter)
+                                            },
+                                            onDelete = {
+                                                activityToDelete = currentActivity
+                                            },
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -417,10 +449,22 @@ fun ActivityFeedItem(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    val icon = when (item) {
-        is BabyActivity.Nappy -> Icons.Default.ChildCare
-        is BabyActivity.Feeding -> Icons.Default.Restaurant
-        is BabyActivity.Temperature -> Icons.Default.Thermostat
+    val (icon, color, onColor) = when (item) {
+        is BabyActivity.Nappy -> Triple(
+            Icons.Default.ChildCare,
+            Color(0xFFE8F5E9), // Light Green
+            Color(0xFF2E7D32)  // Dark Green
+        )
+        is BabyActivity.Feeding -> Triple(
+            Icons.Default.Restaurant,
+            Color(0xFFE3F2FD), // Light Blue
+            Color(0xFF1565C0)  // Dark Blue
+        )
+        is BabyActivity.Temperature -> Triple(
+            Icons.Default.Thermostat,
+            Color(0xFFFFF3E0), // Light Orange
+            Color(0xFFE65100)  // Dark Orange
+        )
     }
 
     val title = when (item) {
@@ -462,7 +506,7 @@ fun ActivityFeedItem(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection
-            val color = when (direction) {
+            val bgColor = when (direction) {
                 SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 else -> Color.Transparent
@@ -482,7 +526,7 @@ fun ActivityFeedItem(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CardDefaults.shape)
-                    .background(color)
+                    .background(bgColor)
                     .padding(horizontal = 24.dp),
                 contentAlignment = alignment
             ) {
@@ -525,7 +569,7 @@ fun ActivityFeedItem(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                            .background(color, CircleShape)
                             .clip(CircleShape)
                             .clickable { onIconClick() },
                         contentAlignment = Alignment.Center
@@ -534,7 +578,7 @@ fun ActivityFeedItem(
                             imageVector = icon,
                             contentDescription = "Filter by type",
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            tint = onColor
                         )
                     }
 

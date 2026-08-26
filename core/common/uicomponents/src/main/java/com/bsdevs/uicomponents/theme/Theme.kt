@@ -12,10 +12,10 @@ private val DarkColorScheme = darkColorScheme(
     primaryContainer = BabyBlueDark,
     onPrimaryContainer = OnBabyBackground,
     
-    secondary = SoftPink80,
+    secondary = BabyBlue80,
     onSecondary = OnBabyBackground,
-    secondaryContainer = SoftPinkDark,
-    onSecondaryContainer = OnBabyBackground,
+    secondaryContainer = BabyBlue80.copy(alpha = 0.2f),
+    onSecondaryContainer = BabyBlue80,
     
     tertiary = MintGreen80,
     onTertiary = OnBabyBackground,
