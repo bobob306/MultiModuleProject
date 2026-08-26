@@ -33,3 +33,4 @@ Thumbs.db
 
 # Optional: Ignore log files
 *.log
+/.artifacts/
