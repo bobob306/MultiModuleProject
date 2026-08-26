@@ -1,6 +1,6 @@
 package com.bsdevs.babycare.network
 
-import com.google.firebase.firestore.FieldPath
+import android.util.Log
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -18,29 +18,49 @@ class FirestoreBabyCareService @Inject constructor(
         firestore.collection("babyLogs").document(userId).collection("months")
 
     override suspend fun getLatestMonthId(userId: String): String? {
-        return getMonthsCollection(userId)
-            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
-            .limit(1)
-            .get()
-            .await()
-            .documents.firstOrNull()?.id
+        return try {
+            // Fetching all IDs in the collection to avoid descending index requirement
+            // This is efficient as month IDs are very small strings
+            getMonthsCollection(userId)
+                .get()
+                .await()
+                .documents
+                .map { it.id }
+                .sortedDescending()
+                .firstOrNull()
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Error fetching latest month ID", e)
+            null
+        }
     }
 
     override suspend fun getMonthIdBefore(userId: String, monthId: String): String? {
-        return getMonthsCollection(userId)
-            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
-            .whereLessThan(FieldPath.documentId(), monthId)
-            .limit(1)
-            .get()
-            .await()
-            .documents.firstOrNull()?.id
+        return try {
+            getMonthsCollection(userId)
+                .get()
+                .await()
+                .documents
+                .map { it.id }
+                .filter { it < monthId }
+                .sortedDescending()
+                .firstOrNull()
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Error fetching month ID before $monthId", e)
+            null
+        }
     }
 
     override suspend fun getAllMonthIds(userId: String): List<String> {
-        return getMonthsCollection(userId)
-            .get()
-            .await()
-            .documents.map { it.id }
+        return try {
+            getMonthsCollection(userId)
+                .get()
+                .await()
+                .documents
+                .map { it.id }
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Error fetching all month IDs", e)
+            emptyList()
+        }
     }
 
     override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? {

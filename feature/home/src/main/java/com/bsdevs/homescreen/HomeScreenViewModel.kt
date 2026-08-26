@@ -43,7 +43,9 @@ class HomeScreenViewModel @Inject constructor(
                         _viewData.update { result }
                     }
 
-                    is Result.Loading -> Result.Loading
+                    is Result.Loading -> {
+                        _viewData.update { Result.Loading }
+                    }
                 }
             }
 

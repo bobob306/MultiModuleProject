@@ -9,6 +9,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -27,6 +28,7 @@ import javax.inject.Inject
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
+    private val timeProvider: TimeProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -114,7 +116,7 @@ class FeedingViewModel @Inject constructor(
     }
 
     private fun startTimer(side: FeedingSide) {
-        val sessionStartTime = SystemClock.elapsedRealtime()
+        val sessionStartTime = timeProvider.elapsedRealtime()
         val previousAccumulatedDuration = baseDurations.getValue(side)
 
         // Update the running state flag dynamically
@@ -128,7 +130,7 @@ class FeedingViewModel @Inject constructor(
         // Launch a single unified timer loop
         timerJobs[side] = viewModelScope.launch {
             while (true) {
-                val actualSecondsElapsed = (SystemClock.elapsedRealtime() - sessionStartTime) / 1000
+                val actualSecondsElapsed = (timeProvider.elapsedRealtime() - sessionStartTime) / 1000
                 val totalDuration = previousAccumulatedDuration + actualSecondsElapsed
 
                 _uiState.update { state ->

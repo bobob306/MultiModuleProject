@@ -1,0 +1,142 @@
+package com.bsdevs.babycare.presentation.nappy
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.toRoute
+import app.cash.turbine.test
+import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
+import com.bsdevs.babycare.presentation.home.FakeAccountService
+import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
+import io.mockk.every
+import io.mockk.mockkStatic
+import io.mockk.unmockkAll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.*
+import org.junit.After
+import org.junit.Assert.*
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class NappyChangeViewModelTest {
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+    
+    private lateinit var fakeService: FakeBabyCareFirestoreService
+    private lateinit var repository: BabyCareRepositoryImpl
+    private lateinit var accountService: FakeAccountService
+    private lateinit var viewModel: NappyChangeViewModel
+
+    private val userId = "testUser"
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(testDispatcher)
+        mockkStatic("androidx.navigation.SavedStateHandleKt")
+        
+        fakeService = FakeBabyCareFirestoreService()
+        repository = BabyCareRepositoryImpl(fakeService)
+        accountService = FakeAccountService(userId)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        unmockkAll()
+    }
+
+    private suspend fun createViewModel(activityId: String? = null) {
+        val savedStateHandle = SavedStateHandle()
+        every { savedStateHandle.toRoute<NappyChangeRoute>() } returns NappyChangeRoute(activityId)
+        
+        repository.loadInitialData(userId, 20)
+        
+        viewModel = NappyChangeViewModel(accountService, repository, savedStateHandle)
+    }
+
+    @Test
+    fun `init with activityId loads nappy change data`() = runTest {
+        // Given
+        val eventId = java.util.UUID.randomUUID().toString()
+        val date = "2026-08-26"
+        val rawData = mapOf("days" to mapOf(date to listOf(
+            mapOf(
+                "id" to eventId, 
+                "type" to "NAPPY", 
+                "nappyType" to "Wet",
+                "time" to "11:00", 
+                "dateTimeString" to "$date 11:00",
+                "comment" to "Quick change"
+            )
+        )))
+        fakeService.injectMonth(userId, "2026-08", rawData)
+
+        // When
+        createViewModel(activityId = eventId)
+
+        // Then
+        viewModel.uiState.test {
+            val state = awaitItem()
+            val finalState = if (state.id == null) awaitItem() else state
+
+            assertEquals(eventId, finalState.id)
+            assertEquals("Wet", finalState.type)
+            assertEquals("11:00", finalState.time)
+            assertEquals("Quick change", finalState.comment)
+        }
+    }
+
+    @Test
+    fun `onTypeChanged updates uiState`() = runTest {
+        createViewModel()
+        viewModel.onTypeChanged("Dirty")
+        assertEquals("Dirty", viewModel.uiState.value.type)
+    }
+
+    @Test
+    fun `submitNappyChange saves new record successfully`() = runTest {
+        createViewModel()
+        viewModel.onTimeSelected(9, 0)
+        viewModel.onTypeChanged("Both")
+        viewModel.onCommentChanged("Morning change")
+
+        viewModel.events.test {
+            viewModel.submitNappyChange()
+            assertEquals(NappyChangeEvent.SaveSuccess, awaitItem())
+        }
+
+        val savedMonth = fakeService.fetchMonthDocument(userId, "2026-08")
+        assertNotNull(savedMonth)
+        val days = savedMonth!!["days"] as Map<*, *>
+        val today = viewModel.uiState.value.date
+        val dayEvents = days[today] as List<*>
+        assertTrue(dayEvents.any { (it as Map<*, *>)["nappyType"] == "Both" })
+    }
+
+    @Test
+    fun `deleteNappyChange removes record successfully`() = runTest {
+        // Given
+        val eventId = java.util.UUID.randomUUID().toString()
+        val date = "2026-08-26"
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(
+            mapOf("id" to eventId, "type" to "NAPPY", "time" to "11:00", "dateTimeString" to "$date 11:00")
+        ))))
+        
+        createViewModel(activityId = eventId)
+        
+        // Wait for data to load
+        viewModel.uiState.filter { it.id == eventId }.first()
+
+        // When
+        viewModel.events.test {
+            viewModel.deleteNappyChange()
+            assertEquals(NappyChangeEvent.DeleteSuccess, awaitItem())
+        }
+
+        // Then
+        assertNull(repository.getNappyEventById(userId, eventId))
+    }
+}

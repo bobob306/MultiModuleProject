@@ -13,4 +13,8 @@ dependencies {
     implementation(project(":core:authentication"))
     implementation(project(":core:common"))
     implementation(project(":core:common:uicomponents"))
+
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

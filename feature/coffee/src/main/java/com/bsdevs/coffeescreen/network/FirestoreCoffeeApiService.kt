@@ -32,4 +32,32 @@ class FirestoreCoffeeApiService @Inject constructor(
         val label = coffee.label ?: coffee.id ?: "unknown"
         firestore.collection("coffeeUploads").document(label).set(item).await()
     }
+
+    override suspend fun getCoffeeById(userId: String, coffeeId: String): CoffeeDto? {
+        val snapshot = firestore.collection("coffeeUploads")
+            .whereEqualTo("userId", userId)
+            .whereEqualTo("id", coffeeId)
+            .get()
+            .await()
+        return snapshot.toObjects(CoffeeDto::class.java).firstOrNull()
+    }
+
+    override suspend fun getShotsForCoffee(coffeeLabel: String): List<com.bsdevs.coffeescreen.screens.detailscreen.ShotDto> {
+        val snapshot = firestore.collection("coffeeUploads")
+            .document(coffeeLabel)
+            .collection("shots")
+            .get()
+            .await()
+        return snapshot.toObjects(com.bsdevs.coffeescreen.screens.detailscreen.ShotDto::class.java)
+    }
+
+    override suspend fun uploadShot(coffeeLabel: String, shot: com.bsdevs.coffeescreen.screens.detailscreen.ShotDto) {
+        val shotId = shot.id ?: java.util.UUID.randomUUID().toString()
+        firestore.collection("coffeeUploads")
+            .document(coffeeLabel)
+            .collection("shots")
+            .document(shotId)
+            .set(shot)
+            .await()
+    }
 }

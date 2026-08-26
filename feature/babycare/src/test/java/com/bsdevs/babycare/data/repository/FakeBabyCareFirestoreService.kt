@@ -30,8 +30,8 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
     override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) {
         val userDb = database.getOrPut(userId) { mutableMapOf() }
         val monthData = userDb.getOrDefault(monthId, mapOf("days" to mutableMapOf<String, List<Map<String, Any?>>>())).toMutableMap()
-        val days = (monthData["days"] as? Map<String, List<Map<String, Any?>>> ?: emptyMap()).toMutableMap()
-        val events = (days[date] ?: emptyList()) + event
+        val days = (monthData["days"] as? Map<*, *> ?: emptyMap<Any?, Any?>()).toMutableMap()
+        val events = (days[date] as? List<*> ?: emptyList<Any?>()) + event
         days[date] = events
         monthData["days"] = days
         userDb[monthId] = monthData as Map<String, Any>
@@ -40,9 +40,12 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
     override suspend fun updateEvent(userId: String, monthId: String, date: String, eventId: String, updatedEvent: Map<String, Any?>) {
         val userDb = database[userId] ?: return
         val monthData = userDb[monthId]?.toMutableMap() ?: return
-        val days = (monthData["days"] as? Map<String, List<Map<String, Any?>>> ?: return).toMutableMap()
-        val events = days[date] ?: return
-        days[date] = events.map { if (it["id"] == eventId) updatedEvent else it }
+        val days = (monthData["days"] as? Map<*, *> ?: return).toMutableMap()
+        val events = days[date] as? List<*> ?: return
+        days[date] = events.map { 
+            val item = it as Map<*, *>
+            if (item["id"] == eventId) updatedEvent else it 
+        }
         monthData["days"] = days
         userDb[monthId] = monthData as Map<String, Any>
     }
@@ -50,9 +53,12 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
     override suspend fun deleteEvent(userId: String, monthId: String, date: String, eventId: String) {
         val userDb = database[userId] ?: return
         val monthData = userDb[monthId]?.toMutableMap() ?: return
-        val days = (monthData["days"] as? Map<String, List<Map<String, Any?>>> ?: return).toMutableMap()
-        val events = days[date] ?: return
-        days[date] = events.filterNot { it["id"] == eventId }
+        val days = (monthData["days"] as? Map<*, *> ?: return).toMutableMap()
+        val events = days[date] as? List<*> ?: return
+        days[date] = events.filterNot { 
+            val item = it as Map<*, *>
+            item["id"] == eventId 
+        }
         monthData["days"] = days
         userDb[monthId] = monthData as Map<String, Any>
     }

@@ -6,10 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.navigation.CoffeeDetailScreenRoute
+import com.bsdevs.coffeescreen.network.CoffeeApiService
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Loading
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -33,10 +32,13 @@ data class CoffeeDetailsViewData(
 
 @HiltViewModel
 class CoffeeDetailsViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle,
     private val accountService: AccountService,
+    private val apiService: CoffeeApiService
 ) : ViewModel() {
-    private var selectedCoffee: String
+    
+    private val detailsRoute: CoffeeDetailScreenRoute = savedStateHandle.toRoute()
+    private val selectedCoffeeId: String = detailsRoute.coffeeId
 
     private val _viewData = MutableStateFlow<Result<CoffeeDetailsViewData>>(Loading)
     val viewData: StateFlow<Result<CoffeeDetailsViewData>> = _viewData.onStart {
@@ -48,101 +50,72 @@ class CoffeeDetailsViewModel @Inject constructor(
     )
 
     private val _navigationEvent = Channel<NavigationEvent>()
-    val navigationEvent = _navigationEvent.receiveAsFlow() // Expose as Flow
-
-    init {
-        val detailsRoute: CoffeeDetailScreenRoute = savedStateHandle.toRoute()
-        selectedCoffee = detailsRoute.coffeeId
-    }
+    val navigationEvent = _navigationEvent.receiveAsFlow()
 
     private suspend fun loadDataFromNetwork() {
+        try {
+            val currentUser = accountService.currentUserId
+            val coffee = apiService.getCoffeeById(currentUser, selectedCoffeeId)
+                ?: throw Exception("Coffee not found")
 
-        val currentUser = accountService.currentUserId
-        val collectionReference =
-            FirebaseFirestore.getInstance().collection("coffeeUploads")
-                .whereEqualTo("userId", currentUser)
-                .whereEqualTo("id", selectedCoffee)
-                .get()
-                .await()
-        val coffeeListFromNetwork = collectionReference.toObjects(CoffeeDto::class.java).first()
-        val shotsFromNetwork =
-            collectionReference.documents.first().reference.collection("shots").get().await()
-        val formattedShots = shotsFromNetwork?.let {
-            it.map { docs ->
-                docs.toObject(ShotDto::class.java)
+            val label = coffee.label ?: throw Exception("Coffee label missing")
+            val shots = apiService.getShotsForCoffee(label)
+            
+            val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            val sortedShots = shots.sortedByDescending { shotDto ->
+                shotDto.date?.let { dateString ->
+                    try {
+                        LocalDate.parse(dateString, formatter)
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
             }
-        }
-        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-        val sortedFormattedShots = formattedShots?.sortedByDescending { shotDto ->
-            shotDto.date?.let { dateString ->
-                LocalDate.parse(dateString, formatter)
-            }
-        }
 
-
-        _viewData.value = Result.Success(
-            data = CoffeeDetailsViewData(
-                coffeeDto = coffeeListFromNetwork,
-                shotList = sortedFormattedShots,
+            _viewData.value = Result.Success(
+                data = CoffeeDetailsViewData(
+                    coffeeDto = coffee,
+                    shotList = sortedShots,
+                )
             )
-        )
-    }
-
-    private fun loadData() {
-        _viewData.value = Result.Success(
-            data = CoffeeDetailsViewData(
-                coffeeDto = CoffeeDto(
-                    label = "a coffee",
-                    roastDate = TODO(),
-                    beanTypes = TODO(),
-                    originCountries = TODO(),
-                    tastingNotes = TODO(),
-                    beanPreparationMethod = TODO(),
-                    roaster = TODO(),
-                    isDecaf = TODO(),
-                    userId = TODO(),
-                    id = TODO()
-                ),
-                null,
-            )
-        )
+        } catch (e: Exception) {
+            _viewData.value = Result.Error(e)
+        }
     }
 
     fun processIntent(intent: CoffeeDetailsIntent) {
         when (intent) {
             CoffeeDetailsIntent.NavigateHome -> {
-                // Handle navigation to the home screen
                 viewModelScope.launch {
                     _navigationEvent.send(NavigationEvent.NavigateHome)
                 }
             }
 
             is CoffeeDetailsIntent.ShowSheet -> {
-                _viewData.update {
-                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
-                    Result.Success(
-                        data.data.copy(showSheet = true)
-                    )
+                _viewData.update { current ->
+                    if (current is Result.Success) {
+                        Result.Success(current.data.copy(showSheet = true))
+                    } else current
                 }
             }
 
             is CoffeeDetailsIntent.HideSheet -> {
-                _viewData.update {
-                    val data = viewData.value as Result.Success<CoffeeDetailsViewData>
-                    Result.Success(
-                        data.data.copy(showSheet = false)
-                    )
+                _viewData.update { current ->
+                    if (current is Result.Success) {
+                        Result.Success(current.data.copy(showSheet = false))
+                    } else current
                 }
             }
 
             is CoffeeDetailsIntent.SubmitShot -> {
                 viewModelScope.launch {
                     try {
-                        val coffeeLabel = viewData.value as Result.Success<CoffeeDetailsViewData>
-                        val label = coffeeLabel.data.coffeeDto.label
-                        _viewData.update {
-                            Loading
-                        }
+                        val currentSuccess = _viewData.value as? Result.Success ?: return@launch
+                        val coffee = currentSuccess.data.coffeeDto
+                        val label = coffee.label ?: return@launch
+
+                        _viewData.update { Loading }
+                        
                         val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
                         val formattedDate = formatter.format(intent.shot.date)
 
@@ -154,38 +127,27 @@ class CoffeeDetailsViewModel @Inject constructor(
                             time = intent.shot.timeInSeconds,
                             rating = intent.shot.rating,
                         )
-                        val currentUser = accountService.currentUserId
-                        val database = FirebaseFirestore.getInstance().collection("coffeeUploads")
-                            .document("$label").collection("shots")
-                            .document(intent.shot.id)
-                            .set(shotDto)
-                            .await()
-                        val downloadedShots =
-                            FirebaseFirestore.getInstance().collection("coffeeUploads")
-                                .document("$label").collection("shots")
-                                .get()
-                                .await()
-                        val formattedShots = downloadedShots.map {
-                            it.toObject(ShotDto::class.java)
-                        }
-                        val dateSortFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
-                        val sortedFormattedShots = formattedShots.sortedByDescending { shotDto ->
-                            shotDto.date?.let { dateString ->
-                                LocalDate.parse(dateString, dateSortFormatter)
+                        
+                        apiService.uploadShot(label, shotDto)
+                        
+                        val updatedShots = apiService.getShotsForCoffee(label)
+                        val sortedShots = updatedShots.sortedByDescending { s ->
+                            s.date?.let { 
+                                try { LocalDate.parse(it, formatter) } catch(e: Exception) { null }
                             }
                         }
+
                         _viewData.update {
                             Result.Success(
                                 data = CoffeeDetailsViewData(
-                                    coffeeDto = coffeeLabel.data.coffeeDto,
-                                    shotList = sortedFormattedShots,
+                                    coffeeDto = coffee,
+                                    shotList = sortedShots,
                                     showSheet = false
                                 ),
                             )
                         }
                     } catch (e: Exception) {
-                        println("error uploading shot ${e.message} ${e.cause}")
-                        // Handle error, e.g., show a toast or log the error
+                        println("error uploading shot ${e.message}")
                     }
                 }
             }
