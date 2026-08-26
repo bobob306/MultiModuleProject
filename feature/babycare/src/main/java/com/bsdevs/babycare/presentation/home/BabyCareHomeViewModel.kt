@@ -31,7 +31,7 @@ class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val accountService: AccountService,
     private val screenRepository: ScreenRepository,
-    private val mapper: ScreenDataMapper
+    private val mapper: ScreenDataMapper,
 ) : ViewModel() {
 
     private val pageSize = 20
