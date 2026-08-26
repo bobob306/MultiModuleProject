@@ -51,13 +51,13 @@ class BabyCareRepositoryImpl @Inject constructor(
 
     private suspend fun fetchMonthFromService(userId: String, monthId: String): List<DailyLogDto> {
         val data = apiService.fetchMonthDocument(userId, monthId) ?: return emptyList()
-        val daysMap = data["days"] as? Map<String, List<Map<String, Any?>>> ?: emptyMap()
+        val daysMap = data["days"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
 
         return daysMap.map { (dateString, eventsArray) ->
             DailyLogDto(
-                date = dateString,
+                date = dateString as String,
                 userId = userId,
-                events = eventsArray.map { parseUnifiedEvent(it) }
+                events = (eventsArray as List<*>).map { parseUnifiedEvent(it as Map<String, Any?>) }
             )
         }
     }
@@ -76,10 +76,10 @@ class BabyCareRepositoryImpl @Inject constructor(
             comment = eventMap["comment"] as? String,
             nappyType = eventMap["nappyType"] as? String,
             mainFeedingSide = eventMap["mainFeedingSide"] as? String,
-            leftDuration = (eventMap["leftDuration"] as? Long) ?: 0L,
-            rightDuration = (eventMap["rightDuration"] as? Long) ?: 0L,
-            totalDuration = (eventMap["totalDuration"] as? Long) ?: 0L,
-            bottleAmountMl = (eventMap["bottleAmountMl"] as? Long)?.toInt(),
+            leftDuration = (eventMap["leftDuration"] as? Number)?.toLong() ?: 0L,
+            rightDuration = (eventMap["rightDuration"] as? Number)?.toLong() ?: 0L,
+            totalDuration = (eventMap["totalDuration"] as? Number)?.toLong() ?: 0L,
+            bottleAmountMl = (eventMap["bottleAmountMl"] as? Number)?.toInt(),
             temperature = (eventMap["temperature"] as? Number)?.toDouble()
         )
     }
