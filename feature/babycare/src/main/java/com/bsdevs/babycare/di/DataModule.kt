@@ -18,4 +18,10 @@ abstract class DataModule {
     abstract fun bindBabyCareRepository(
         babyCareRepositoryImpl: BabyCareRepositoryImpl
     ): BabyCareRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBabyCareFirestoreService(
+        firestoreBabyCareService: com.bsdevs.babycare.network.FirestoreBabyCareService
+    ): com.bsdevs.babycare.network.BabyCareFirestoreService
 }
