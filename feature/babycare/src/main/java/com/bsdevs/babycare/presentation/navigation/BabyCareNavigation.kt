@@ -11,6 +11,10 @@ import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
 import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -46,9 +50,11 @@ fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavO
 fun NavController.navigateToTemperature(activityId: String? = null, navOptions: NavOptions? = null) =
     navigate(route = TemperatureRoute(activityId), navOptions = navOptions)
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.babyCareSection(
     navController: NavController,
     onShowSnackBar: suspend (String, String?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
 ) {
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
@@ -60,7 +66,9 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
                 onNavigateToEditTemperature = { id -> navController.navigateToTemperature(id) },
-                onNavigateToGraph = {navController.navigateToGraph()}
+                onNavigateToGraph = {navController.navigateToGraph()},
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
         composable<NappyChangeRoute>(
@@ -70,7 +78,9 @@ fun NavGraphBuilder.babyCareSection(
         ) {
             NappyChangeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
         composable<FeedingRoute>(
@@ -80,7 +90,9 @@ fun NavGraphBuilder.babyCareSection(
         ) {
             FeedingScreenRoute(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
         composable<BabyGraphRoute>(

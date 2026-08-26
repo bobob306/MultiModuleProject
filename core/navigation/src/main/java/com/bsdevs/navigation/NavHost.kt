@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.bsdevs.babycare.presentation.navigation.babyCareSection
 import com.bsdevs.babycare.presentation.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
@@ -19,6 +21,7 @@ import com.bsdevs.login.loginScreenSection
 import com.bsdevs.login.navigateToLoginScreen
 import com.bsdevs.login.navigateToRegisterScreen
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MMPNavHost(
     navController: NavHostController,
@@ -26,39 +29,43 @@ fun MMPNavHost(
     modifier: Modifier,
     rootPadding: PaddingValues,
 ) {
-    NavHost(
-        navController = navController,
-        startDestination = SplashScreenBaseRoute,
-        modifier = modifier.padding(
-            bottom = rootPadding.calculateBottomPadding()
-        )
-    ) {
-        homeScreenSection(
-            onShowSnackBar = onShowSnackBar,
-            onNavigateToCoffee = navController::navigateToCoffeeHome,
-            onNavigateToBabyCare = navController::navigateToBabyCareHome,
-        )
-        coffeeScreenSection(
-            onShowSnackBar,
-            navigateToCoffeeInput = navController::navigateToCoffeeInput,
-            navigateToCoffeeHome = navController::navigateToCoffeeHome,
-            navigateToLogin = navController::navigateToLoginScreen,
-            navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
-        )
-        loginScreenSection(
-            onShowSnackBar,
-            onNavigateToCoffeeHome = navController::navigateToCoffeeHome,
-            onNavigateToLogin = navController::navigateToLoginScreen,
-            onNavigateToRegisterScreen = navController::navigateToRegisterScreen,
-        )
-        splashScreenSection(
-            onShowSnackBar,
-            onNavigateToBabyHome = navController::navigateToBabyCareHome,
-            onNavigateToSignIn = navController::navigateToLoginScreen,
-        )
-        babyCareSection(
+    SharedTransitionLayout {
+        NavHost(
             navController = navController,
-            onShowSnackBar = onShowSnackBar
-        )
+            startDestination = SplashScreenBaseRoute,
+            modifier = modifier.padding(
+                bottom = rootPadding.calculateBottomPadding()
+            )
+        ) {
+            homeScreenSection(
+                onShowSnackBar = onShowSnackBar,
+                onNavigateToCoffee = navController::navigateToCoffeeHome,
+                onNavigateToBabyCare = navController::navigateToBabyCareHome,
+            )
+            coffeeScreenSection(
+                onShowSnackBar,
+                navigateToCoffeeInput = navController::navigateToCoffeeInput,
+                navigateToCoffeeHome = navController::navigateToCoffeeHome,
+                navigateToLogin = navController::navigateToLoginScreen,
+                navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
+                sharedTransitionScope = this@SharedTransitionLayout
+            )
+            loginScreenSection(
+                onShowSnackBar,
+                onNavigateToCoffeeHome = navController::navigateToCoffeeHome,
+                onNavigateToLogin = navController::navigateToLoginScreen,
+                onNavigateToRegisterScreen = navController::navigateToRegisterScreen,
+            )
+            splashScreenSection(
+                onShowSnackBar,
+                onNavigateToBabyHome = navController::navigateToBabyCareHome,
+                onNavigateToSignIn = navController::navigateToLoginScreen,
+            )
+            babyCareSection(
+                navController = navController,
+                onShowSnackBar = onShowSnackBar,
+                sharedTransitionScope = this@SharedTransitionLayout
+            )
+        }
     }
 }

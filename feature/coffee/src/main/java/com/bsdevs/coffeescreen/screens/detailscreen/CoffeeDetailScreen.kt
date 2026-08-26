@@ -2,6 +2,8 @@ package com.bsdevs.coffeescreen.screens.detailscreen
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -45,16 +47,22 @@ import com.bsdevs.coffeescreen.screens.detailscreen.components.SecondHalfContent
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import java.nio.file.WatchEvent
 import java.time.LocalDate
 import java.util.UUID
 
 import com.bsdevs.uicomponents.MMPScaffold
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeDetailScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CoffeeDetailsViewModel = hiltViewModel()
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
@@ -76,7 +84,9 @@ fun CoffeeDetailScreenRoute(
                 CoffeeDetailContent(
                     onShowSnackBar = onShowSnackBar,
                     coffeeDetailsViewData = (viewData.value as Result.Success<CoffeeDetailsViewData>).data,
-                    onIntent = viewModel::processIntent
+                    onIntent = viewModel::processIntent,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
             }
         }
@@ -90,12 +100,14 @@ fun CoffeeDetailScreenRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeDetailContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     coffeeDetailsViewData: CoffeeDetailsViewData,
-    onIntent: (CoffeeDetailsIntent) -> Unit
+    onIntent: (CoffeeDetailsIntent) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val configuration = LocalConfiguration.current
     val window = currentWindowAdaptiveInfo()
@@ -140,83 +152,107 @@ fun CoffeeDetailContent(
                 CoffeeDetailLandscapeMode(
                     modifier = Modifier,
                     coffeeDetailsViewData,
-                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) },
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             } else {
                 // Portrait mode:
                 CoffeeDetailPortraitMode(
                     modifier = Modifier,
                     coffeeDetailsViewData,
-                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) })
+                    onAddShotClicked = { onIntent(CoffeeDetailsIntent.ShowSheet) },
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CoffeeDetailLandscapeMode(
     modifier: Modifier,
     viewData: CoffeeDetailsViewData,
     onAddShotClicked: () -> Unit = {},
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    Row(modifier = modifier.fillMaxSize(), horizontalArrangement = spacedBy(16.dp)) {
-        // Left half: Coffee Details Card
-        Card(
-            modifier = Modifier
-                .padding(4.dp)
-                .fillMaxHeight()
-                .fillMaxWidth(0.5f)
-                .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) { // Pass showSheet state and its updater
-            CoffeeDetailsFirstHalf(viewData.coffeeDto, true)
-        }
-        // Right half: Empty or for other content
-        Card(
-            modifier = Modifier
-                .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp))
-                .fillMaxWidth()
-                .fillMaxHeight(), // This applies .fillMaxWidth() from above
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            SecondHalfContent(
-                onAddShotClicked = onAddShotClicked,
-                shotList = viewData.shotList
-            )
+    with(sharedTransitionScope) {
+        Row(modifier = modifier.fillMaxSize(), horizontalArrangement = spacedBy(16.dp)) {
+            // Left half: Coffee Details Card
+            Card(
+                modifier = Modifier
+                    .padding(4.dp)
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.5f)
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "coffee_card_${viewData.coffeeDto.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                    .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) { // Pass showSheet state and its updater
+                CoffeeDetailsFirstHalf(viewData.coffeeDto, true)
+            }
+            // Right half: Empty or for other content
+            Card(
+                modifier = Modifier
+                    .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp))
+                    .fillMaxWidth()
+                    .fillMaxHeight(), // This applies .fillMaxWidth() from above
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                SecondHalfContent(
+                    onAddShotClicked = onAddShotClicked,
+                    shotList = viewData.shotList
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun CoffeeDetailPortraitMode(
     modifier: Modifier,
     viewData: CoffeeDetailsViewData,
     onAddShotClicked: () -> Unit = {},
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = spacedBy(16.dp)
-    ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight(), // This applies .fillMaxWidth() from above
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    with(sharedTransitionScope) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .clip(shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 16.dp)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = spacedBy(16.dp)
         ) {
-            CoffeeDetailsFirstHalf(viewData.coffeeDto, false)
-        }
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(), // This applies .fillMaxWidth() from above
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            SecondHalfContent(
-                onAddShotClicked = onAddShotClicked,
-                shotList = viewData.shotList,
-            )
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "coffee_card_${viewData.coffeeDto.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                CoffeeDetailsFirstHalf(viewData.coffeeDto, false)
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(), // This applies .fillMaxWidth() from above
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                SecondHalfContent(
+                    onAddShotClicked = onAddShotClicked,
+                    shotList = viewData.shotList,
+                )
+            }
         }
     }
 }
@@ -241,24 +277,30 @@ private fun CoffeeDetailContentPreview() {
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            CoffeeDetailContent(
-                onShowSnackBar = { _, _ -> },
-                CoffeeDetailsViewData(
-                    coffeeDto = CoffeeDto(
-                        label = "Ethiopian Yirgacheffe",
-                        roastDate = "2023-10-26",
-                        roaster = "Artisan Coffee Roasters",
-                        beanTypes = listOf("Arabica"),
-                        originCountries = listOf("Ethiopia"),
-                        tastingNotes = listOf("Floral", "Citrus", "Berry"),
-                        beanPreparationMethod = listOf("Washed"),
-                        isDecaf = false,
-                        rating = 3,
-                    ),
-                    null
-                ),
-                onIntent = {}
-            )
+            SharedTransitionLayout {
+                AnimatedVisibility(visible = true) {
+                    CoffeeDetailContent(
+                        onShowSnackBar = { _, _ -> },
+                        coffeeDetailsViewData = CoffeeDetailsViewData(
+                            coffeeDto = CoffeeDto(
+                                label = "Ethiopian Yirgacheffe",
+                                roastDate = "2023-10-26",
+                                roaster = "Artisan Coffee Roasters",
+                                beanTypes = listOf("Arabica"),
+                                originCountries = listOf("Ethiopia"),
+                                tastingNotes = listOf("Floral", "Citrus", "Berry"),
+                                beanPreparationMethod = listOf("Washed"),
+                                isDecaf = false,
+                                rating = 3,
+                            ),
+                            null
+                        ),
+                        onIntent = {},
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this@AnimatedVisibility
+                    )
+                }
+            }
         }
     }
 }

@@ -57,13 +57,18 @@ import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.MMPTimePickerDialog
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import java.time.LocalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun FeedingScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: FeedingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -110,7 +115,9 @@ fun FeedingScreenRoute(
             onUpdateBottleAmount = viewModel::updateBottleAmount,
             onCommentChanged = viewModel::onCommentChanged,
             onSave = viewModel::submitFeeding,
-            onDelete = viewModel::deleteFeeding
+            onDelete = viewModel::deleteFeeding,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
         )
     }
 
@@ -124,7 +131,7 @@ fun FeedingScreenRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun FeedingScreen(
     modifier: Modifier = Modifier,
@@ -137,7 +144,9 @@ internal fun FeedingScreen(
     onUpdateBottleAmount: (Int?) -> Unit,
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     var showBottleDialog by rememberSaveable { mutableStateOf(false) }
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
@@ -151,8 +160,15 @@ internal fun FeedingScreen(
     var isPlayingSplodge by remember { mutableStateOf(false) }
 
     // 📱 OPTION A: LANDSCAPE MODE (Two-Column Side-by-Side Layout)
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isLandscape) {
+    with(sharedTransitionScope) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .sharedElement(
+                sharedContentState = rememberSharedContentState(key = "tile_feeding_tile"),
+                animatedVisibilityScope = animatedVisibilityScope
+            )
+        ) {
+            if (isLandscape) {
             Row(
                 modifier = modifier
                     .fillMaxSize(),
@@ -525,6 +541,7 @@ internal fun FeedingScreen(
             )
         }
     }
+}
 }
 
 @OptIn(ExperimentalFoundationApi::class)

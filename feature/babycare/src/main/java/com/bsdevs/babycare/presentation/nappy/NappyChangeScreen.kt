@@ -47,13 +47,18 @@ import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.MMPTimePickerDialog
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import java.time.LocalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun NappyChangeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: NappyChangeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -95,7 +100,9 @@ fun NappyChangeScreenRoute(
             onTypeChanged = { type -> viewModel.onTypeChanged(type) },
             onCommentChanged = viewModel::onCommentChanged,
             onSave = { viewModel.submitNappyChange() },
-            onDelete = { viewModel.deleteNappyChange() }
+            onDelete = { viewModel.deleteNappyChange() },
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope
         )
     }
 
@@ -109,7 +116,7 @@ fun NappyChangeScreenRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun NappyChangeScreen(
     modifier: Modifier = Modifier,
@@ -118,7 +125,9 @@ internal fun NappyChangeScreen(
     onTypeChanged: (String) -> Unit,
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -129,8 +138,17 @@ internal fun NappyChangeScreen(
     var isPlayingTurdAnimation by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // 📱 1. LANDSCAPE MODE: Two-Column Side-by-Side Layout
-        if (isLandscape) {
+        with(sharedTransitionScope) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "tile_nappy_tile"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+            ) {
+                // 📱 1. LANDSCAPE MODE: Two-Column Side-by-Side Layout
+                if (isLandscape) {
             Row(
                 modifier = modifier
                     .fillMaxSize(),
@@ -354,5 +372,7 @@ internal fun NappyChangeScreen(
                 }
             )
         }
+        }
     }
+}
 }

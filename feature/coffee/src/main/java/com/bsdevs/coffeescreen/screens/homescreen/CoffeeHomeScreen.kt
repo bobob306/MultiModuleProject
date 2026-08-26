@@ -44,9 +44,13 @@ import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.shimmer
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 
 import com.bsdevs.uicomponents.MMPScaffold
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun CoffeeHomeScreenRoute(
@@ -54,6 +58,8 @@ fun CoffeeHomeScreenRoute(
     navigateToCoffeeInput: () -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
     val scope = rememberCoroutineScope()
@@ -71,6 +77,8 @@ fun CoffeeHomeScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeHomeScreenViewData>).data,
                 onIntent = viewModel::processIntent,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }
@@ -90,12 +98,14 @@ fun CoffeeHomeScreenRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeHomeScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeHomeScreenViewData,
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val coffeeListItems = viewData.viewData
         .filterIsInstance<CoffeeHomeScreenViewDatas.CoffeeList>()
@@ -138,6 +148,8 @@ fun CoffeeHomeScreenContent(
                                 coffee = list[index],
                                 onIntent = onIntent,
                                 isLandscape = isLandscape,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
                             )
                         }
                     }
@@ -183,33 +195,47 @@ fun CoffeeHomeButtons(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeListItem(
     coffee: CoffeeDto,
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    Card(
-        modifier = Modifier
-            .clickable {
-                onIntent.invoke(
-                    CoffeeHomeScreenIntent.NavigateToDetail(
-                        coffee.id ?: ""
-                    )
+    with(sharedTransitionScope) {
+        Card(
+            modifier = Modifier
+                .padding(vertical = 8.dp, horizontal = if (isLandscape) 8.dp else 0.dp)
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "coffee_card_${coffee.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
-            }
-            .wrapContentHeight()
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = if (isLandscape) 8.dp else 0.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    )
-    {
-        Text(
-            text = coffee.label ?: "Unnamed Coffee",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(4.dp)
+                .clickable {
+                    onIntent.invoke(
+                        CoffeeHomeScreenIntent.NavigateToDetail(
+                            coffee.id ?: ""
+                        )
+                    )
+                }
+                .wrapContentHeight()
+                .fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         )
+        {
+            Text(
+                text = coffee.label ?: "Unnamed Coffee",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .padding(4.dp)
+                    .sharedBounds(
+                        sharedContentState = rememberSharedContentState(key = "coffee_label_${coffee.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+            )
+        }
     }
 }
 
