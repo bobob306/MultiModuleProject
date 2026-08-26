@@ -1,6 +1,7 @@
 package com.bsdevs.babycare.presentation.home
 
 import com.bsdevs.babycare.presentation.common.BabyActivity
+import com.bsdevs.data.NetworkScreenData
 
 sealed class HomeFeedItem {
     data class Header(
@@ -18,6 +19,7 @@ data class BabyCareHomeViewData(
     val lastFeeding: String? = null,
     val lastTemperature: String? = null,
     val activityFeed: List<HomeFeedItem> = emptyList(),
+    val dynamicUi: List<NetworkScreenData> = emptyList(),
     val canLoadMore: Boolean = true,
     val isLoadingMore: Boolean = false,
     val isRefreshing: Boolean = false,

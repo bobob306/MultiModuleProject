@@ -21,27 +21,23 @@ class ScreenRepositoryImpl @Inject constructor(
     private val scr: CollectionReference,
     private val mapper: ScreenDtoMapper,
 ) : ScreenRepository {
-    private var cache: Task<DocumentSnapshot>? = null
-    private var cacheFlow: List<ScreenDto>? = null
+    private val cacheFlowMap = mutableMapOf<String, List<ScreenDto>>()
 
     override suspend fun getScreen(screen: String): Task<DocumentSnapshot> {
-        return if (cache != null) {
-            cache as Task<DocumentSnapshot>
-        } else {
-            cache = scr.document(screen).get()
-            return cache as Task<DocumentSnapshot>
-        }
+        return scr.document(screen).get()
     }
 
     override suspend fun getScreenFlow(screen: String): Flow<Result<List<ScreenDto>>> {
-        if (cacheFlow != null) {
-            return flowOf(Result.Success(cacheFlow!!))
+        val cached = cacheFlowMap[screen]
+        if (cached != null) {
+            return flowOf(Result.Success(cached))
         } else {
             try {
                 val document = scr.document(screen).get().await().data
                 println("document = $document")
-                cacheFlow = mapper.mapToDto(document as HashMap)
-                return flowOf(Result.Success(cacheFlow!!))
+                val dto = mapper.mapToDto(document as HashMap)
+                cacheFlowMap[screen] = dto
+                return flowOf(Result.Success(dto))
             } catch (e: Exception) {
                 println(e.message)
                 return flowOf(Result.Error(e))

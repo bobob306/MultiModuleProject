@@ -96,6 +96,33 @@ sealed class ScreenDto(
         @SerialName("destination") val destination: String,
         @SerialName("sort") val sort: ButtonType? = PRIMARY,
     ) : ScreenDto(index)
+
+    @SerialName("SMALL_TITLE")
+    data class SmallTitleDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("content") val content: String,
+    ) : ScreenDto(index)
+
+    @SerialName("ACTIVITY_FEED")
+    data class ActivityFeedDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
+    @SerialName("TILE_ROW")
+    data class TileRowDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("tiles") val tiles: List<TileDto> = emptyList(),
+    ) : ScreenDto(index)
+
+    @Serializable
+    data class TileDto(
+        @SerialName("index") val index: Int,
+        @SerialName("title") val title: String,
+        @SerialName("iconName") val iconName: String,
+        @SerialName("destination") val destination: String,
+        @SerialName("subtitleType") val subtitleType: String? = null,
+        @SerialName("sharedElementKey") val sharedElementKey: String? = null,
+    )
 }
 
 data class SizeDto(
