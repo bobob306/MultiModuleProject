@@ -45,7 +45,7 @@ class BabyCareRepositoryImpl @Inject constructor(
             )
         } catch (e: Exception) {
             Log.e("BABYCARE_REPO", "Error loading initial data", e)
-            RepositoryFetchResult(null, false)
+            throw e // Rethrow so ViewModel can catch it
         }
     }
 

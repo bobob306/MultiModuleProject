@@ -215,17 +215,15 @@ class BabyCareRepositoryImplTest {
         }
     }
 
-    @Test
-    fun `loadInitialData handles unexpected exceptions gracefully`() = runTest {
+    @Test(expected = RuntimeException::class)
+    fun `loadInitialData rethrows unexpected exceptions`() = runTest {
         // Create a fake that throws
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String) = throw RuntimeException("Firestore Down")
         }
         val repo = BabyCareRepositoryImpl(crashingService)
 
-        val result = repo.loadInitialData(userId, 20)
-
-        assertNull(result.nextAnchorMonth)
-        assertFalse(result.hasMoreData)
+        // When/Then
+        repo.loadInitialData(userId, 20)
     }
 }
