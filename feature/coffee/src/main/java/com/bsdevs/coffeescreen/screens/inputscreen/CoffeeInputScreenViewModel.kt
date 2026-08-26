@@ -2,6 +2,7 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.annotation.Keep
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.network.CoffeeApiService
 import com.bsdevs.coffeescreen.network.CoffeeDto
@@ -301,6 +302,7 @@ sealed class CoffeeInputScreenIntent {
     object NavigateHome : CoffeeInputScreenIntent()
 }
 
+@Keep
 data class CoffeeInputScreenDto(
     @get:PropertyName("BEANS") val BEANS: List<String> = emptyList(),
     @get:PropertyName("CAFFEINE") val CAFFEINE: List<String> = emptyList(),

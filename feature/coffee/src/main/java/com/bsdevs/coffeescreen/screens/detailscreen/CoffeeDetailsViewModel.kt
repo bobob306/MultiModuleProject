@@ -2,6 +2,7 @@ package com.bsdevs.coffeescreen.screens.detailscreen
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.annotation.Keep
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
@@ -159,6 +160,7 @@ data class ShotList(
     val shots: List<ShotDto>
 )
 
+@Keep
 data class ShotDto(
     val id: String? = null,
     val date: String? = null,

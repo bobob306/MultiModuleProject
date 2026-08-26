@@ -63,7 +63,6 @@ fun NavGraphBuilder.babyCareSection(
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
             BabyCareHomeScreenRoute(
-                onShowSnackBar = onShowSnackBar,
                 onNavigateToNappyChange = { navController.navigateToNappyChange() },
                 onNavigateToFeeding = { navController.navigateToFeeding() },
                 onNavigateToTemperature = { navController.navigateToTemperature() },
