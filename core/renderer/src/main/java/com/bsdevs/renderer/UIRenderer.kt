@@ -27,11 +27,11 @@ fun ColumnScope.RenderUI(
     onClick: (String, String) -> Unit,
     onChipClick: (Boolean) -> Unit,
     onSwitchClick: (Boolean) -> Unit,
-    featureContent: @Composable (NetworkScreenData) -> Unit = {}
+    featureContent: @Composable (NetworkScreenData) -> Unit = {},
 ) {
     when (item) {
         is NetworkScreenData.TitleDataNetwork -> Text(
-            item.content.uppercase(Locale.getDefault()),
+            text = item.content.uppercase(Locale.getDefault()),
             style = MaterialTheme.typography.titleMedium
         )
 

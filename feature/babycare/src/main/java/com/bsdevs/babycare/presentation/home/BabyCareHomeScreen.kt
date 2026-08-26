@@ -356,7 +356,7 @@ private fun LazyListScope.renderActivityFeed(
                     is BabyActivity.Temperature -> currentActivity.dto.id
                 }
 
-                item(key = "row_${uniqueId}") {
+                item(key = "row_$uniqueId") {
                     val allRows = remember(activityItems) {
                         activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
                     }
