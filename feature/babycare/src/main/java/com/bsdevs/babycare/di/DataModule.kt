@@ -6,7 +6,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import jakarta.inject.Singleton
+import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.babycare.presentation.common.DefaultTimeProvider
+import javax.inject.Singleton
 
 
 @Module
@@ -24,4 +26,10 @@ abstract class DataModule {
     abstract fun bindBabyCareFirestoreService(
         firestoreBabyCareService: com.bsdevs.babycare.network.FirestoreBabyCareService
     ): com.bsdevs.babycare.network.BabyCareFirestoreService
+
+    @Binds
+    @Singleton
+    abstract fun bindTimeProvider(
+        defaultTimeProvider: DefaultTimeProvider
+    ): TimeProvider
 }
