@@ -1,6 +1,12 @@
 package com.bsdevs.babycare.presentation.home
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,25 +32,37 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
@@ -57,9 +75,6 @@ import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.shimmer
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -82,8 +97,7 @@ fun BabyCareHomeScreenRoute(
         is Result.Success -> {
             BabyCareHomeScreen(
                 viewData = state.data,
-                // If your success viewData already tracks the root refresh loading block:
-                onRefresh = { viewModel.refreshData() }, // Make sure your ViewModel exposes a refresh method
+                onRefresh = { viewModel.refreshData() },
                 onNavigateToNappyChange = onNavigateToNappyChange,
                 onNavigateToFeeding = onNavigateToFeeding,
                 onNavigateToTemperature = onNavigateToTemperature,
@@ -94,6 +108,7 @@ fun BabyCareHomeScreenRoute(
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore,
                 onNavigateToGraph = onNavigateToGraph,
+                onDeleteActivity = viewModel::deleteActivity,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope
             )
@@ -127,37 +142,61 @@ internal fun BabyCareHomeScreen(
     onToggleHeaderCollapse: (String) -> Unit,
     onNavigateToGraph: () -> Unit,
     onLoadMore: () -> Unit,
+    onDeleteActivity: (BabyActivity) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
-    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
+    
+    var activityToDelete by remember { mutableStateOf<BabyActivity?>(null) }
+
+    if (activityToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { activityToDelete = null },
+            title = { Text("Delete Activity") },
+            text = { Text("Are you sure you want to delete this activity? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        activityToDelete?.let { onDeleteActivity(it) }
+                        activityToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { activityToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     MMPScaffold(
         title = "Baby Care",
         scrollBehavior = scrollBehavior
     ) { innerPadding ->
-        // 1. Direct PullToRefreshBox wrapper at the root level
         PullToRefreshBox(
-            isRefreshing = viewData.isRefreshing, // Use the localized ui flag
+            isRefreshing = viewData.isRefreshing,
             onRefresh = {
-                onRefresh() // Trigger your Firebase fetch logic
+                onRefresh()
             },
             state = pullToRefreshState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // 2. The scrollable view MUST be the immediate child so gestures sync perfectly
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Item 2: Quick Action Tiles Row
                 item {
                     Row(
                         modifier = Modifier
@@ -222,7 +261,6 @@ internal fun BabyCareHomeScreen(
                     }
                 }
 
-                // Item 3: Activity Feed Label
                 item {
                     Text(
                         text = "Recent Activity",
@@ -231,25 +269,21 @@ internal fun BabyCareHomeScreen(
                     )
                 }
 
-                // 📱 Item 4: High-performance flat-list loop with Native Sticky Headers
                 val activityItems = viewData.activityFeed
 
                 activityItems.forEach { feedItem ->
                     when (feedItem) {
-
-                        // 📌 1. Natively pin headers to the top using stickyHeader
                         is HomeFeedItem.Header -> {
                             stickyHeader(key = "header_${feedItem.title}") {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.surface)
-                                        .clickable { onToggleHeaderCollapse(feedItem.title) } // 🔄 Click to collapse/expand
+                                        .clickable { onToggleHeaderCollapse(feedItem.title) }
                                         .padding(vertical = 12.dp, horizontal = 4.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Left Side: Date Title text + Dynamic Chevron state arrow layout
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
@@ -257,13 +291,12 @@ internal fun BabyCareHomeScreen(
                                         val isCollapsed =
                                             viewData.collapsedHeaders.contains(feedItem.title)
                                         Text(
-                                            text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}", // Inline structural indicator
+                                            text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}",
                                             style = MaterialTheme.typography.titleMedium,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                     }
 
-                                    // Right Side: Quick Totals metrics indicators
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         if (feedItem.feedingCount > 0) {
                                             Text(
@@ -288,11 +321,8 @@ internal fun BabyCareHomeScreen(
                             }
                         }
 
-                        // 📋 2. Render standard rows using individual item slots underneath
                         is HomeFeedItem.ActivityRow -> {
                             val currentActivity = feedItem.activity
-
-                            // Extract the unique ID value directly for the primitive key signature reference
                             val uniqueId = when (currentActivity) {
                                 is BabyActivity.Nappy -> currentActivity.dto.id
                                 is BabyActivity.Feeding -> currentActivity.dto.id
@@ -300,8 +330,6 @@ internal fun BabyCareHomeScreen(
                             }
 
                             item(key = "row_${uniqueId}") {
-
-                                // Calculate pagination indices relative to standard rows only
                                 val allRows = remember(activityItems) {
                                     activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
                                 }
@@ -318,47 +346,69 @@ internal fun BabyCareHomeScreen(
                                         .fillMaxWidth()
                                         .animateItem()
                                 ) {
-                                    ActivityFeedItem(
-                                        item = currentActivity,
-                                        onEdit = {
-                                            val activityId = when (currentActivity) {
-                                                is BabyActivity.Nappy -> currentActivity.dto.id
-                                                is BabyActivity.Feeding -> currentActivity.dto.id
-                                                is BabyActivity.Temperature -> currentActivity.dto.id
-                                            }
-                                            activityId?.let {
-                                                when (currentActivity) {
-                                                    is BabyActivity.Nappy -> onNavigateToEditNappyChange(
-                                                        activityId
-                                                    )
+                                    val index = activityItems.indexOf(feedItem)
+                                    val animatedOffset = remember { Animatable(100f) }
+                                    val animatedAlpha = remember { Animatable(0f) }
 
-                                                    is BabyActivity.Feeding -> onNavigateToEditFeeding(
-                                                        activityId
-                                                    )
-                                                    is BabyActivity.Temperature -> onNavigateToEditTemperature(
-                                                        activityId
-                                                    )
+
+                                    LaunchedEffect(key1 = true) {
+                                        kotlinx.coroutines.delay((index % 10) * 50L)
+                                        animatedOffset.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                                        )
+                                    }
+                                    LaunchedEffect(key1 = true) {
+                                        kotlinx.coroutines.delay((index % 10) * 50L)
+                                        animatedAlpha.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = tween(durationMillis = 400)
+                                        )
+                                    }
+
+                                    Box(modifier = Modifier
+                                        .graphicsLayer {
+                                            translationY = animatedOffset.value
+                                            alpha = animatedAlpha.value
+                                        }
+                                    ) {
+                                        ActivityFeedItem(
+                                            item = currentActivity,
+                                            onEdit = {
+                                                val activityId = when (currentActivity) {
+                                                    is BabyActivity.Nappy -> currentActivity.dto.id
+                                                    is BabyActivity.Feeding -> currentActivity.dto.id
+                                                    is BabyActivity.Temperature -> currentActivity.dto.id
                                                 }
-                                            }
-                                        },
-                                        onIconClick = {
-                                            val targetFilter = when (currentActivity) {
-                                                is BabyActivity.Nappy -> ActivityFilter.NAPPY
-                                                is BabyActivity.Feeding -> ActivityFilter.FEEDING
-                                                is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
-                                            }
-                                            onToggleFilter(targetFilter)
-                                        },
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    )
+                                                activityId?.let {
+                                                    when (currentActivity) {
+                                                        is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
+                                                        is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
+                                                        is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
+                                                    }
+                                                }
+                                            },
+                                            onIconClick = {
+                                                val targetFilter = when (currentActivity) {
+                                                    is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                                    is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                                    is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
+                                                }
+                                                onToggleFilter(targetFilter)
+                                            },
+                                            onDelete = {
+                                                activityToDelete = currentActivity
+                                            },
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                // Item 5: Bottom Loading Spinner for Pagination
                 if (viewData.isLoadingMore) {
                     item {
                         Box(
@@ -372,7 +422,6 @@ internal fun BabyCareHomeScreen(
                     }
                 }
 
-                // Item 6: Empty Placeholder State
                 if (viewData.activityFeed.isEmpty()) {
                     item {
                         Text(
@@ -384,26 +433,38 @@ internal fun BabyCareHomeScreen(
                     }
                 }
 
-                // Item 7: Bottom Padding Spacing
                 item { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityFeedItem(
     item: BabyActivity,
     onEdit: () -> Unit,
     onIconClick: () -> Unit,
+    onDelete: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    val icon = when (item) {
-        is BabyActivity.Nappy -> Icons.Default.ChildCare
-        is BabyActivity.Feeding -> Icons.Default.Restaurant
-        is BabyActivity.Temperature -> Icons.Default.Thermostat
+    val (icon, color, onColor) = when (item) {
+        is BabyActivity.Nappy -> Triple(
+            Icons.Default.ChildCare,
+            Color(0xFFE8F5E9), // Light Green
+            Color(0xFF2E7D32)  // Dark Green
+        )
+        is BabyActivity.Feeding -> Triple(
+            Icons.Default.Restaurant,
+            Color(0xFFE3F2FD), // Light Blue
+            Color(0xFF1565C0)  // Dark Blue
+        )
+        is BabyActivity.Temperature -> Triple(
+            Icons.Default.Thermostat,
+            Color(0xFFFFF3E0), // Light Orange
+            Color(0xFFE65100)  // Dark Orange
+        )
     }
 
     val title = when (item) {
@@ -425,67 +486,125 @@ fun ActivityFeedItem(
         is BabyActivity.Temperature -> item.dto.id
     }
 
-    with(sharedTransitionScope) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .sharedElement(
-                    sharedContentState = rememberSharedContentState(key = "activity_card_${activityId}"),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = onEdit
-                ),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-        ) {
-            Row(
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onDelete()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onEdit()
+                    false
+                }
+                else -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val bgColor = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                else -> Color.Transparent
+            }
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }
+            val swipeIcon = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Delete
+                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Edit
+                else -> null
+            }
+
+            Box(
                 modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .clip(CardDefaults.shape)
+                    .background(bgColor)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = alignment
             ) {
-                // 🔄 2. Make only this circle clickable to capture the filter event
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                        .clip(CircleShape) // Ensures the click ripple is a perfect circle
-                        .clickable { onIconClick() },
-                    contentAlignment = Alignment.Center
-                ) {
+                swipeIcon?.let {
                     Icon(
-                        imageVector = icon,
-                        contentDescription = "Filter by type",
+                        imageVector = it,
+                        contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        tint = if (direction == SwipeToDismissBoxValue.StartToEnd) 
+                            MaterialTheme.colorScheme.error 
+                        else 
+                            MaterialTheme.colorScheme.primary
                     )
                 }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+            }
+        }
+    ) {
+        with(sharedTransitionScope) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "activity_card_${activityId}"),
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
-                    item.comment?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    .combinedClickable(
+                        onClick = {}, // Disable single tap edit to prevent accidental navigation
+                        onLongClick = onEdit
+                    ),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(color, CircleShape)
+                            .clip(CircleShape)
+                            .clickable { onIconClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = "Filter by type",
+                            modifier = Modifier.size(24.dp),
+                            tint = onColor
                         )
                     }
-                }
 
-                Text(
-                    text = item.time ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        item.comment?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = item.time ?: "",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -533,7 +652,7 @@ fun BabyCareTile(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp), // 📏 Slightly smaller icon to guarantee it fits under 120.dp
+                        modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
@@ -541,7 +660,7 @@ fun BabyCareTile(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center,
-                        maxLines = 1, // 🛡️ Safe guard against text wrapping
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (subtitle != null) {
@@ -574,7 +693,6 @@ internal fun BabyCareHomeLoading() {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Tiles Shimmer
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -598,7 +716,6 @@ internal fun BabyCareHomeLoading() {
                 modifier = Modifier.padding(top = 16.dp)
             )
 
-            // Feed Shimmer
             repeat(5) {
                 Box(
                     modifier = Modifier
@@ -611,4 +728,3 @@ internal fun BabyCareHomeLoading() {
         }
     }
 }
-

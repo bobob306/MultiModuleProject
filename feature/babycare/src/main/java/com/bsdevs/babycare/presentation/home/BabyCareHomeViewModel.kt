@@ -319,4 +319,23 @@ class BabyCareHomeViewModel @Inject constructor(
             )
         }
     }
+
+    fun deleteActivity(activity: BabyActivity) {
+        val userId = accountService.currentUserId
+        val (date, eventId) = when (activity) {
+            is BabyActivity.Feeding -> activity.dto.date to activity.dto.id
+            is BabyActivity.Nappy -> activity.dto.date to activity.dto.id
+            is BabyActivity.Temperature -> activity.dto.date to activity.dto.id
+        }
+
+        if (date != null && eventId != null) {
+            viewModelScope.launch {
+                try {
+                    repository.deleteActivityEvent(userId, date, eventId)
+                } catch (e: Exception) {
+                    Log.e("DELETE_ERROR", "Failed to delete activity", e)
+                }
+            }
+        }
+    }
 }
