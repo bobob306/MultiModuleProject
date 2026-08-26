@@ -6,6 +6,7 @@ import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 
 import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
@@ -40,6 +41,7 @@ class BabyCareHomeViewModelTest {
     private lateinit var screenRepository: ScreenRepository
     private lateinit var mapper: ScreenDataMapper
     private lateinit var viewModel: BabyCareHomeViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
 
@@ -51,8 +53,14 @@ class BabyCareHomeViewModelTest {
         every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
         every { Log.e(any<String>(), any<String>()) } returns 0
 
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService)
+        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
         accountService = FakeAccountService(userId)
         
         screenRepository = mockk(relaxed = true)
@@ -62,7 +70,7 @@ class BabyCareHomeViewModelTest {
         every { mapper.mapToData(any()) } returns emptyList()
         
         // viewModel init triggers initialLoad which uses repository
-        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper)
+        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
     }
 
     @After
@@ -100,7 +108,7 @@ class BabyCareHomeViewModelTest {
         coEvery { screenRepository.getScreenFlow("baby_home") } returns flowOf(Result.Success(listOf(mockk())))
         
         // When recreating VM to trigger init
-        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper)
+        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
         
         // Then
         vm.viewData.test {
@@ -290,10 +298,10 @@ class BabyCareHomeViewModelTest {
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String) = throw RuntimeException("Network Error")
         }
-        val errorRepo = BabyCareRepositoryImpl(crashingService)
+        val errorRepo = BabyCareRepositoryImpl(crashingService, dispatchers)
         
         // We need to wait for the viewModelScope to finish the initialLoad call
-        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper)
+        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper, dispatchers)
 
         // Then
         errorViewModel.viewData.test {

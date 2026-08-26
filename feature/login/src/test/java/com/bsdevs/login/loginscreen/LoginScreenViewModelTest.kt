@@ -1,6 +1,7 @@
 package com.bsdevs.login.loginscreen
 
 import app.cash.turbine.test
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,12 +21,20 @@ class LoginScreenViewModelTest {
     
     private lateinit var accountService: FakeAccountService
     private lateinit var viewModel: LoginScreenViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         accountService = FakeAccountService()
-        viewModel = LoginScreenViewModel(accountService)
+        viewModel = LoginScreenViewModel(accountService, dispatchers)
     }
 
     @After

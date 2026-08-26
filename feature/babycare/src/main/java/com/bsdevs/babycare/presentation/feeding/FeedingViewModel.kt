@@ -1,6 +1,5 @@
 package com.bsdevs.babycare.presentation.feeding
 
-import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +9,7 @@ import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -23,12 +23,14 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
     private val timeProvider: TimeProvider,
+    private val dispatchers: DispatcherProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -139,7 +141,7 @@ class FeedingViewModel @Inject constructor(
                         FeedingSide.RIGHT -> state.copy(rightDuration = totalDuration)
                     }
                 }
-                delay(1000L)
+                delay(1000L.milliseconds)
             }
         }
     }

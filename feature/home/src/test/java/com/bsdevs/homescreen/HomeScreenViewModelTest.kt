@@ -1,6 +1,7 @@
 package com.bsdevs.homescreen
 
 import app.cash.turbine.test
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenDataMapperImpl
 import com.bsdevs.network.dto.ScreenDto
@@ -23,13 +24,21 @@ class HomeScreenViewModelTest {
     private lateinit var repository: FakeScreenRepository
     private lateinit var mapper: ScreenDataMapperImpl
     private lateinit var viewModel: HomeScreenViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         repository = FakeScreenRepository()
         mapper = ScreenDataMapperImpl()
-        viewModel = HomeScreenViewModel(repository, mapper)
+        viewModel = HomeScreenViewModel(repository, mapper, dispatchers)
     }
 
     @After

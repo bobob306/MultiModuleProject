@@ -10,19 +10,28 @@ import org.junit.Before
 import org.junit.Test
 import java.time.YearMonth
 import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.common.DispatcherProvider
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BabyCareRepositoryImplTest {
 
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
 
     @Before
     fun setUp() {
+        val testDispatcher = UnconfinedTestDispatcher()
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService)
+        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
     }
 
     // --- INITIAL LOAD TESTS ---
@@ -221,7 +230,7 @@ class BabyCareRepositoryImplTest {
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String) = throw RuntimeException("Firestore Down")
         }
-        val repo = BabyCareRepositoryImpl(crashingService)
+        val repo = BabyCareRepositoryImpl(crashingService, dispatchers)
 
         // When/Then
         repo.loadInitialData(userId, 20)

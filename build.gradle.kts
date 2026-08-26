@@ -8,4 +8,5 @@ plugins {
     id("com.google.dagger.hilt.android") version "2.60.1" apply false // Hilt plugin
     alias(libs.plugins.kotlin.serialization) apply false // Kotlin serialization plugin
     id("com.google.gms.google-services") version "4.4.2" apply false
+    alias(libs.plugins.androidx.baselineprofile) apply false
 }

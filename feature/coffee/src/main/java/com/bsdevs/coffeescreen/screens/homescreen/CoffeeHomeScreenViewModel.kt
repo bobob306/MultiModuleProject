@@ -14,6 +14,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeRoasters
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesList
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.asResult
 import com.google.firebase.firestore.FirebaseFirestore
@@ -30,11 +31,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class CoffeeHomeScreenViewModel @Inject constructor(
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
@@ -72,17 +75,20 @@ class CoffeeHomeScreenViewModel @Inject constructor(
                 .get()
                 .await()
         val coffeeListFromNetwork = collectionReference.toObjects(CoffeeDto::class.java)
-        val vd = loadedData.copy(
-            viewData = loadedData.viewData.map {
-                when (it) {
-                    is CoffeeHomeScreenViewDatas.CoffeeList -> {
-                        it.copy(coffeeList = coffeeListFromNetwork)
-                    }
 
-                    else -> it
+        val vd = withContext(dispatchers.default) {
+            loadedData.copy(
+                viewData = loadedData.viewData.map {
+                    when (it) {
+                        is CoffeeHomeScreenViewDatas.CoffeeList -> {
+                            it.copy(coffeeList = coffeeListFromNetwork)
+                        }
+
+                        else -> it
+                    }
                 }
-            }
-        )
+            )
+        }
         _viewData.value = Result.Success(
             data = vd
         )

@@ -5,6 +5,7 @@ plugins {
     id("com.google.dagger.hilt.android")
     alias(libs.plugins.kotlin.serialization)
     id("com.google.gms.google-services")
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -27,7 +28,13 @@ android {
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Use release signing if configured, otherwise fallback to debug signing
+            signingConfig = if (System.getenv("SIGN_STORE_FILE") != null || project.hasProperty("storeFile")) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
+
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -64,6 +71,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
     implementation(libs.play.services.base)
+
+    baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.androidx.ui.test.manifest)
 }

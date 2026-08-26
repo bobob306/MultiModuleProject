@@ -8,6 +8,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class NappyChangeViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
+    private val dispatchers: DispatcherProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 

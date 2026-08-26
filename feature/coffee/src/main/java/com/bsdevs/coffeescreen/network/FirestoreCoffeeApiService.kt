@@ -1,8 +1,11 @@
 package com.bsdevs.coffeescreen.network
 
+import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
 import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenDto
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,17 +45,17 @@ class FirestoreCoffeeApiService @Inject constructor(
         return snapshot.toObjects(CoffeeDto::class.java).firstOrNull()
     }
 
-    override suspend fun getShotsForCoffee(coffeeLabel: String): List<com.bsdevs.coffeescreen.screens.detailscreen.ShotDto> {
+    override suspend fun getShotsForCoffee(coffeeLabel: String): List<ShotDto> {
         val snapshot = firestore.collection("coffeeUploads")
             .document(coffeeLabel)
             .collection("shots")
             .get()
             .await()
-        return snapshot.toObjects(com.bsdevs.coffeescreen.screens.detailscreen.ShotDto::class.java)
+        return snapshot.toObjects(ShotDto::class.java)
     }
 
-    override suspend fun uploadShot(coffeeLabel: String, shot: com.bsdevs.coffeescreen.screens.detailscreen.ShotDto) {
-        val shotId = shot.id ?: java.util.UUID.randomUUID().toString()
+    override suspend fun uploadShot(coffeeLabel: String, shot: ShotDto) {
+        val shotId = shot.id ?: UUID.randomUUID().toString()
         firestore.collection("coffeeUploads")
             .document(coffeeLabel)
             .collection("shots")

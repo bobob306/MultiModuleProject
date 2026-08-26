@@ -4,10 +4,9 @@ import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.common.DispatcherProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -25,15 +24,23 @@ class BabyGraphViewModelTest {
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var viewModel: BabyGraphViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService)
-        viewModel = BabyGraphViewModel(repository)
+        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
+        viewModel = BabyGraphViewModel(repository, dispatchers)
     }
 
     @After

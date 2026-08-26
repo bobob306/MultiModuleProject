@@ -3,6 +3,7 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 import app.cash.turbine.test
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,10 +25,18 @@ class CoffeeInputScreenViewModelTest {
     private lateinit var fakeService: FakeCoffeeApiService
     private lateinit var accountService: FakeAccountService
     private lateinit var viewModel: CoffeeInputScreenViewModel
+    private lateinit var dispatchers: DispatcherProvider
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+
+        dispatchers = object : DispatcherProvider {
+            override val main = testDispatcher
+            override val io = testDispatcher
+            override val default = testDispatcher
+        }
+
         fakeService = FakeCoffeeApiService()
         accountService = FakeAccountService()
         // We create the viewModel inside tests to allow configuring the fakeService first
@@ -45,7 +54,7 @@ class CoffeeInputScreenViewModelTest {
         fakeService.screenData = dto
 
         // When
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
 
         // Then
         viewModel.viewData.test {
@@ -64,7 +73,7 @@ class CoffeeInputScreenViewModelTest {
 
     @Test
     fun `isButtonEnabled updates correctly based on inputs`() = runTest {
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
         
         // Initial state: disabled
         assertFalse(viewModel.isButtonEnabled.value)
@@ -82,7 +91,7 @@ class CoffeeInputScreenViewModelTest {
 
     @Test
     fun `submitCoffee uploads data and navigates home`() = runTest {
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
 
         // Setup valid data
         viewModel.processIntent(CoffeeInputScreenIntent.ToggleDropdownSelection(InputType.BEANS, "Arabica"))
@@ -103,7 +112,7 @@ class CoffeeInputScreenViewModelTest {
 
     @Test
     fun `toggleDropdownSelection for singleInput replaces selection`() = runTest {
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
 
         // ROASTER is singleInput
         viewModel.processIntent(CoffeeInputScreenIntent.ToggleDropdownSelection(InputType.ROASTER, "Roaster A"))
@@ -116,7 +125,7 @@ class CoffeeInputScreenViewModelTest {
 
     @Test
     fun `toggleDropdownSelection for multiInput appends selection`() = runTest {
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
 
         // BEANS is multiInput
         viewModel.processIntent(CoffeeInputScreenIntent.ToggleDropdownSelection(InputType.BEANS, "Arabica"))
@@ -129,7 +138,7 @@ class CoffeeInputScreenViewModelTest {
 
     @Test
     fun `updateSearchText updates correctly`() = runTest {
-        viewModel = CoffeeInputScreenViewModel(accountService, fakeService)
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
 
         viewModel.processIntent(CoffeeInputScreenIntent.UpdateSearchText(InputType.TASTE, "Fruit"))
 
