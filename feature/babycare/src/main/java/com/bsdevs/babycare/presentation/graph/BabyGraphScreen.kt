@@ -43,27 +43,37 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.bsdevs.uicomponents.MMPScaffold
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyGraphRoute(
     onShowSnackBar: suspend (String, String) -> Unit,
     onNavigateBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: BabyGraphViewModel = hiltViewModel()
 ) {
     val viewData by viewModel.uiState.collectAsStateWithLifecycle()
 
     BabyFeedingGraphScreen(
         uiState = viewData,
-        onBackClick = onNavigateBack
+        onBackClick = onNavigateBack,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyFeedingGraphScreen(
     uiState: FeedingGraphUiState,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -74,96 +84,105 @@ fun BabyFeedingGraphScreen(
         onBackClick = onBackClick,
         scrollBehavior = scrollBehavior
     ) { innerPadding ->
-
-        // Pass innerPadding directly to contentPadding so the content scrolls UNDER the top bar space
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            item {
-                Column(
+        with(sharedTransitionScope) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "tile_graph_tile"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(
-                        text = "Feeding Frequency by Hour",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-
-                    Text(
-                        text = "Based on ${uiState.totalFeedsInCache} total recorded feeds",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 32.dp)
-                    )
-
-                    if (uiState.totalFeedsInCache == 0) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(300.dp),
-                            contentAlignment = Alignment.Center
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
-                                text = "No feeding logs available yet.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "Feeding Frequency by Hour",
+                                style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.padding(bottom = 4.dp)
                             )
-                        }
-                    } else {
-                        // --- CHART 1: HOURLY FREQUENCY ---
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(260.dp)
-                                .horizontalScroll(rememberScrollState())
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                .padding(horizontal = 16.dp)
-                        ) {
-                            FeedingHourCanvas(
-                                hourlyCounts = uiState.hourlyCounts,
-                                barColor = MaterialTheme.colorScheme.primary,
-                                labelColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
 
-                        // --- CHART 2: DAILY AVERAGE GAP (NEW) ---
-                        Text(
-                            text = "Average Gap Between Feeds Each Day",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.padding(top = 32.dp, bottom = 16.dp)
-                        )
-
-                        if (uiState.dailyAverageGaps.isEmpty()) {
                             Text(
-                                text = "Need consecutive feeds tracked on the same day to calculate average gaps.",
+                                text = "Based on ${uiState.totalFeedsInCache} total recorded feeds",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(bottom = 32.dp)
                             )
-                        } else {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(260.dp)
-                                    .horizontalScroll(rememberScrollState())
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .padding(horizontal = 16.dp)
-                            ) {
-                                DailyAverageGapCanvas(
-                                    dailyGaps = uiState.dailyAverageGaps,
-                                    lineColor = MaterialTheme.colorScheme.tertiary,
-                                    labelColor = MaterialTheme.colorScheme.onSurface
+
+                            if (uiState.totalFeedsInCache == 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No feeding logs available yet.",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                // --- CHART 1: HOURLY FREQUENCY ---
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(260.dp)
+                                        .horizontalScroll(rememberScrollState())
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    FeedingHourCanvas(
+                                        hourlyCounts = uiState.hourlyCounts,
+                                        barColor = MaterialTheme.colorScheme.primary,
+                                        labelColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                // --- CHART 2: DAILY AVERAGE GAP (NEW) ---
+                                Text(
+                                    text = "Average Gap Between Feeds Each Day",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.padding(top = 32.dp, bottom = 16.dp)
                                 )
+
+                                if (uiState.dailyAverageGaps.isEmpty()) {
+                                    Text(
+                                        text = "Need consecutive feeds tracked on the same day to calculate average gaps.",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 16.dp)
+                                    )
+                                } else {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(260.dp)
+                                            .horizontalScroll(rememberScrollState())
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                            .padding(horizontal = 16.dp)
+                                    ) {
+                                        DailyAverageGapCanvas(
+                                            dailyGaps = uiState.dailyAverageGaps,
+                                            lineColor = MaterialTheme.colorScheme.tertiary,
+                                            labelColor = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+
+                            uiState.analysisResult?.let {
+                                BucketedAnalysisInsightCard(analysis = uiState.analysisResult)
                             }
                         }
-                    }
-
-                    uiState.analysisResult?.let {
-                        BucketedAnalysisInsightCard(analysis = uiState.analysisResult)
                     }
                 }
             }

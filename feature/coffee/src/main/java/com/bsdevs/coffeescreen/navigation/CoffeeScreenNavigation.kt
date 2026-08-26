@@ -9,6 +9,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.CoffeeDetailScreenRoute
 import com.bsdevs.coffeescreen.screens.homescreen.CoffeeHomeScreenRoute
@@ -43,16 +45,23 @@ fun NavController.navigateToCoffeeDetail(coffeeId: String, navOptions: NavOption
 //        navOptions = navOptions,
 //    )
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.coffeeScreenSection(
     onShowSnackBar: suspend (String, String?) -> Unit,
     navigateToCoffeeInput: () -> Unit,
     navigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
     navigateToCoffeeDetail: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
 ) {
     navigation<CoffeeScreenBaseRoute>(startDestination = CoffeeHomeScreenRoute) {
         composable<CoffeeInputScreenRoute> {
-            CoffeeInputScreenRoute(onShowSnackBar, navigateToCoffeeHome = navigateToCoffeeHome)
+            CoffeeInputScreenRoute(
+                onShowSnackBar, 
+                navigateToCoffeeHome = navigateToCoffeeHome,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
+            )
         }
         composable<CoffeeHomeScreenRoute>(
             deepLinks = listOf(navDeepLink { uriPattern = "app://com.bsdevs.multimoduleproject/coffeehome" })
@@ -62,10 +71,17 @@ fun NavGraphBuilder.coffeeScreenSection(
                 navigateToCoffeeInput = navigateToCoffeeInput,
                 navigateToLogin = navigateToLogin,
                 onNavigateToDetail = navigateToCoffeeDetail,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
             )
         }
         composable<CoffeeDetailScreenRoute> { backStackEntry ->
-            CoffeeDetailScreenRoute(onShowSnackBar, navigateToCoffeeHome = navigateToCoffeeHome)
+            CoffeeDetailScreenRoute(
+                onShowSnackBar, 
+                navigateToCoffeeHome = navigateToCoffeeHome,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
+            )
         }
     }
 }

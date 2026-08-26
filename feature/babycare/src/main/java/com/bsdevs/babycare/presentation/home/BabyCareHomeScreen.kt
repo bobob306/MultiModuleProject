@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,7 +56,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.MMPScaffold
+import com.bsdevs.uicomponents.shimmer
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyCareHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
@@ -66,6 +72,8 @@ fun BabyCareHomeScreenRoute(
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
 ) {
     val result by viewModel.viewData.collectAsStateWithLifecycle()
@@ -86,13 +94,13 @@ fun BabyCareHomeScreenRoute(
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore,
                 onNavigateToGraph = onNavigateToGraph,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
 
         is Result.Loading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            BabyCareHomeLoading()
         }
 
         is Result.Error -> {
@@ -104,7 +112,7 @@ fun BabyCareHomeScreenRoute(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun BabyCareHomeScreen(
     viewData: BabyCareHomeViewData,
@@ -119,6 +127,8 @@ internal fun BabyCareHomeScreen(
     onToggleHeaderCollapse: (String) -> Unit,
     onNavigateToGraph: () -> Unit,
     onLoadMore: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -165,7 +175,10 @@ internal fun BabyCareHomeScreen(
                             title = "Nappy Change",
                             subtitle = viewData.lastNappyChange,
                             icon = Icons.Default.ChildCare,
-                            onClick = onNavigateToNappyChange
+                            onClick = onNavigateToNappyChange,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            id = "nappy_tile"
                         )
                         BabyCareTile(
                             modifier = Modifier
@@ -175,7 +188,10 @@ internal fun BabyCareHomeScreen(
                             title = "Feeding",
                             subtitle = viewData.lastFeeding,
                             icon = Icons.Default.Restaurant,
-                            onClick = onNavigateToFeeding
+                            onClick = onNavigateToFeeding,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            id = "feeding_tile"
                         )
                         BabyCareTile(
                             modifier = Modifier
@@ -185,7 +201,10 @@ internal fun BabyCareHomeScreen(
                             title = "Temperature",
                             subtitle = viewData.lastTemperature,
                             icon = Icons.Default.Thermostat,
-                            onClick = onNavigateToTemperature
+                            onClick = onNavigateToTemperature,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            id = "temperature_tile"
                         )
                         BabyCareTile(
                             modifier = Modifier
@@ -194,7 +213,10 @@ internal fun BabyCareHomeScreen(
                             title = "Analysis",
                             subtitle = null,
                             icon = Icons.Default.AutoGraph,
-                            onClick = onNavigateToGraph
+                            onClick = onNavigateToGraph,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            id = "graph_tile"
                         )
                         Spacer(modifier = Modifier.width(0.dp))
                     }
@@ -326,7 +348,9 @@ internal fun BabyCareHomeScreen(
                                                 is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
                                             }
                                             onToggleFilter(targetFilter)
-                                        }
+                                        },
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
                                 }
                             }
@@ -367,12 +391,14 @@ internal fun BabyCareHomeScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun ActivityFeedItem(
     item: BabyActivity,
     onEdit: () -> Unit,
-    onIconClick: () -> Unit // ➕ 1. Add this callback parameter
+    onIconClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val icon = when (item) {
         is BabyActivity.Nappy -> Icons.Default.ChildCare
@@ -393,62 +419,74 @@ fun ActivityFeedItem(
         is BabyActivity.Temperature -> "Temperature: ${item.dto.temperature}°C"
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = {},
-                onLongClick = onEdit
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
+    val activityId = when (item) {
+        is BabyActivity.Nappy -> item.dto.id
+        is BabyActivity.Feeding -> item.dto.id
+        is BabyActivity.Temperature -> item.dto.id
+    }
+
+    with(sharedTransitionScope) {
+        Card(
             modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "activity_card_${activityId}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .combinedClickable(
+                    onClick = {},
+                    onLongClick = onEdit
+                ),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
-            // 🔄 2. Make only this circle clickable to capture the filter event
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                    .clip(CircleShape) // Ensures the click ripple is a perfect circle
-                    .clickable { onIconClick() },
-                contentAlignment = Alignment.Center
+                    .padding(12.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = "Filter by type",
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                item.comment?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                // 🔄 2. Make only this circle clickable to capture the filter event
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                        .clip(CircleShape) // Ensures the click ripple is a perfect circle
+                        .clickable { onIconClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = "Filter by type",
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-            }
 
-            Text(
-                text = item.time ?: "",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    item.comment?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Text(
+                    text = item.time ?: "",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -459,57 +497,118 @@ private fun formatDuration(seconds: Long): String {
     return "%02d:%02d".format(minutes, remainingSeconds)
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyCareTile(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String? = null,
     icon: ImageVector,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    id: String
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+    with(sharedTransitionScope) {
+        Card(
+            onClick = onClick,
+            modifier = modifier.sharedElement(
+                sharedContentState = rememberSharedContentState(key = "tile_$id"),
+                animatedVisibilityScope = animatedVisibilityScope
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            )
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(8.dp)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp), // 📏 Slightly smaller icon to guarantee it fits under 120.dp
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 4.dp),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1, // 🛡️ Safe guard against text wrapping
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (subtitle != null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp), // 📏 Slightly smaller icon to guarantee it fits under 120.dp
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 4.dp),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 2.dp),
-                        maxLines = 1,
+                        maxLines = 1, // 🛡️ Safe guard against text wrapping
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 2.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun BabyCareHomeLoading() {
+    MMPScaffold(
+        title = "Baby Care"
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Tiles Shimmer
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(100.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .shimmer()
+                    )
+                }
+            }
+
+            Text(
+                text = "Recent Activity",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // Feed Shimmer
+            repeat(5) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shimmer()
+                )
+            }
+        }
+    }
+}
+

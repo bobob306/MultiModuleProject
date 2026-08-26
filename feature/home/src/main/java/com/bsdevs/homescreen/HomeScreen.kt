@@ -1,11 +1,14 @@
 package com.bsdevs.homescreen
 
 import android.content.res.Configuration
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +39,8 @@ import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
 
 import com.bsdevs.uicomponents.MMPScaffold
+import com.bsdevs.uicomponents.shimmer
+import androidx.compose.ui.draw.clip
 
 @Composable
 fun HomeScreenRoute(
@@ -59,18 +64,52 @@ fun HomeScreenRoute(
         }
 
         is Result.Error -> ErrorScreen()
-        is Result.Loading -> LoadingScreen()
+        is Result.Loading -> HomeLoadingScreen()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun HomeLoadingScreen() {
+    MMPScaffold(
+        title = "Welcome to the Hub"
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Main Section Buttons Shimmer
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(modifier = Modifier.weight(1f).height(48.dp).clip(MaterialTheme.shapes.small).shimmer())
+                Box(modifier = Modifier.weight(1f).height(48.dp).clip(MaterialTheme.shapes.small).shimmer())
+            }
+
+            Text(
+                text = "Quick Actions",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
+            // Dynamic Cards Shimmer
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shimmer()
+                )
+            }
+        }
     }
 }
 
 @Composable
 internal fun ErrorScreen() {
     Text("Error")
-}
-
-@Composable
-internal fun LoadingScreen() {
-    Text("Loading")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

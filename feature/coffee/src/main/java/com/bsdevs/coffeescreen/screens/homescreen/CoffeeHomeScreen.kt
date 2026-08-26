@@ -3,12 +3,15 @@ package com.bsdevs.coffeescreen.screens.homescreen
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -37,12 +40,17 @@ import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
-import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.common.result.Result
+import com.bsdevs.uicomponents.shimmer
+import androidx.compose.ui.draw.clip
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 
 import com.bsdevs.uicomponents.MMPScaffold
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun CoffeeHomeScreenRoute(
@@ -50,6 +58,8 @@ fun CoffeeHomeScreenRoute(
     navigateToCoffeeInput: () -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
     onNavigateToDetail: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
     val scope = rememberCoroutineScope()
@@ -61,12 +71,14 @@ fun CoffeeHomeScreenRoute(
         color = MaterialTheme.colorScheme.background
     ) {
         when (viewData.value) {
-            is Result.Loading -> LoadingScreen()
+            is Result.Loading -> CoffeeHomeLoadingScreen()
             is Result.Error -> ErrorScreen()
             is Result.Success -> CoffeeHomeScreenContent(
                 onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeHomeScreenViewData>).data,
                 onIntent = viewModel::processIntent,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }
@@ -86,12 +98,14 @@ fun CoffeeHomeScreenRoute(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeHomeScreenContent(
     onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeHomeScreenViewData,
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val coffeeListItems = viewData.viewData
         .filterIsInstance<CoffeeHomeScreenViewDatas.CoffeeList>()
@@ -118,7 +132,12 @@ fun CoffeeHomeScreenContent(
             contentAlignment = Alignment.TopCenter
         ) {
             Column {
-                CoffeeHomeButtons(onIntent, isLandscape)
+                CoffeeHomeButtons(
+                    onIntent = onIntent,
+                    isLandscape = isLandscape,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
                 LazyVerticalGrid(
                     columns = if (isLandscape) GridCells.Fixed(2) else GridCells.Fixed(1),
                     modifier = Modifier.fillMaxSize(),
@@ -134,6 +153,8 @@ fun CoffeeHomeScreenContent(
                                 coffee = list[index],
                                 onIntent = onIntent,
                                 isLandscape = isLandscape,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
                             )
                         }
                     }
@@ -143,33 +164,48 @@ fun CoffeeHomeScreenContent(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeHomeButtons(
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     if (isLandscape) {
         Row {
-            Button(
-                onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
-                modifier = Modifier
-                    .wrapContentSize()
-                    .padding(
-                        end = 16.dp
-                    )
-            ) { Text("Click to navigate to coffee input") }
+            with(sharedTransitionScope) {
+                Button(
+                    onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
+                    modifier = Modifier
+                        .sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "coffee_input_box"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                        .wrapContentSize()
+                        .padding(
+                            end = 16.dp
+                        )
+                ) { Text("Click to navigate to coffee input") }
+            }
             Button(
                 onClick = { onIntent.invoke(CoffeeHomeScreenIntent.Logout) },
                 modifier = Modifier.wrapContentSize()
             ) { Text("Logout") }
         }
     } else Column {
-        Button(
-            onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(bottom = 8.dp)
-        ) { Text("Click to navigate to coffee input") }
+        with(sharedTransitionScope) {
+            Button(
+                onClick = { onIntent.invoke(CoffeeHomeScreenIntent.NavigateToInput) },
+                modifier = Modifier
+                    .sharedElement(
+                        sharedContentState = rememberSharedContentState(key = "coffee_input_box"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                    .wrapContentSize()
+                    .padding(bottom = 8.dp)
+            ) { Text("Click to navigate to coffee input") }
+        }
         Button(
             onClick = { onIntent.invoke(CoffeeHomeScreenIntent.Logout) },
             modifier = Modifier
@@ -179,32 +215,79 @@ fun CoffeeHomeButtons(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeListItem(
     coffee: CoffeeDto,
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
-    isLandscape: Boolean
+    isLandscape: Boolean,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    Card(
-        modifier = Modifier
-            .clickable {
-                onIntent.invoke(
-                    CoffeeHomeScreenIntent.NavigateToDetail(
-                        coffee.id ?: ""
+    with(sharedTransitionScope) {
+        Card(
+            modifier = Modifier
+                .padding(vertical = 8.dp, horizontal = if (isLandscape) 8.dp else 0.dp)
+                .sharedElement(
+                    sharedContentState = rememberSharedContentState(key = "coffee_card_${coffee.id}"),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .clickable {
+                    onIntent.invoke(
+                        CoffeeHomeScreenIntent.NavigateToDetail(
+                            coffee.id ?: ""
+                        )
                     )
+                }
+                .wrapContentHeight()
+                .fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        )
+        {
+            Text(
+                text = coffee.label ?: "Unnamed Coffee",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .padding(4.dp)
+                    .sharedBounds(
+                        sharedContentState = rememberSharedContentState(key = "coffee_label_${coffee.id}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun CoffeeHomeLoadingScreen() {
+    MMPScaffold(
+        title = "Coffee Home Screen"
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Buttons Shimmer
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(modifier = Modifier.width(200.dp).height(48.dp).clip(MaterialTheme.shapes.small).shimmer())
+                Box(modifier = Modifier.width(100.dp).height(48.dp).clip(MaterialTheme.shapes.small).shimmer())
+            }
+
+            // Grid Shimmer
+            repeat(4) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shimmer()
                 )
             }
-            .wrapContentHeight()
-            .fillMaxWidth()
-            .padding(vertical = 8.dp, horizontal = if (isLandscape) 8.dp else 0.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    )
-    {
-        Text(
-            text = coffee.label ?: "Unnamed Coffee",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(4.dp)
-        )
+        }
     }
 }
