@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -65,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +75,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.renderer.RenderUI
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.shimmer
 
@@ -92,23 +96,33 @@ fun BabyCareHomeScreenRoute(
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
 ) {
     val result by viewModel.viewData.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val onDynamicClick: (String, String) -> Unit = { destination, _ ->
+        when (destination) {
+            "babycare://nappy" -> onNavigateToNappyChange()
+            "babycare://feeding" -> onNavigateToFeeding()
+            "babycare://temperature" -> onNavigateToTemperature()
+            "babycare://graph" -> onNavigateToGraph()
+            else -> {
+                // Handle unknown or generic navigation if necessary
+            }
+        }
+    }
 
     when (val state = result) {
         is Result.Success -> {
             BabyCareHomeScreen(
                 viewData = state.data,
                 onRefresh = { viewModel.refreshData() },
-                onNavigateToNappyChange = onNavigateToNappyChange,
-                onNavigateToFeeding = onNavigateToFeeding,
-                onNavigateToTemperature = onNavigateToTemperature,
                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                 onNavigateToEditTemperature = onNavigateToEditTemperature,
                 onToggleFilter = viewModel::toggleActivityFilter,
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore,
-                onNavigateToGraph = onNavigateToGraph,
                 onDeleteActivity = viewModel::deleteActivity,
+                onDynamicClick = onDynamicClick,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope
             )
@@ -132,22 +146,20 @@ fun BabyCareHomeScreenRoute(
 internal fun BabyCareHomeScreen(
     viewData: BabyCareHomeViewData,
     onRefresh: () -> Unit,
-    onNavigateToNappyChange: () -> Unit,
-    onNavigateToFeeding: () -> Unit,
-    onNavigateToTemperature: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onToggleHeaderCollapse: (String) -> Unit,
-    onNavigateToGraph: () -> Unit,
     onLoadMore: () -> Unit,
     onDeleteActivity: (BabyActivity) -> Unit,
+    onDynamicClick: (String, String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
+    val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
@@ -187,9 +199,9 @@ internal fun BabyCareHomeScreen(
                 onRefresh()
             },
             state = pullToRefreshState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
         ) {
             LazyColumn(
                 modifier = Modifier
@@ -197,212 +209,47 @@ internal fun BabyCareHomeScreen(
                     .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .horizontalScroll(state = rememberScrollState(), enabled = true)
-                            .padding(top = 8.dp)
-                            .wrapContentHeight(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Spacer(modifier = Modifier.width(0.dp))
-                        BabyCareTile(
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .padding(end = 12.dp)
-                                .heightIn(max = 120.dp),
-                            title = "Nappy Change",
-                            subtitle = viewData.lastNappyChange,
-                            icon = Icons.Default.ChildCare,
-                            onClick = onNavigateToNappyChange,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            id = "nappy_tile"
-                        )
-                        BabyCareTile(
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .padding(end = 12.dp)
-                                .heightIn(max = 120.dp),
-                            title = "Feeding",
-                            subtitle = viewData.lastFeeding,
-                            icon = Icons.Default.Restaurant,
-                            onClick = onNavigateToFeeding,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            id = "feeding_tile"
-                        )
-                        BabyCareTile(
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .padding(end = 12.dp)
-                                .heightIn(max = 120.dp),
-                            title = "Temperature",
-                            subtitle = viewData.lastTemperature,
-                            icon = Icons.Default.Thermostat,
-                            onClick = onNavigateToTemperature,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            id = "temperature_tile"
-                        )
-                        BabyCareTile(
-                            modifier = Modifier
-                                .wrapContentWidth()
-                                .heightIn(max = 120.dp),
-                            title = "Analysis",
-                            subtitle = null,
-                            icon = Icons.Default.AutoGraph,
-                            onClick = onNavigateToGraph,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            id = "graph_tile"
-                        )
-                        Spacer(modifier = Modifier.width(0.dp))
-                    }
-                }
-
-                item {
-                    Text(
-                        text = "Recent Activity",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-                    )
-                }
-
-                val activityItems = viewData.activityFeed
-
-                activityItems.forEach { feedItem ->
-                    when (feedItem) {
-                        is HomeFeedItem.Header -> {
-                            stickyHeader(key = "header_${feedItem.title}") {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .clickable { onToggleHeaderCollapse(feedItem.title) }
-                                        .padding(vertical = 12.dp, horizontal = 4.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val isCollapsed =
-                                            viewData.collapsedHeaders.contains(feedItem.title)
-                                        Text(
-                                            text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        if (feedItem.feedingCount > 0) {
-                                            Text(
-                                                text = "🍼 ${feedItem.feedingCount}",
-                                                style = MaterialTheme.typography.labelMedium
-                                            )
-                                        }
-                                        if (feedItem.nappyCount > 0) {
-                                            Text(
-                                                text = "🍃 ${feedItem.nappyCount}",
-                                                style = MaterialTheme.typography.labelMedium
-                                            )
-                                        }
-                                        if (feedItem.temperatureCount > 0) {
-                                            Text(
-                                                text = "🌡️ ${feedItem.temperatureCount}",
-                                                style = MaterialTheme.typography.labelMedium
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                viewData.dynamicUi.sortedBy { it.index }.forEach { component ->
+                    when (component) {
+                        is NetworkScreenData.ActivityFeedDataNetwork -> {
+                            renderActivityFeed(
+                                viewData = viewData,
+                                onToggleHeaderCollapse = onToggleHeaderCollapse,
+                                onNavigateToEditNappyChange = onNavigateToEditNappyChange,
+                                onNavigateToEditFeeding = onNavigateToEditFeeding,
+                                onNavigateToEditTemperature = onNavigateToEditTemperature,
+                                onToggleFilter = onToggleFilter,
+                                onDeleteActivity = { activityToDelete = it },
+                                onLoadMore = onLoadMore,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
                         }
 
-                        is HomeFeedItem.ActivityRow -> {
-                            val currentActivity = feedItem.activity
-                            val uniqueId = when (currentActivity) {
-                                is BabyActivity.Nappy -> currentActivity.dto.id
-                                is BabyActivity.Feeding -> currentActivity.dto.id
-                                is BabyActivity.Temperature -> currentActivity.dto.id
-                            }
-
-                            item(key = "row_${uniqueId}") {
-                                val allRows = remember(activityItems) {
-                                    activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
-                                }
-                                val globalIndex = allRows.indexOf(feedItem)
-
-                                if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
-                                    LaunchedEffect(Unit) {
-                                        onLoadMore()
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .animateItem()
-                                ) {
-                                    val index = activityItems.indexOf(feedItem)
-                                    val animatedOffset = remember { Animatable(100f) }
-                                    val animatedAlpha = remember { Animatable(0f) }
-
-
-                                    LaunchedEffect(key1 = true) {
-                                        kotlinx.coroutines.delay((index % 10) * 50L)
-                                        animatedOffset.animateTo(
-                                            targetValue = 0f,
-                                            animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
-                                        )
-                                    }
-                                    LaunchedEffect(key1 = true) {
-                                        kotlinx.coroutines.delay((index % 10) * 50L)
-                                        animatedAlpha.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = tween(durationMillis = 400)
-                                        )
-                                    }
-
-                                    Box(modifier = Modifier
-                                        .graphicsLayer {
-                                            translationY = animatedOffset.value
-                                            alpha = animatedAlpha.value
+                        else -> {
+                            item(key = "dynamic_${component.index}") {
+                                Column(modifier = Modifier.fillMaxWidth()) {
+                                    RenderUI(
+                                        item = component,
+                                        context = context,
+                                        onClick = onDynamicClick,
+                                        onChipClick = {},
+                                        onSwitchClick = {},
+                                        featureContent = { featureComponent ->
+                                            when (featureComponent) {
+                                                is NetworkScreenData.TileRowDataNetwork -> {
+                                                    BabyCareTileRow(
+                                                        viewData = viewData,
+                                                        tiles = featureComponent.tiles,
+                                                        onDynamicClick = onDynamicClick,
+                                                        sharedTransitionScope = sharedTransitionScope,
+                                                        animatedVisibilityScope = animatedVisibilityScope
+                                                    )
+                                                }
+                                                else -> {}
+                                            }
                                         }
-                                    ) {
-                                        ActivityFeedItem(
-                                            item = currentActivity,
-                                            onEdit = {
-                                                val activityId = when (currentActivity) {
-                                                    is BabyActivity.Nappy -> currentActivity.dto.id
-                                                    is BabyActivity.Feeding -> currentActivity.dto.id
-                                                    is BabyActivity.Temperature -> currentActivity.dto.id
-                                                }
-                                                activityId?.let {
-                                                    when (currentActivity) {
-                                                        is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
-                                                        is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
-                                                        is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
-                                                    }
-                                                }
-                                            },
-                                            onIconClick = {
-                                                val targetFilter = when (currentActivity) {
-                                                    is BabyActivity.Nappy -> ActivityFilter.NAPPY
-                                                    is BabyActivity.Feeding -> ActivityFilter.FEEDING
-                                                    is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
-                                                }
-                                                onToggleFilter(targetFilter)
-                                            },
-                                            onDelete = {
-                                                activityToDelete = currentActivity
-                                            },
-                                            sharedTransitionScope = sharedTransitionScope,
-                                            animatedVisibilityScope = animatedVisibilityScope
-                                        )
-                                    }
+                                    )
                                 }
                             }
                         }
@@ -436,6 +283,212 @@ internal fun BabyCareHomeScreen(
                 item { Spacer(modifier = Modifier.padding(bottom = 16.dp)) }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
+private fun LazyListScope.renderActivityFeed(
+    viewData: BabyCareHomeViewData,
+    onToggleHeaderCollapse: (String) -> Unit,
+    onNavigateToEditNappyChange: (String) -> Unit,
+    onNavigateToEditFeeding: (String) -> Unit,
+    onNavigateToEditTemperature: (String) -> Unit,
+    onToggleFilter: (ActivityFilter) -> Unit,
+    onDeleteActivity: (BabyActivity) -> Unit,
+    onLoadMore: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
+    val activityItems = viewData.activityFeed
+
+    activityItems.forEach { feedItem ->
+        when (feedItem) {
+            is HomeFeedItem.Header -> {
+                stickyHeader(key = "header_${feedItem.title}") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surface)
+                            .clickable { onToggleHeaderCollapse(feedItem.title) }
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val isCollapsed =
+                                viewData.collapsedHeaders.contains(feedItem.title)
+                            Text(
+                                text = if (isCollapsed) "▶ ${feedItem.title}" else "▼ ${feedItem.title}",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (feedItem.feedingCount > 0) {
+                                Text(
+                                    text = "🍼 ${feedItem.feedingCount}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            if (feedItem.nappyCount > 0) {
+                                Text(
+                                    text = "🍃 ${feedItem.nappyCount}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            if (feedItem.temperatureCount > 0) {
+                                Text(
+                                    text = "🌡️ ${feedItem.temperatureCount}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            is HomeFeedItem.ActivityRow -> {
+                val currentActivity = feedItem.activity
+                val uniqueId = when (currentActivity) {
+                    is BabyActivity.Nappy -> currentActivity.dto.id
+                    is BabyActivity.Feeding -> currentActivity.dto.id
+                    is BabyActivity.Temperature -> currentActivity.dto.id
+                }
+
+                item(key = "row_${uniqueId}") {
+                    val allRows = remember(activityItems) {
+                        activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
+                    }
+                    val globalIndex = allRows.indexOf(feedItem)
+
+                    if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+                        LaunchedEffect(Unit) {
+                            onLoadMore()
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem()
+                    ) {
+                        val index = activityItems.indexOf(feedItem)
+                        val animatedOffset = remember { Animatable(100f) }
+                        val animatedAlpha = remember { Animatable(0f) }
+
+
+                        LaunchedEffect(key1 = true) {
+                            kotlinx.coroutines.delay((index % 10) * 50L)
+                            animatedOffset.animateTo(
+                                targetValue = 0f,
+                                animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                            )
+                        }
+                        LaunchedEffect(key1 = true) {
+                            kotlinx.coroutines.delay((index % 10) * 50L)
+                            animatedAlpha.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(durationMillis = 400)
+                            )
+                        }
+
+                        Box(modifier = Modifier
+                            .graphicsLayer {
+                                translationY = animatedOffset.value
+                                alpha = animatedAlpha.value
+                            }
+                        ) {
+                            ActivityFeedItem(
+                                item = currentActivity,
+                                onEdit = {
+                                    val activityId = when (currentActivity) {
+                                        is BabyActivity.Nappy -> currentActivity.dto.id
+                                        is BabyActivity.Feeding -> currentActivity.dto.id
+                                        is BabyActivity.Temperature -> currentActivity.dto.id
+                                    }
+                                    activityId?.let {
+                                        when (currentActivity) {
+                                            is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
+                                            is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
+                                            is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
+                                        }
+                                    }
+                                },
+                                onIconClick = {
+                                    val targetFilter = when (currentActivity) {
+                                        is BabyActivity.Nappy -> ActivityFilter.NAPPY
+                                        is BabyActivity.Feeding -> ActivityFilter.FEEDING
+                                        is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
+                                    }
+                                    onToggleFilter(targetFilter)
+                                },
+                                onDelete = {
+                                    onDeleteActivity(currentActivity)
+                                },
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun BabyCareTileRow(
+    viewData: BabyCareHomeViewData,
+    tiles: List<NetworkScreenData.TileDataNetwork>,
+    onDynamicClick: (String, String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+) {
+    Row(
+        modifier = Modifier
+            .horizontalScroll(state = rememberScrollState(), enabled = true)
+            .padding(top = 8.dp)
+            .wrapContentHeight(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Spacer(modifier = Modifier.width(0.dp))
+        tiles.forEach { tile ->
+            val subtitle = when (tile.subtitleType) {
+                "NAPPY" -> viewData.lastNappyChange
+                "FEEDING" -> viewData.lastFeeding
+                "TEMPERATURE" -> viewData.lastTemperature
+                else -> null
+            }
+            BabyCareTile(
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .padding(end = 12.dp)
+                    .heightIn(max = 120.dp),
+                title = tile.title,
+                subtitle = subtitle,
+                icon = mapIconNameToVector(tile.iconName),
+                onClick = { onDynamicClick(tile.destination, tile.title) },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                id = tile.sharedElementKey ?: "tile_${tile.index}"
+            )
+        }
+        Spacer(modifier = Modifier.width(0.dp))
+    }
+}
+
+private fun mapIconNameToVector(iconName: String): ImageVector {
+    return when (iconName) {
+        "ChildCare" -> Icons.Default.ChildCare
+        "Restaurant" -> Icons.Default.Restaurant
+        "Thermostat" -> Icons.Default.Thermostat
+        "AutoGraph" -> Icons.Default.AutoGraph
+        else -> Icons.Default.ChildCare
     }
 }
 

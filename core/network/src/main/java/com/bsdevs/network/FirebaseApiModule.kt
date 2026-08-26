@@ -31,6 +31,7 @@ object FirebaseApiModule {
     }
 
     @Provides
+    @Singleton
     fun provideScreenRepository(scr: CollectionReference, mapper: ScreenDtoMapper): ScreenRepository {
         return ScreenRepositoryImpl(scr, mapper)
     }

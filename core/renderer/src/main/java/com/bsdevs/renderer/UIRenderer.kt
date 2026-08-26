@@ -27,6 +27,7 @@ fun ColumnScope.RenderUI(
     onClick: (String, String) -> Unit,
     onChipClick: (Boolean) -> Unit,
     onSwitchClick: (Boolean) -> Unit,
+    featureContent: @Composable (NetworkScreenData) -> Unit = {}
 ) {
     when (item) {
         is NetworkScreenData.TitleDataNetwork -> Text(
@@ -35,6 +36,12 @@ fun ColumnScope.RenderUI(
         )
 
         is NetworkScreenData.SubtitleDataNetwork -> Text(item.content)
+        
+        is NetworkScreenData.SmallTitleDataNetwork -> Text(
+            text = item.content,
+            style = MaterialTheme.typography.titleLarge
+        )
+
         is NetworkScreenData.Unknown -> {}
         is NetworkScreenData.SpacerDataNetwork -> {
             if (item.size.type == SpacerTypeData.WEIGHT) {
@@ -73,6 +80,8 @@ fun ColumnScope.RenderUI(
             SwitchComponent(switchData = item, context, onSwitchClick = onSwitchClick)
         }
 
-        else -> {}
+        else -> {
+            featureContent(item)
+        }
     }
 }

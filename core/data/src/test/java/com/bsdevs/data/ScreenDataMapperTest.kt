@@ -32,6 +32,17 @@ class ScreenDataMapperTest {
     }
 
     @Test
+    fun `mapToData converts SmallTitleDto correctly`() {
+        val dto = listOf(ScreenDto.SmallTitleDto(index = 0, content = "Small Title"))
+        val result = mapper.mapToData(dto)
+
+        assertEquals(1, result.size)
+        val titleData = result[0] as NetworkScreenData.SmallTitleDataNetwork
+        assertEquals(0, titleData.index)
+        assertEquals("Small Title", titleData.content)
+    }
+
+    @Test
     fun `mapToData converts SubtitleDto correctly`() {
         val dto = listOf(ScreenDto.SubtitleDto(index = 1, content = "Hello Subtitle"))
         val result = mapper.mapToData(dto)
@@ -144,6 +155,37 @@ class ScreenDataMapperTest {
         assertEquals("dest", btnData.destination)
         assertEquals(LocationTypeData.EXTERNAL, btnData.location)
         assertEquals(ButtonTypeData.SECONDARY, btnData.sort)
+    }
+
+    @Test
+    fun `mapToData converts ActivityFeedDto correctly`() {
+        val dto = listOf(ScreenDto.ActivityFeedDto(index = 5))
+        val result = mapper.mapToData(dto)
+
+        assertEquals(1, result.size)
+        val feedData = result[0] as NetworkScreenData.ActivityFeedDataNetwork
+        assertEquals(5, feedData.index)
+    }
+
+    @Test
+    fun `mapToData converts TileRowDto correctly`() {
+        val tile = ScreenDto.TileDto(
+            index = 0,
+            title = "T1",
+            iconName = "I1",
+            destination = "D1",
+            subtitleType = "S1",
+            sharedElementKey = "K1"
+        )
+        val dto = listOf(ScreenDto.TileRowDto(index = 6, tiles = listOf(tile)))
+        val result = mapper.mapToData(dto)
+
+        assertEquals(1, result.size)
+        val tileRowData = result[0] as NetworkScreenData.TileRowDataNetwork
+        assertEquals(6, tileRowData.index)
+        assertEquals(1, tileRowData.tiles.size)
+        assertEquals("T1", tileRowData.tiles[0].title)
+        assertEquals("K1", tileRowData.tiles[0].sharedElementKey)
     }
 
     @Test

@@ -82,6 +82,36 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         )
                     }
 
+                    "SMALL_TITLE" -> {
+                        ScreenDto.SmallTitleDto(
+                            index = item["index"].toString().toInt(),
+                            content = item["content"] as String
+                        )
+                    }
+
+                    "ACTIVITY_FEED" -> {
+                        ScreenDto.ActivityFeedDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "TILE_ROW" -> {
+                        val tiles = (item["tiles"] as? List<HashMap<*, *>>)?.map { tileMap ->
+                            ScreenDto.TileDto(
+                                index = tileMap["index"].toString().toInt(),
+                                title = tileMap["title"] as String,
+                                iconName = tileMap["iconName"] as String,
+                                destination = tileMap["destination"] as String,
+                                subtitleType = tileMap["subtitleType"] as? String,
+                                sharedElementKey = tileMap["sharedElementKey"] as? String
+                            )
+                        } ?: emptyList()
+                        ScreenDto.TileRowDto(
+                            index = item["index"].toString().toInt(),
+                            tiles = tiles
+                        )
+                    }
+
                     else -> {
                         ScreenDto.Unknown(99)
                     }
