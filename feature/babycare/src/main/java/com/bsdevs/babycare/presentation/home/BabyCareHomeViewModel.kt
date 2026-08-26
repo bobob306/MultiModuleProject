@@ -117,8 +117,8 @@ class BabyCareHomeViewModel @Inject constructor(
             try {
                 val refreshResult = repository.loadInitialData(accountService.currentUserId, pageSize)
                 updateDisplayFeed(repository.cachedDays.value, refreshResult.hasMoreData)
-            } catch (e: Exception) {
-                Log.e("REFRESH_ERROR", "Failed to clear refresh cycle", e)
+            } catch (exception: Exception) {
+                Log.e("REFRESH_ERROR", "Failed to clear refresh cycle", exception)
                 _viewData.value = Result.Success(current.copy(isRefreshing = false))
             }
         }

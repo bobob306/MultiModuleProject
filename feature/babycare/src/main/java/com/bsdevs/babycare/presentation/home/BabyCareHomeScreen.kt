@@ -57,7 +57,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,7 +82,6 @@ import com.bsdevs.uicomponents.shimmer
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyCareHomeScreenRoute(
-    onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
     onNavigateToTemperature: () -> Unit,
@@ -96,7 +94,6 @@ fun BabyCareHomeScreenRoute(
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
 ) {
     val result by viewModel.viewData.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
     val onDynamicClick: (String, String) -> Unit = { destination, _ ->
         when (destination) {
@@ -243,7 +240,7 @@ internal fun BabyCareHomeScreen(
                                                         tiles = featureComponent.tiles,
                                                         onDynamicClick = onDynamicClick,
                                                         sharedTransitionScope = sharedTransitionScope,
-                                                        animatedVisibilityScope = animatedVisibilityScope
+                                                        animatedVisibilityScope = animatedVisibilityScope,
                                                     )
                                                 }
                                                 else -> {}
