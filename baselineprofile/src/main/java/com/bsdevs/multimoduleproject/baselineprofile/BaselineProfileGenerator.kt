@@ -13,8 +13,7 @@ class BaselineProfileGenerator {
 
     @Test
     fun generate() = baselineProfileRule.collect(
-        packageName = "com.bsdevs.multimoduleproject",
-        includeInvolvedProcesses = true
+        packageName = "com.bsdevs.multimoduleproject"
     ) {
         pressHome()
         startActivityAndWait()
