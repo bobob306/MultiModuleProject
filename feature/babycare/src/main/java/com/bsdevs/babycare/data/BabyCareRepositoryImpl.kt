@@ -24,24 +24,29 @@ class BabyCareRepositoryImpl @Inject constructor(
     private var currentAnchorMonth: YearMonth? = null
 
     override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult {
-        val latestMonthId = apiService.getLatestMonthId(userId)
+        return try {
+            val latestMonthId = apiService.getLatestMonthId(userId)
 
-        if (latestMonthId == null) {
-            _cachedDays.value = emptyList()
-            currentAnchorMonth = null
-            return RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
+            if (latestMonthId == null) {
+                _cachedDays.value = emptyList()
+                currentAnchorMonth = null
+                return RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
+            }
+
+            val monthlyDays = fetchMonthFromService(userId, latestMonthId)
+            _cachedDays.value = monthlyDays.sortedByDescending { it.date }
+
+            val nextMonthId = apiService.getMonthIdBefore(userId, latestMonthId)
+            currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
+
+            RepositoryFetchResult(
+                nextAnchorMonth = currentAnchorMonth,
+                hasMoreData = currentAnchorMonth != null
+            )
+        } catch (e: Exception) {
+            Log.e("BABYCARE_REPO", "Error loading initial data", e)
+            RepositoryFetchResult(null, false)
         }
-
-        val monthlyDays = fetchMonthFromService(userId, latestMonthId)
-        _cachedDays.value = monthlyDays.sortedByDescending { it.date }
-
-        val nextMonthId = apiService.getMonthIdBefore(userId, latestMonthId)
-        currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
-
-        return RepositoryFetchResult(
-            nextAnchorMonth = currentAnchorMonth,
-            hasMoreData = currentAnchorMonth != null
-        )
     }
 
     private suspend fun fetchMonthFromService(userId: String, monthId: String): List<DailyLogDto> {
@@ -118,8 +123,10 @@ class BabyCareRepositoryImpl @Inject constructor(
         val cached = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == activityId }
         if (cached != null) return cached
         
-        // This part could be improved by adding a searchByEventId to the Service
-        return null 
+        // 📡 Network Fallback: Scan all months for the event ID
+        return apiService.getAllMonthIds(userId).firstNotNullOfOrNull { monthId ->
+            fetchMonthFromService(userId, monthId).flatMap { it.events }.firstOrNull { it.id == activityId }
+        }
     }
 
     override suspend fun getNappyEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)

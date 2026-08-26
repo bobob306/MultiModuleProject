@@ -36,7 +36,14 @@ class FirestoreBabyCareService @Inject constructor(
             .documents.firstOrNull()?.id
     }
 
-    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any>? {
+    override suspend fun getAllMonthIds(userId: String): List<String> {
+        return getMonthsCollection(userId)
+            .get()
+            .await()
+            .documents.map { it.id }
+    }
+
+    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? {
         val snapshot = getMonthsCollection(userId).document(monthId).get().await()
         return if (snapshot.exists()) snapshot.data else null
     }

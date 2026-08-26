@@ -19,7 +19,11 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
         return database[userId]?.keys?.filter { it < monthId }?.sortedDescending()?.firstOrNull()
     }
 
-    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any>? {
+    override suspend fun getAllMonthIds(userId: String): List<String> {
+        return database[userId]?.keys?.toList() ?: emptyList()
+    }
+
+    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? {
         return database[userId]?.get(monthId)
     }
 
