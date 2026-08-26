@@ -1,10 +1,9 @@
 package com.bsdevs.coffeescreen.screens.inputscreen
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.coffeescreen.network.CoffeeApiService
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
@@ -18,10 +17,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesLi
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
-import com.google.firebase.Firebase
-import com.google.firebase.auth.auth
 import com.google.firebase.firestore.PropertyName
-import com.google.firebase.firestore.firestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +29,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -41,7 +36,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
-    private val accountService: AccountService
+    private val accountService: AccountService,
+    private val apiService: CoffeeApiService
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
     val viewData: StateFlow<Result<CoffeeScreenViewData>> = _viewData.onStart {
@@ -73,11 +69,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
                 }
             }
 
-            // Note: Assuming isDecaf being non-null indicates a selection. Adjust logic based on your ViewData.
-
             // Check the date field
             val isDateValid = viewData.roastDate != null
-            // Note: Assuming a non-null roastDate indicates a valid entry. Adjust logic based on your ViewData.
+            
             _viewData.update {
                 Success(
                     data = viewData.copy(
@@ -87,106 +81,88 @@ class CoffeeInputScreenViewModel @Inject constructor(
             }
             areSetsValid && isDateValid
         } else {
-            // If the result is not Success (e.g., Loading or Error), the button should be disabled
             false
         }
     }
-        // Convert the Flow<Boolean> into a StateFlow<Boolean>
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = false // Initial state is disabled
+            initialValue = false
         )
-
-    private fun loadData() {
-        _viewData.value = Success(
-            data = CoffeeScreenViewData()
-        )
-    }
 
     private suspend fun loadDataFromNetwork() {
-        val collectionReference = Firebase.firestore.collection("screens").document("coffeeInput")
-        val documentSnapshot = collectionReference.get().await()
-        val data = documentSnapshot.toObject(CoffeeInputScreenDto::class.java)
-        val viewData = CoffeeScreenViewData()
-        val updatedViewData = viewData.copy(
-            inputs = listOf(
-                InputVD(
-                    label = "Coffee Type(s)",
-                    inputList = data?.BEANS ?: coffeeBeanTypes,
-                    selectedSet = emptySet(),
-                    searchText = null,
-                    inputType = InputType.BEANS
-                ),
-                InputVD(
-                    label = "Coffee Origin(s)",
-                    inputList = data?.ORIGIN ?: originCountries,
-                    selectedSet = emptySet(),
-                    searchText = null,
-                    inputType = InputType.ORIGIN
-                ),
-                InputVD(
-                    label = "Coffee Tasting Notes",
-                    inputList = data?.TASTE ?: coffeeTastingNotesList,
-                    selectedSet = emptySet(),
-                    searchText = "",
-                    inputType = InputType.TASTE
-                ),
-                InputVD(
-                    label = "Coffee Preparation Method",
-                    inputList = data?.METHOD ?: beanPreparationMethod,
-                    selectedSet = emptySet(),
-                    searchText = null,
-                    inputType = InputType.METHOD,
-                    singleInput = true,
-                ),
-                InputVD(
-                    label = "Roaster",
-                    inputList = data?.ROASTER ?: coffeeRoasters,
-                    selectedSet = emptySet(),
-                    searchText = "",
-                    inputType = InputType.ROASTER,
-                    singleInput = true,
-                ),
-                InputRadioVD(
-                    label = "Decaf",
-                    option = listOf(
-                        RadioInputViewData(
-                            label = "Caffeinated",
-                            isDecaf = false,
-                        ),
-                        RadioInputViewData(
-                            label = "Decaffeinated",
-                            isDecaf = true,
-                        )
+        try {
+            val data = apiService.getCoffeeInputScreenData()
+            val viewData = CoffeeScreenViewData()
+            val updatedViewData = viewData.copy(
+                inputs = listOf(
+                    InputVD(
+                        label = "Coffee Type(s)",
+                        inputList = data?.BEANS ?: coffeeBeanTypes,
+                        selectedSet = emptySet(),
+                        searchText = null,
+                        inputType = InputType.BEANS
                     ),
-                    isDecaf = false,
+                    InputVD(
+                        label = "Coffee Origin(s)",
+                        inputList = data?.ORIGIN ?: originCountries,
+                        selectedSet = emptySet(),
+                        searchText = null,
+                        inputType = InputType.ORIGIN
+                    ),
+                    InputVD(
+                        label = "Coffee Tasting Notes",
+                        inputList = data?.TASTE ?: coffeeTastingNotesList,
+                        selectedSet = emptySet(),
+                        searchText = "",
+                        inputType = InputType.TASTE
+                    ),
+                    InputVD(
+                        label = "Coffee Preparation Method",
+                        inputList = data?.METHOD ?: beanPreparationMethod,
+                        selectedSet = emptySet(),
+                        searchText = null,
+                        inputType = InputType.METHOD,
+                        singleInput = true,
+                    ),
+                    InputVD(
+                        label = "Roaster",
+                        inputList = data?.ROASTER ?: coffeeRoasters,
+                        selectedSet = emptySet(),
+                        searchText = "",
+                        inputType = InputType.ROASTER,
+                        singleInput = true,
+                    ),
+                    InputRadioVD(
+                        label = "Decaf",
+                        option = listOf(
+                            RadioInputViewData(
+                                label = "Caffeinated",
+                                isDecaf = false,
+                            ),
+                            RadioInputViewData(
+                                label = "Decaffeinated",
+                                isDecaf = true,
+                            )
+                        ),
+                        isDecaf = false,
+                    ),
                 ),
-            ),
-        )
-        _viewData.value = Success(
-            data = updatedViewData
-        )
+            )
+            _viewData.value = Success(data = updatedViewData)
+        } catch (e: Exception) {
+            _viewData.value = Result.Error(e)
+        }
     }
 
     fun processIntent(intent: CoffeeInputScreenIntent) {
         when (intent) {
             is CoffeeInputScreenIntent.UpdateRoastDate -> onUpdateRoastData(intent.date)
             is CoffeeInputScreenIntent.SetDecaf -> onToggleDecaf(intent.isDecaf)
-            CoffeeInputScreenIntent.SubmitCoffee -> {
-                onEnterPress()
-            }
-
-            is CoffeeInputScreenIntent.ToggleDropdownSelection -> {
-                handleToggleDropdownSelection(intent.inputType, intent.selection)
-            }
-
-            is CoffeeInputScreenIntent.UpdateSearchText -> {
-                handleUpdateSearchText(intent.inputType, intent.searchText)
-            }
-
+            CoffeeInputScreenIntent.SubmitCoffee -> onEnterPress()
+            is CoffeeInputScreenIntent.ToggleDropdownSelection -> handleToggleDropdownSelection(intent.inputType, intent.selection)
+            is CoffeeInputScreenIntent.UpdateSearchText -> handleUpdateSearchText(intent.inputType, intent.searchText)
             CoffeeInputScreenIntent.NavigateHome -> {
-                // Handle navigation to the home screen
                 viewModelScope.launch {
                     _navigationEvent.send(NavigationEvent.NavigateToHome)
                 }
@@ -195,13 +171,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
     }
 
     fun onUpdateRoastData(date: LocalDate) {
-        val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
+        val currentViewData = _viewData.value as? Success<CoffeeScreenViewData> ?: return
         _viewData.update {
-            Success(
-                data = currentViewData.data.copy(
-                    roastDate = date
-                )
-            )
+            Success(data = currentViewData.data.copy(roastDate = date))
         }
     }
 
@@ -213,14 +185,11 @@ class CoffeeInputScreenViewModel @Inject constructor(
                     if (input is InputRadioVD) {
                         input.copy(isDecaf = isDecaf)
                     } else {
-                        // Keep other inputs as they are
                         input
                     }
                 }
-                // Return a new Success result with the updated inputs list
                 Success(data = currentViewData.copy(inputs = updatedInputs))
             } else {
-                // If the current state is not Success, return it unchanged
                 currentResult
             }
         }
@@ -228,18 +197,10 @@ class CoffeeInputScreenViewModel @Inject constructor(
 
     fun onEnterPress() {
         viewModelScope.launch {
-            val currentViewData = _viewData.value as Success<CoffeeScreenViewData>
+            val currentViewData = _viewData.value as? Success<CoffeeScreenViewData> ?: return@launch
             val coffeeDto = mapToCoffeeDto(currentViewData.data)
-            uploadCoffee(coffeeDto)
-        }.invokeOnCompletion {
-            if (it == null) {
-                viewModelScope.launch {
-                    _navigationEvent.send(NavigationEvent.NavigateToHome)
-
-                }
-            } else {
-                println(it)
-            }
+            apiService.uploadCoffee(accountService.currentUserId, coffeeDto)
+            _navigationEvent.send(NavigationEvent.NavigateToHome)
         }
     }
 
@@ -247,7 +208,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
         var beanTypes = emptySet<String>()
         var originCountries = emptySet<String>()
         var tastingNotes = emptySet<String>()
-        var beanPreparationMethod = emptySet<String>() // For METHOD
+        var beanPreparationMethod = emptySet<String>()
         var roaster: String = ""
         var isDecaf: Boolean? = null
         val formattedRoastDate: String =
@@ -260,17 +221,12 @@ class CoffeeInputScreenViewModel @Inject constructor(
                         InputType.BEANS -> beanTypes = input.selectedSet
                         InputType.ORIGIN -> originCountries = input.selectedSet
                         InputType.TASTE -> tastingNotes = input.selectedSet
-                        InputType.METHOD -> beanPreparationMethod = input.selectedSet // Map METHOD
+                        InputType.METHOD -> beanPreparationMethod = input.selectedSet
                         InputType.ROASTER -> roaster =
                             input.selectedSet.firstOrNull() ?: "no roaster"
                     }
                 }
-
-                is InputRadioVD -> {
-                    // Assuming the label for the decaf radio button is consistent
-                    // or you only have one InputRadioVD for decaf.
-                    isDecaf = input.isDecaf
-                }
+                is InputRadioVD -> isDecaf = input.isDecaf
             }
         }
 
@@ -282,45 +238,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
             beanPreparationMethod = beanPreparationMethod.toList(),
             roaster = roaster,
             isDecaf = isDecaf == true,
-            label = roaster + " " + originCountries.joinToString(", ") + " " +
-                    beanPreparationMethod.first() + " " + formattedRoastDate,
+            label = "$roaster ${originCountries.joinToString(", ")} ${beanPreparationMethod.firstOrNull() ?: ""} $formattedRoastDate",
             id = UUID.randomUUID().toString()
         )
-    }
-
-    private fun uploadCoffee(coffee: CoffeeDto) {
-        val item = mapOf(
-            "isDecaf" to coffee.isDecaf,
-            "roastDate" to coffee.roastDate,
-            "beanTypes" to coffee.beanTypes,
-            "originCountries" to coffee.originCountries,
-            "tastingNotes" to coffee.tastingNotes,
-            "beanPreparationMethod" to coffee.beanPreparationMethod,
-            "roaster" to coffee.roaster,
-            "label" to coffee.label,
-            "userId" to accountService.currentUserId,
-            "id" to coffee.id
-        )
-//        val itemWithUserId = item + ("userId" to accountService.currentUserId)
-
-        val userId = accountService.currentUserId
-        val request = Firebase.firestore.collection("coffeeUploads")
-        val something = Firebase.auth.addAuthStateListener {
-            it.currentUser?.let {
-                request.document("${coffee.label}").set(item)
-            }
-        }
-
-        viewModelScope.launch { doSomething(something) }
-
-//        val collectionReference = FirebaseFirestore.getInstance().collection("$userId")
-//        viewModelScope.launch {
-//            request.document().collection("$userId").add(mapOf(userId to "id")).await().id
-//        }
-    }
-
-    private suspend fun doSomething(something: Unit) {
-        something
     }
 
     private fun handleToggleDropdownSelection(inputType: InputType, selection: String) {
@@ -330,21 +250,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputVD && input.inputType == inputType) {
                         val newSelectedSet = if (input.singleInput) {
-                            // Logic for single input
-                            if (input.selectedSet.contains(selection)) {
-                                // If the selected item is clicked again, clear the set
-                                emptySet()
-                            } else {
-                                // Otherwise, replace the set with the new single selection
-                                setOf(selection)
-                            }
+                            if (input.selectedSet.contains(selection)) emptySet() else setOf(selection)
                         } else {
-                            // Logic for multi-input (existing logic)
-                            if (input.selectedSet.contains(selection)) {
-                                input.selectedSet - selection
-                            } else {
-                                input.selectedSet + selection
-                            }
+                            if (input.selectedSet.contains(selection)) input.selectedSet - selection else input.selectedSet + selection
                         }
                         input.copy(selectedSet = newSelectedSet)
                     } else {
@@ -381,22 +289,15 @@ sealed class NavigationEvent {
     object NavigateToHome : NavigationEvent()
     object NavigateToInput : NavigationEvent()
     data object NavigateToLogin : NavigationEvent()
-
-    //    data class NavigateToDetail(val coffee: CoffeeDto) : NavigationEvent()
-    // Add other navigation events here if needed, e.g.:
     data class NavigateToDetail(val coffeeId: String) : NavigationEvent()
 }
 
 sealed class CoffeeInputScreenIntent {
     data class UpdateRoastDate(val date: LocalDate) : CoffeeInputScreenIntent()
     data class SetDecaf(val isDecaf: Boolean) : CoffeeInputScreenIntent()
-    object SubmitCoffee : CoffeeInputScreenIntent() // For the "Enter" press or submit button
-    data class ToggleDropdownSelection(val inputType: InputType, val selection: String) :
-        CoffeeInputScreenIntent()
-
-    data class UpdateSearchText(val inputType: InputType, val searchText: String) :
-        CoffeeInputScreenIntent()
-
+    object SubmitCoffee : CoffeeInputScreenIntent()
+    data class ToggleDropdownSelection(val inputType: InputType, val selection: String) : CoffeeInputScreenIntent()
+    data class UpdateSearchText(val inputType: InputType, val searchText: String) : CoffeeInputScreenIntent()
     object NavigateHome : CoffeeInputScreenIntent()
 }
 
