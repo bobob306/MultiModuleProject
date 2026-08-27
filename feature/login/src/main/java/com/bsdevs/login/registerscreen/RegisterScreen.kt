@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,19 +23,21 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -59,7 +63,6 @@ import androidx.navigation.NavOptions
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
-
 import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
@@ -109,32 +112,19 @@ fun RegisterScreenContentPreview() {
     )
 }
 
-
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RegisterScreenContent(
     viewData: RegisterScreenViewData,
     onIntent: (RegisterScreenIntent) -> Unit
 ) {
-    val focusManager = LocalFocusManager.current // To handle keyboard actions
+    val focusManager = LocalFocusManager.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
 
-    val scrollProgress by remember(scrollState.value, scrollState.maxValue) {
-        derivedStateOf {
-            if (scrollState.maxValue > 0) {
-                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-            } else {
-                0f
-            }
-        }
-    }
-
     val isScrollable by remember(scrollState.maxValue) {
-        derivedStateOf {
-            scrollState.maxValue > 0
-        }
+        derivedStateOf { scrollState.maxValue > 0 }
     }
     val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
         derivedStateOf {
@@ -151,12 +141,9 @@ fun RegisterScreenContent(
             if (scrollState.maxValue > 0 && scrollState.viewportSize > 0) {
                 val viewportSize = scrollState.viewportSize.toFloat()
                 val totalContentHeight = viewportSize + scrollState.maxValue.toFloat()
-                (viewportSize / totalContentHeight).coerceIn(
-                    0.05f,
-                    1f
-                ) // Ensure min 5% height for thumb
+                (viewportSize / totalContentHeight).coerceIn(0.05f, 1f)
             } else {
-                1f // If not scrollable or viewport not determined, thumb is full height (won't be shown anyway)
+                1f
             }
         }
     }
@@ -179,138 +166,247 @@ fun RegisterScreenContent(
                         .fillMaxSize()
                         .verticalScroll(scrollState)
                         .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp)
-                        .padding(end = if (isScrollable && isLandscape) 16.dp else 0.dp), // Add some padding around the content
+                        .padding(end = if (isScrollable && isLandscape) 16.dp else 0.dp),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        text = "Register Screen",
+                        text = "Register Account",
                         style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = if (isLandscape) 8.dp else 24.dp)
+                        modifier = Modifier.padding(vertical = if (isLandscape) 8.dp else 24.dp)
                     )
+
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email ->
-                            onIntent(RegisterScreenIntent.UpdateEmail(email))
-                        },
+                        onValueChange = { onIntent(RegisterScreenIntent.UpdateEmail(it)) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Email Address") },
                         supportingText = { emailError?.let { Text(it) } },
                         singleLine = true,
-                        // You can also add supportingText = { Text("Error message") } when isError is true
-                        trailingIcon = {
-                            if (viewData.email.isNotEmpty()) {
-                                IconButton(onClick = { onIntent(RegisterScreenIntent.UpdateEmail("")) }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Clear Email"
-                                    )
-                                }
-                            }
-                        },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next // Or ImeAction.Done if it's the last field
+                            imeAction = ImeAction.Next
                         ),
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = "Email Icon"
-                            )
-                        },
                     )
-                    Spacer(modifier = Modifier.height(if (isLandscape) 0.dp else 16.dp))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = firstName,
+                            onValueChange = { onIntent(RegisterScreenIntent.UpdateFirstName(it)) },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("First Name") },
+                            singleLine = true,
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = lastName,
+                            onValueChange = { onIntent(RegisterScreenIntent.UpdateLastName(it)) },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("Last Name") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = middleName,
+                        onValueChange = { onIntent(RegisterScreenIntent.UpdateMiddleName(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Middle Name (Optional)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        "Roles",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("parent", "coffee", "flashcards").forEach { role ->
+                            FilterChip(
+                                selected = roles.contains(role),
+                                onClick = { onIntent(RegisterScreenIntent.ToggleRole(role)) },
+                                label = { Text(role.replaceFirstChar { it.uppercase() }) }
+                            )
+                        }
+                    }
+
+                    if (roles.contains("parent")) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Baby Details",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+
+                        OutlinedTextField(
+                            value = babyId,
+                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyId(it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Existing Baby ID (Optional)") },
+                            singleLine = true,
+                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            supportingText = {
+                                if (babyId.isEmpty()) {
+                                    Text("If empty, a new baby profile will be created.")
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = babyFirstName,
+                                onValueChange = {
+                                    onIntent(
+                                        RegisterScreenIntent.UpdateBabyFirstName(
+                                            it
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Baby First Name ${if (babyId.isEmpty()) "*" else ""}") },
+                                singleLine = true,
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = babyLastName,
+                                onValueChange = {
+                                    onIntent(
+                                        RegisterScreenIntent.UpdateBabyLastName(
+                                            it
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                label = { Text("Baby Last Name ${if (babyId.isEmpty()) "*" else ""}") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = babyMiddleName,
+                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyMiddleName(it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Baby Middle Name (Optional)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedTextField(
+                            value = babyBirthDate,
+                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyBirthDate(it)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Baby Birth Date ${if (babyId.isEmpty()) "*" else "(Optional)"}") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.DateRange,
+                                    contentDescription = null
+                                )
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            placeholder = { Text("YYYY-MM-DD") }
+                        )
+
+                        babyError?.let {
+                            Text(
+                                it,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { newPassword: String ->
-                            onIntent(RegisterScreenIntent.UpdatePassword(newPassword))
-                        },
+                        onValueChange = { onIntent(RegisterScreenIntent.UpdatePassword(it)) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(text = "Password") },
-                        placeholder = { Text("Enter your password") },
+                        label = { Text("Password") },
                         supportingText = { passwordError?.let { Text(it) } },
                         singleLine = true,
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "Password Icon"
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
-                            val image = if (viewData.isPasswordVisible)
-                                Icons.Default.Lock
-                            else Icons.Outlined.Lock
-
-                            val description =
-                                if (viewData.isPasswordVisible) "Hide password" else "Show password"
-
                             IconButton(onClick = { onIntent(RegisterScreenIntent.UpdatePasswordVisibility) }) {
-                                Icon(imageVector = image, description)
+                                Icon(
+                                    if (isPasswordVisible) Icons.Default.Lock else Icons.Outlined.Lock,
+                                    null
+                                )
                             }
                         },
-                        visualTransformation = if (viewData.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done // Set to Done as it's likely the last field before login
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                ImeAction.Next // Clear focus when "Done" is pressed
-                            }
+                            imeAction = ImeAction.Next
                         ),
                     )
-                    Spacer(modifier = Modifier.height(if (isLandscape) 0.dp else 16.dp))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     OutlinedTextField(
                         value = passwordConfirmation,
-                        visualTransformation = if (viewData.isPasswordConfirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        onValueChange = { newPasswordConfirmation: String ->
+                        onValueChange = {
                             onIntent(
                                 RegisterScreenIntent.UpdatePasswordConfirmation(
-                                    newPasswordConfirmation
+                                    it
                                 )
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text(text = "Confirm Password") },
-                        placeholder = { Text("Confirm your password") },
+                        label = { Text("Confirm Password") },
                         singleLine = true,
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = "Password Icon"
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
-                            val image = if (viewData.isPasswordConfirmationVisible)
-                                Icons.Default.Lock
-                            else Icons.Outlined.Lock
-                            val description =
-                                if (viewData.isPasswordConfirmationVisible) "Hide password" else "Show password"
                             IconButton(onClick = { onIntent(RegisterScreenIntent.UpdatePasswordConfirmationVisibility) }) {
-                                Icon(imageVector = image, description)
+                                Icon(
+                                    if (isPasswordConfirmationVisible) Icons.Default.Lock else Icons.Outlined.Lock,
+                                    null
+                                )
                             }
                         },
+                        visualTransformation = if (isPasswordConfirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done // Set to Done as it's likely the last field before login
+                            imeAction = ImeAction.Done
                         ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                if (
-                                    viewData.password == viewData.passwordConfirmation && viewData.password.isNotEmpty() && viewData.email.isNotEmpty() && !viewData.isLoading
-                                ) {
-                                    onIntent(RegisterScreenIntent.Register) // Clear focus when "Done" is pressed
-                                }
-                            }
-                        ),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     )
-                    Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else 16.dp))
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
                     Button(
                         onClick = { onIntent(RegisterScreenIntent.Register) },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = viewData.password == viewData.passwordConfirmation && viewData.password.isNotEmpty() && viewData.email.isNotEmpty() && !viewData.isLoading
+                        enabled = password == passwordConfirmation && password.isNotEmpty() && email.isNotEmpty() && firstName.isNotEmpty() && lastName.isNotEmpty() && roles.isNotEmpty() && !isLoading
                     ) {
                         Text("Register")
                     }
@@ -324,34 +420,27 @@ fun RegisterScreenContent(
             }
             if (isScrollable && isLandscape) {
                 val scrollbarWidth = 8.dp
-                val minThumbVisualHeightDp = 20.dp // Minimum visible height for the thumb in Dp
+                val minThumbVisualHeightDp = 20.dp
 
-                Box( // Container for the scrollbar
+                Box(
                     contentAlignment = Alignment.CenterEnd,
                     modifier = Modifier
                         .fillMaxHeight()
-                        .padding(horizontal = 4.dp, vertical = 12.dp) // Align with content padding
+                        .padding(horizontal = 4.dp, vertical = 12.dp)
                 ) {
-                    BoxWithConstraints(contentAlignment = Alignment.CenterEnd) { // Use BoxWithConstraints to get the actual track height
+                    BoxWithConstraints(contentAlignment = Alignment.CenterEnd) {
                         val trackActualHeightDp = this.maxHeight
                         val trackActualHeightPx = with(density) { trackActualHeightDp.toPx() }
-
-                        // Calculate thumb height in Dp, ensuring it's not smaller than minThumbVisualHeightDp
-                        val thumbHeightDp = (trackActualHeightDp * visiblePortionFraction)
-                            .coerceAtLeast(minThumbVisualHeightDp)
+                        val thumbHeightDp =
+                            (trackActualHeightDp * visiblePortionFraction).coerceAtLeast(
+                                minThumbVisualHeightDp
+                            )
                         val thumbHeightPx = with(density) { thumbHeightDp.toPx() }
-
-
-                        // Calculate the total movable range for the top of the thumb
                         val movableRangePx = trackActualHeightPx - thumbHeightPx
-
-                        // Calculate the thumb's Y offset based on how much is scrolled from the top
                         val thumbOffsetYPx =
                             (movableRangePx * scrollProgressFromTop).coerceAtLeast(0f)
                         val thumbOffsetYDp = with(density) { thumbOffsetYPx.toDp() }
 
-
-                        // Track
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -360,20 +449,19 @@ fun RegisterScreenContent(
                                     MaterialTheme.colorScheme.surfaceVariant,
                                     shape = RoundedCornerShape(4.dp)
                                 )
-                                .clip(RoundedCornerShape(4.dp)) // Clip background
+                                .clip(RoundedCornerShape(4.dp))
                         ) {
-                            // Thumb
                             Box(
                                 modifier = Modifier
-                                    .align(Alignment.TopStart) // Thumb starts at top of its calculated offset
+                                    .align(Alignment.TopStart)
                                     .width(scrollbarWidth)
-                                    .height(thumbHeightDp) // Use calculated thumb height
-                                    .offset(y = thumbOffsetYDp) // Apply calculated offset
+                                    .height(thumbHeightDp)
+                                    .offset(y = thumbOffsetYDp)
                                     .background(
                                         MaterialTheme.colorScheme.primary,
                                         shape = RoundedCornerShape(4.dp)
                                     )
-                                    .clip(RoundedCornerShape(4.dp)) // Clip thumb itself
+                                    .clip(RoundedCornerShape(4.dp))
                             )
                         }
                     }

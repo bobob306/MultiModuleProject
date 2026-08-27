@@ -14,15 +14,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.bsdevs.uicomponents.theme.MultiModuleProjectTheme
 import kotlinx.coroutines.launch
+
 @Composable
-fun MMPApp() {
+fun MMPApp(
+    viewModel: MainAppViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    val userRoles by viewModel.userRoles.collectAsStateWithLifecycle()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -43,7 +50,7 @@ fun MMPApp() {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (shouldShowBottomBar && !isLandscape) {
-                    MMPBottomBar(navController)
+                    MMPBottomBar(navController, userRoles)
                 }
             }
         ) { innerPadding ->
@@ -52,12 +59,13 @@ fun MMPApp() {
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (shouldShowBottomBar && isLandscape) {
-                    MMPNavigationRail(navController)
+                    MMPNavigationRail(navController, userRoles)
                 }
 
                 // Pass the root innerPadding directly into your NavHost
                 MMPNavHost(
                     navController = navController,
+                    userRoles = userRoles,
                     onShowSnackBar = { message, action ->
                         scope.launch {
                             snackbarHostState.showSnackbar(

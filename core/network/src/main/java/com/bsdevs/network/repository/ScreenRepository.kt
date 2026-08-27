@@ -37,6 +37,7 @@ class ScreenRepositoryImpl @Inject constructor(
             flowOf(Result.Success(cached))
         } else {
             try {
+                android.util.Log.d("FIREBASE_CALL", "Read Screen: $screen")
                 val document = scr.document(screen).get().await().data
                 val dto = mapper.mapToDto(document as HashMap)
                 cacheFlowMap[screen] = dto

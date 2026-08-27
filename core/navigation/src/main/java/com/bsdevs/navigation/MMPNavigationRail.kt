@@ -28,11 +28,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MMPNavigationRail(navController: NavController) {
-    val items = listOf(
+fun MMPNavigationRail(navController: NavController, userRoles: List<String>) {
+    val items = listOfNotNull(
         BottomNavItem.Home,
-        BottomNavItem.Coffee,
-        BottomNavItem.Baby
+        BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
+        BottomNavItem.Baby.takeIf { userRoles.contains("parent") }
     )
     NavigationRail {
         val navBackStackEntry by navController.currentBackStackEntryAsState()

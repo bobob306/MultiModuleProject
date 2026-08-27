@@ -16,6 +16,7 @@ import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
 import com.bsdevs.firstscreen.navigation.splashScreenSection
+import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.homeScreenSection
 import com.bsdevs.login.loginScreenSection
 import com.bsdevs.login.navigateToLoginScreen
@@ -25,6 +26,7 @@ import com.bsdevs.login.navigateToRegisterScreen
 @Composable
 fun MMPNavHost(
     navController: NavHostController,
+    userRoles: List<String>,
     onShowSnackBar: suspend (String, String?) -> Unit,
     modifier: Modifier,
     rootPadding: PaddingValues,
@@ -39,8 +41,20 @@ fun MMPNavHost(
         ) {
             homeScreenSection(
                 onShowSnackBar = onShowSnackBar,
-                onNavigateToCoffee = navController::navigateToCoffeeHome,
-                onNavigateToBabyCare = navController::navigateToBabyCareHome,
+                onNavigateToCoffee = {
+                    if (userRoles.contains("coffee")) {
+                        navController.navigateToCoffeeHome()
+                    } else {
+                        navController.navigate(HomeScreenBaseRoute)
+                    }
+                },
+                onNavigateToBabyCare = {
+                    if (userRoles.contains("parent")) {
+                        navController.navigateToBabyCareHome()
+                    } else {
+                        navController.navigate(HomeScreenBaseRoute)
+                    }
+                },
             )
             coffeeScreenSection(
                 onShowSnackBar,
@@ -52,13 +66,25 @@ fun MMPNavHost(
             )
             loginScreenSection(
                 onShowSnackBar,
-                onNavigateToCoffeeHome = navController::navigateToCoffeeHome,
+                onNavigateToCoffeeHome = {
+                    if (userRoles.contains("coffee")) {
+                        navController.navigateToCoffeeHome()
+                    } else {
+                        navController.navigate(HomeScreenBaseRoute)
+                    }
+                },
                 onNavigateToLogin = navController::navigateToLoginScreen,
                 onNavigateToRegisterScreen = navController::navigateToRegisterScreen,
             )
             splashScreenSection(
                 onShowSnackBar,
-                onNavigateToBabyHome = navController::navigateToBabyCareHome,
+                onNavigateToBabyHome = {
+                    if (userRoles.contains("parent")) {
+                        navController.navigateToBabyCareHome()
+                    } else {
+                        navController.navigate(HomeScreenBaseRoute)
+                    }
+                },
                 onNavigateToSignIn = navController::navigateToLoginScreen,
             )
             babyCareSection(
