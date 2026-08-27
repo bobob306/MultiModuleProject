@@ -18,32 +18,30 @@ class FirestoreBabyCareService @Inject constructor(
     private val dispatchers: DispatcherProvider,
 ) : BabyCareFirestoreService {
 
-    private fun getMonthsCollection(id: String): com.google.firebase.firestore.CollectionReference {
-        val user = userRepository.userProfile.value
+    private suspend fun getAuthorizedBabyId(id: String): String? {
+        val user = userRepository.userProfile.value ?: userRepository.getUser(id)
         val authorizedIds = (user?.babyIds ?: emptyList()) + listOfNotNull(user?.babyId)
-        
-        // If the ID passed is the user's ID, we default to their first authorized babyId.
-        // If it's already a babyId, we verify it's in their authorized list.
-        val targetBabyId = when {
-            id == user?.id -> authorizedIds.firstOrNull()
+
+        val targetId = when {
             authorizedIds.contains(id) -> id
+            id == user?.id -> authorizedIds.firstOrNull()
             else -> null
         }
-        
-        if (targetBabyId == null) {
+
+        if (targetId == null) {
             Log.e("BABYCARE_SERVICE", "Access Denied. ID $id is not authorized for user ${user?.id}. Authorized Baby IDs: $authorizedIds")
-            // In a production app, we would throw an exception here.
-            // For now, return a reference to a non-existent path to prevent crashes but stop data leak.
-            return firestore.collection("unauthorized_access").document("logs").collection("empty")
         }
-        
-        return firestore.collection("babyLogs").document(targetBabyId).collection("months")
+        return targetId
     }
+
+    private fun getMonthsCollection(babyId: String) =
+        firestore.collection("babyLogs").document(babyId).collection("months")
 
     override suspend fun getLatestMonthId(userId: String): String? = withContext(dispatchers.io) {
         try {
-            android.util.Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query): $userId")
-            getMonthsCollection(userId)
+            val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
+            Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId")
+            getMonthsCollection(babyId)
                 .orderBy(com.google.firebase.firestore.FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(1)
                 .get()
@@ -58,8 +56,9 @@ class FirestoreBabyCareService @Inject constructor(
 
     override suspend fun getMonthIdBefore(userId: String, monthId: String): String? = withContext(dispatchers.io) {
         try {
-            android.util.Log.d("FIREBASE_CALL", "Read Month ID Before (Optimized Query): $userId / $monthId")
-            getMonthsCollection(userId)
+            val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
+            Log.d("FIREBASE_CALL", "Read Month ID Before (Optimized Query) for Baby: $babyId / $monthId")
+            getMonthsCollection(babyId)
                 .whereLessThan(com.google.firebase.firestore.FieldPath.documentId(), monthId)
                 .orderBy(com.google.firebase.firestore.FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(1)
@@ -75,8 +74,9 @@ class FirestoreBabyCareService @Inject constructor(
 
     override suspend fun getAllMonthIds(userId: String): List<String> = withContext(dispatchers.io) {
         try {
-            Log.d("FIREBASE_CALL", "Read Collection (All Months IDs): $userId")
-            getMonthsCollection(userId)
+            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+            Log.d("FIREBASE_CALL", "Read Collection (All Months IDs) for Baby: $babyId")
+            getMonthsCollection(babyId)
                 .get()
                 .await()
                 .documents
@@ -88,19 +88,21 @@ class FirestoreBabyCareService @Inject constructor(
     }
 
     override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? = withContext(dispatchers.io) {
-        Log.d("FIREBASE_CALL", "Read Month Doc: $userId / $monthId")
-        val snapshot = getMonthsCollection(userId).document(monthId).get().await()
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
+        Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId")
+        val snapshot = getMonthsCollection(babyId).document(monthId).get().await()
         if (snapshot.exists()) snapshot.data else null
     }
 
     override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) = withContext(dispatchers.io) {
-        val docRef = getMonthsCollection(userId).document(monthId)
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        val docRef = getMonthsCollection(babyId).document(monthId)
         try {
-            Log.d("FIREBASE_CALL", "Update Event: $userId / $monthId / $date")
+            Log.d("FIREBASE_CALL", "Update Event for Baby: $babyId / $monthId / $date")
             docRef.update("days.$date", FieldValue.arrayUnion(event)).await()
         } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
             if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
-                Log.d("FIREBASE_CALL", "Set Initial Month Doc: $userId / $monthId")
+                Log.d("FIREBASE_CALL", "Set Initial Month Doc for Baby: $babyId / $monthId")
                 docRef.set(mapOf("days" to mapOf(date to listOf(event))), SetOptions.merge()).await()
             } else throw e
         }
@@ -108,8 +110,9 @@ class FirestoreBabyCareService @Inject constructor(
     }
 
     override suspend fun updateEvent(userId: String, monthId: String, date: String, eventId: String, updatedEvent: Map<String, Any?>) = withContext(dispatchers.io) {
-        val docRef = getMonthsCollection(userId).document(monthId)
-        Log.d("FIREBASE_CALL", "Transaction Update Event: $userId / $monthId / $date / $eventId")
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        val docRef = getMonthsCollection(babyId).document(monthId)
+        Log.d("FIREBASE_CALL", "Transaction Update Event for Baby: $babyId / $monthId / $date / $eventId")
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
             val daysMap = snapshot.get("days") as? Map<String, List<Map<String, Any?>>> ?: return@runTransaction
@@ -121,8 +124,9 @@ class FirestoreBabyCareService @Inject constructor(
     }
 
     override suspend fun deleteEvent(userId: String, monthId: String, date: String, eventId: String) = withContext(dispatchers.io) {
-        val docRef = getMonthsCollection(userId).document(monthId)
-        Log.d("FIREBASE_CALL", "Transaction Delete Event: $userId / $monthId / $date / $eventId")
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        val docRef = getMonthsCollection(babyId).document(monthId)
+        Log.d("FIREBASE_CALL", "Transaction Delete Event for Baby: $babyId / $monthId / $date / $eventId")
         firestore.runTransaction { transaction ->
             val snapshot = transaction.get(docRef)
             val daysMap = snapshot.get("days") as? Map<String, List<Map<String, Any?>>> ?: return@runTransaction
