@@ -27,12 +27,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import androidx.window.core.layout.WindowWidthSizeClass
@@ -62,19 +61,16 @@ fun CoffeeHomeScreenRoute(
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: CoffeeHomeScreenViewModel = hiltViewModel(),
 ) {
-    val scope = rememberCoroutineScope()
-//    scope.launch { viewModel.start() }
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     Surface(
         modifier = Modifier
             .fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background,
     ) {
         when (viewData.value) {
             is Result.Loading -> CoffeeHomeLoadingScreen()
             is Result.Error -> ErrorScreen()
             is Result.Success -> CoffeeHomeScreenContent(
-                onShowSnackBar = onShowSnackBar,
                 viewData = (viewData.value as Result.Success<CoffeeHomeScreenViewData>).data,
                 onIntent = viewModel::processIntent,
                 sharedTransitionScope = sharedTransitionScope,
@@ -101,7 +97,6 @@ fun CoffeeHomeScreenRoute(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoffeeHomeScreenContent(
-    onShowSnackBar: suspend (String, String?) -> Unit,
     viewData: CoffeeHomeScreenViewData,
     onIntent: (CoffeeHomeScreenIntent) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
@@ -111,10 +106,12 @@ fun CoffeeHomeScreenContent(
         .filterIsInstance<CoffeeHomeScreenViewDatas.CoffeeList>()
         .firstOrNull()?.coffeeList
     val configuration = LocalConfiguration.current
+    @Suppress("DEPRECATION")
     val window = currentWindowAdaptiveInfo()
+    @Suppress("DEPRECATION")
     val isLandscape =
-        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+        (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
+                || (window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT)
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp

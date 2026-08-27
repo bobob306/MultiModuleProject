@@ -16,8 +16,6 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffee
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
-import com.bsdevs.common.result.asResult
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +35,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoffeeHomeScreenViewModel @Inject constructor(
     private val accountService: AccountService,
+    private val apiService: com.bsdevs.coffeescreen.network.CoffeeApiService,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private lateinit var currentUser: String
@@ -69,29 +68,30 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     }
 
     private suspend fun loadDataFromNetwork() {
-        val collectionReference =
-            FirebaseFirestore.getInstance().collection("coffeeUploads")
-                .whereEqualTo("userId", currentUser)
-                .get()
-                .await()
-        val coffeeListFromNetwork = collectionReference.toObjects(CoffeeDto::class.java)
+        if (currentUser.isEmpty()) return
+        
+        try {
+            val coffeeListFromNetwork = apiService.getAllCoffee(currentUser)
 
-        val vd = withContext(dispatchers.default) {
-            loadedData.copy(
-                viewData = loadedData.viewData.map {
-                    when (it) {
-                        is CoffeeHomeScreenViewDatas.CoffeeList -> {
-                            it.copy(coffeeList = coffeeListFromNetwork)
+            val vd = withContext(dispatchers.default) {
+                loadedData.copy(
+                    viewData = loadedData.viewData.map {
+                        when (it) {
+                            is CoffeeHomeScreenViewDatas.CoffeeList -> {
+                                it.copy(coffeeList = coffeeListFromNetwork)
+                            }
+
+                            else -> it
                         }
-
-                        else -> it
                     }
-                }
+                )
+            }
+            _viewData.value = Result.Success(
+                data = vd
             )
+        } catch (e: Exception) {
+             _viewData.value = Result.Error(e)
         }
-        _viewData.value = Result.Success(
-            data = vd
-        )
     }
 
     fun processIntent(intent: CoffeeHomeScreenIntent) {
@@ -124,28 +124,6 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             accountService.signOut()
             _navigationEvent.send(NavigationEvent.NavigateToLogin)
-        }
-    }
-
-    private fun uploadCoffeeData() {
-        val beans = coffeeBeanTypes
-        val method = beanPreparationMethod
-        val taste = coffeeTastingNotesList
-        val roaster = coffeeRoasters
-        val caffeine = listOf("Caffeinated", "Decaffeinated")
-        val origin = originCountries
-        val coffeeDetails = listOf(
-            beans, method, taste, roaster, caffeine, origin
-        )
-
-        val collectionReference =
-            FirebaseFirestore.getInstance().collection("screens").document("coffeeInput")
-        viewModelScope.launch {
-            collectionReference.update("METHOD", method)
-            collectionReference.update("TASTE", taste)
-            collectionReference.update("ROASTER", roaster)
-            collectionReference.update("CAFFEINE", caffeine)
-            collectionReference.update("ORIGIN", origin)
         }
     }
 }

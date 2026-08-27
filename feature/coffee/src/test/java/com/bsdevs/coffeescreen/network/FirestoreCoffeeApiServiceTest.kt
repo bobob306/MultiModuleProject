@@ -43,9 +43,11 @@ class FirestoreCoffeeApiServiceTest {
         service.uploadCoffee(userId, coffee)
         
         verify { collection.document("Espresso Blend") }
-        verify { document.set(match<Map<String, Any?>> { 
-            it["userId"] == userId && it["label"] == "Espresso Blend" 
-        }) }
+        verify { 
+            document.set(match<Map<String, Any?>> { 
+                (it["userId"] == userId) && (it["label"] == "Espresso Blend") 
+            }) 
+        }
     }
 
     @Test

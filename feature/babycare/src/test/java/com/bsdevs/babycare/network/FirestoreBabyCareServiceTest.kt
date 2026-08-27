@@ -125,7 +125,7 @@ class FirestoreBabyCareServiceTest {
         val event1 = mapOf("id" to "e1")
         val event2 = mapOf("id" to "e2")
         val snapshot = mockk<DocumentSnapshot>(relaxed = true)
-        every { snapshot.get("days") } returns mapOf("2026-08-27" to listOf(event1, event2))
+        every { snapshot["days"] } returns mapOf("2026-08-27" to listOf(event1, event2))
         
         val transaction = mockk<Transaction>(relaxed = true)
         every { transaction.get(docRef) } returns snapshot

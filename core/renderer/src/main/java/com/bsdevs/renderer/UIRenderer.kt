@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -18,7 +19,6 @@ import com.bsdevs.renderer.components.CardComponent
 import com.bsdevs.renderer.components.ChipComponent
 import com.bsdevs.renderer.components.MMPButton
 import com.bsdevs.renderer.components.SwitchComponent
-import java.util.Locale
 
 @Composable
 fun ColumnScope.RenderUI(
@@ -29,10 +29,11 @@ fun ColumnScope.RenderUI(
     onSwitchClick: (Boolean) -> Unit,
     featureContent: @Composable (NetworkScreenData) -> Unit = {},
 ) {
+    val locale = LocalConfiguration.current.locales[0]
     when (item) {
         is NetworkScreenData.TitleDataNetwork -> Text(
-            text = item.content.uppercase(Locale.getDefault()),
-            style = MaterialTheme.typography.titleMedium
+            text = item.content.uppercase(locale),
+            style = MaterialTheme.typography.titleMedium,
         )
 
         is NetworkScreenData.SubtitleDataNetwork -> Text(item.content)

@@ -31,10 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +53,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import com.bsdevs.common.result.Result
@@ -69,7 +67,7 @@ fun LoginScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateToCoffeeHome: (navOptions: NavOptions?) -> Unit,
     onNavigateToRegisterScreen: (navOptions: NavOptions?) -> Unit,
-    viewModel: LoginScreenViewModel = hiltViewModel()
+    viewModel: LoginScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
     when (viewData.value) {
@@ -89,6 +87,13 @@ fun LoginScreenRoute(
             }
         }
     }
+
+    val state = viewData.value
+    if ((state is Result.Success) && (state.data.emailError != null || state.data.passwordError != null)) {
+        LaunchedEffect(state.data.emailError, state.data.passwordError) {
+            onShowSnackBar("Login failed. Please check your credentials.", null)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,16 +105,6 @@ fun LoginScreenContent(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
-
-    val scrollProgress by remember(scrollState.value, scrollState.maxValue) {
-        derivedStateOf {
-            if (scrollState.maxValue > 0) {
-                scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-            } else {
-                0f
-            }
-        }
-    }
 
     val isScrollable by remember(scrollState.maxValue) {
         derivedStateOf {
@@ -180,9 +175,8 @@ fun LoginScreenContent(
                                     contentDescription = "Email Icon"
                                 )
                             },
-                            supportingText = { emailError?.let { Text(it) } },
                             trailingIcon = {
-                                if (viewData.email.isNotEmpty()) {
+                                if (email.isNotEmpty()) {
                                     IconButton(onClick = { onIntent(LoginScreenIntent.UpdateEmail("")) }) {
                                         Icon(
                                             imageVector = Icons.Default.Clear,
@@ -196,11 +190,20 @@ fun LoginScreenContent(
                                 imeAction = ImeAction.Next // Or ImeAction.Done if it's the last field
                             ),
                             singleLine = true,
-                            // You can also add supportingText = { Text("Error message") } when isError is true
+                            isError = emailError != null,
+                            supportingText = {
+                                emailError?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
-                            value = viewData.password,
+                            value = password,
                             onValueChange = { newPassword ->
                                 onIntent(LoginScreenIntent.UpdatePassword(newPassword))
                             },
@@ -214,18 +217,18 @@ fun LoginScreenContent(
                                 )
                             },
                             trailingIcon = {
-                                val image = if (viewData.isPasswordVisible)
+                                val image = if (isPasswordVisible)
                                     Icons.Default.Lock
                                 else Icons.Outlined.Lock
 
                                 val description =
-                                    if (viewData.isPasswordVisible) "Hide password" else "Show password"
+                                    if (isPasswordVisible) "Hide password" else "Show password"
 
                                 IconButton(onClick = { onIntent(LoginScreenIntent.UpdatePasswordVisibility) }) {
                                     Icon(imageVector = image, description)
                                 }
                             },
-                            visualTransformation = if (viewData.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
                                 imeAction = ImeAction.Done // Set to Done as it's likely the last field before login
@@ -233,22 +236,31 @@ fun LoginScreenContent(
                             keyboardActions = KeyboardActions(
                                 onDone = {
                                     focusManager.clearFocus() // Clear focus when "Done" is pressed
-                                    if (viewData.email.isNotEmpty() && viewData.password.isNotEmpty() && !isLoading) {
+                                    if (email.isNotEmpty() && password.isNotEmpty() && !isLoading) {
                                         onIntent(LoginScreenIntent.Login) // Optionally trigger login on Done
                                     }
                                 }
                             ),
                             singleLine = true,
-                            isError = false // TODO: Add password validation
+                            isError = passwordError != null,
+                            supportingText = {
+                                passwordError?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Button(
                             onClick = { onIntent(LoginScreenIntent.Login) },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = viewData.email.isNotEmpty() && viewData.password.isNotEmpty() && !isLoading // Disable button while loading
+                            enabled = email.isNotEmpty() && password.isNotEmpty() && !isLoading // Disable button while loading
                         ) {
-                            if (viewData.isLoading) {
+                            if (isLoading) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.height(24.dp), // Adjust size as needed
                                     color = MaterialTheme.colorScheme.onPrimary
@@ -271,7 +283,7 @@ fun LoginScreenContent(
                 val scrollbarWidth = 8.dp
                 val minThumbVisualHeightDp = 20.dp // Minimum visible height for the thumb in Dp
 
-                Box( // Container for the scrollbar
+                Box(
                     contentAlignment = Alignment.CenterEnd,
                     modifier = Modifier
                         .fillMaxHeight()
