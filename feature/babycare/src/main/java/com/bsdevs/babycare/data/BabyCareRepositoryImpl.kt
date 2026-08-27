@@ -95,8 +95,10 @@ class BabyCareRepositoryImpl @Inject constructor(
         )
     }
 
-    override suspend fun refreshData(userId: String, pageSize: Int): RepositoryFetchResult {
-        return loadInitialData(userId, pageSize)
+    override suspend fun refreshData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
+        _cachedDays.value = emptyList()
+        currentAnchorMonth = null
+        loadInitialData(userId, pageSize)
     }
 
     override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {

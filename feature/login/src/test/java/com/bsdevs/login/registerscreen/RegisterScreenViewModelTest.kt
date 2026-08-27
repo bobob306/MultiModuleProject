@@ -3,6 +3,8 @@ package com.bsdevs.login.registerscreen
 import app.cash.turbine.test
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.repository.UserRepository
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterIsInstance
@@ -20,6 +22,7 @@ class RegisterScreenViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
     private lateinit var accountService: FakeAccountService
+    private lateinit var userRepository: UserRepository
     private lateinit var viewModel: RegisterScreenViewModel
     private lateinit var dispatchers: DispatcherProvider
 
@@ -34,7 +37,8 @@ class RegisterScreenViewModelTest {
         }
 
         accountService = FakeAccountService()
-        viewModel = RegisterScreenViewModel(accountService, dispatchers)
+        userRepository = mockk(relaxed = true)
+        viewModel = RegisterScreenViewModel(accountService, userRepository, dispatchers)
     }
 
     @After
@@ -105,21 +109,144 @@ class RegisterScreenViewModelTest {
     }
 
     @Test
-    fun `register success navigates to Login`() = runTest {
+    fun `register success navigates to SuccessfulAccountCreation`() = runTest {
         ensureReady()
         viewModel.processIntent(RegisterScreenIntent.UpdateEmail("test@example.com"))
         viewModel.processIntent(RegisterScreenIntent.UpdatePassword("password"))
 
         viewModel.navigationEvent.test {
             viewModel.processIntent(RegisterScreenIntent.Register)
-            assertEquals(RegisterNavigationEvent.NavigateToLogin, awaitItem())
+            assertEquals(RegisterNavigationEvent.SuccessfulAccountCreation, awaitItem())
         }
         advanceUntilIdle()
         assertEquals("test@example.com", accountService.lastSignedUpEmail)
     }
 
     @Test
+    fun `navigateToLogin intent emits NavigateToLogin event`() = runTest {
+        ensureReady()
+        viewModel.navigationEvent.test {
+            viewModel.processIntent(RegisterScreenIntent.NavigateToLogin)
+            assertEquals(RegisterNavigationEvent.NavigateToLogin, awaitItem())
+        }
+    }
+
+    @Test
+    fun `updateFirstName updates viewData correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.UpdateFirstName("John"))
+
+        val result = viewModel.viewData.value as Result.Success
+        assertEquals("John", result.data.firstName)
+    }
+
+    @Test
+    fun `updateLastName updates viewData correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.UpdateLastName("Doe"))
+
+        val result = viewModel.viewData.value as Result.Success
+        assertEquals("Doe", result.data.lastName)
+    }
+
+    @Test
+    fun `updateMiddleName updates viewData correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.UpdateMiddleName("Quincy"))
+
+        val result = viewModel.viewData.value as Result.Success
+        assertEquals("Quincy", result.data.middleName)
+    }
+
+    @Test
+    fun `toggleRole adds and removes roles correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        var result = viewModel.viewData.value as Result.Success
+        assertTrue(result.data.roles.contains("parent"))
+
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("caregiver"))
+        result = viewModel.viewData.value as Result.Success
+        assertTrue(result.data.roles.contains("parent"))
+        assertTrue(result.data.roles.contains("caregiver"))
+
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        result = viewModel.viewData.value as Result.Success
+        assertFalse(result.data.roles.contains("parent"))
+        assertTrue(result.data.roles.contains("caregiver"))
+    }
+
+    @Test
+    fun `updateBabyFields updates viewData correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyId("baby123"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyFirstName("Baby"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyLastName("Boy"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyMiddleName("M"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyBirthDate("2023-01-01"))
+
+        val result = viewModel.viewData.value as Result.Success
+        assertEquals("baby123", result.data.babyId)
+        assertEquals("Baby", result.data.babyFirstName)
+        assertEquals("Boy", result.data.babyLastName)
+        assertEquals("M", result.data.babyMiddleName)
+        assertEquals("2023-01-01", result.data.babyBirthDate)
+    }
+
+    @Test
+    fun `register with parent role and missing baby info shows error`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        // Missing baby info
+        
+        viewModel.processIntent(RegisterScreenIntent.Register)
+        
+        val result = viewModel.viewData.value as Result.Success
+        assertNotNull(result.data.babyError)
+        assertEquals(0, accountService.signUpCallCount)
+    }
+
+    @Test
+    fun `register success with parent role and new baby info saves baby and user`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.UpdateEmail("test@example.com"))
+        viewModel.processIntent(RegisterScreenIntent.UpdatePassword("password"))
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyFirstName("Baby"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyLastName("Boy"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyBirthDate("2023-01-01"))
+
+        viewModel.navigationEvent.test {
+            viewModel.processIntent(RegisterScreenIntent.Register)
+            assertEquals(RegisterNavigationEvent.SuccessfulAccountCreation, awaitItem())
+        }
+        
+        io.mockk.coVerify { userRepository.saveBaby(any()) }
+        io.mockk.coVerify { userRepository.saveUser(any()) }
+    }
+
+    @Test
+    fun `register success with existing babyId verifies baby exists and saves user`() = runTest {
+        ensureReady()
+        io.mockk.coEvery { userRepository.babyExists("existing_baby") } returns true
+        
+        viewModel.processIntent(RegisterScreenIntent.UpdateEmail("test@example.com"))
+        viewModel.processIntent(RegisterScreenIntent.UpdatePassword("password"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyId("existing_baby"))
+
+        viewModel.navigationEvent.test {
+            viewModel.processIntent(RegisterScreenIntent.Register)
+            assertEquals(RegisterNavigationEvent.SuccessfulAccountCreation, awaitItem())
+        }
+        
+        io.mockk.coVerify { userRepository.babyExists("existing_baby") }
+        io.mockk.coVerify { userRepository.saveUser(match { it.babyId == "existing_baby" }) }
+        io.mockk.coVerify(exactly = 0) { userRepository.saveBaby(any()) }
+    }
+
+    @Test
     fun `register failure updates error messages and stops loading`() = runTest {
+
         ensureReady()
         accountService.shouldSucceed = false
         

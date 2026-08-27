@@ -119,7 +119,7 @@ class BabyCareHomeViewModelTest {
                 result = awaitItem()
             }
             
-            assertEquals(dynamicUi, (result as Result.Success).data.dynamicUi)
+            assertEquals(dynamicUi, (result).data.dynamicUi)
         }
     }
 
@@ -147,13 +147,13 @@ class BabyCareHomeViewModelTest {
     @Test
     fun `toggling header collapse hides activity rows`() = runTest {
         // Given
-        val date = "2026-08-26"
-        val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")
-        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(feeding))))
+        val today = java.time.LocalDate.now().toString()
+        val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$today 10:00")
+        fakeService.injectMonth(userId, today.substring(0, 7), mapOf("days" to mapOf(today to listOf(feeding))))
         
         viewModel.refreshData()
         
-        val headerTitle = "Today" // Assuming date is today
+        val headerTitle = "Today"
 
         // When
         viewModel.toggleHeaderCollapse(headerTitle)

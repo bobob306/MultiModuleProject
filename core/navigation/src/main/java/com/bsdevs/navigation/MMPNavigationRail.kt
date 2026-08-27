@@ -32,7 +32,8 @@ fun MMPNavigationRail(navController: NavController, userRoles: List<String>) {
     val items = listOfNotNull(
         BottomNavItem.Home,
         BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
-        BottomNavItem.Baby.takeIf { userRoles.contains("parent") }
+        BottomNavItem.Baby.takeIf { userRoles.contains("parent") },
+        BottomNavItem.Settings
     )
     NavigationRail {
         val navBackStackEntry by navController.currentBackStackEntryAsState()

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -30,6 +31,8 @@ import com.bsdevs.coffeescreen.navigation.CoffeeHomeScreenRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.HomeScreenRoute
+import com.bsdevs.homescreen.navigation.SettingsBaseRoute
+import com.bsdevs.homescreen.navigation.SettingsRoute
 import kotlin.reflect.KClass
 
 sealed class BottomNavItem(
@@ -41,6 +44,7 @@ sealed class BottomNavItem(
     object Home : BottomNavItem(HomeScreenRoute, HomeScreenBaseRoute::class, Icons.Default.Home, "Home")
     object Coffee : BottomNavItem(CoffeeHomeScreenRoute, CoffeeScreenBaseRoute::class, R.drawable.ic_coffee_bean, "Coffee")
     object Baby : BottomNavItem(BabyCareHomeRoute, BabyCareBaseRoute::class, Icons.Default.Face, "Baby")
+    object Settings : BottomNavItem(SettingsRoute, SettingsBaseRoute::class, Icons.Default.Settings, "Settings")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +53,8 @@ fun MMPBottomBar(navController: NavHostController, userRoles: List<String>) {
     val items = listOfNotNull(
         BottomNavItem.Home,
         BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
-        BottomNavItem.Baby.takeIf { userRoles.contains("parent") }
+        BottomNavItem.Baby.takeIf { userRoles.contains("parent") },
+        BottomNavItem.Settings
     )
     NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
