@@ -27,6 +27,14 @@ class BabyCareRepositoryImpl @Inject constructor(
     private var currentAnchorMonth: YearMonth? = null
 
     override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
+        // Optimization: If we already have data in memory, don't hit the network unless force refreshed
+        if (_cachedDays.value.isNotEmpty()) {
+            return@withContext RepositoryFetchResult(
+                nextAnchorMonth = currentAnchorMonth,
+                hasMoreData = currentAnchorMonth != null
+            )
+        }
+        
         try {
             val latestMonthId = apiService.getLatestMonthId(userId)
 
