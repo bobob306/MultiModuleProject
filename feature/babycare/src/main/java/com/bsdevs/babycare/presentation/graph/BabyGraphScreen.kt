@@ -1,6 +1,9 @@
 package com.bsdevs.babycare.presentation.graph
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -43,9 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
 import com.bsdevs.uicomponents.MMPScaffold
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -97,7 +97,11 @@ fun BabyFeedingGraphScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
-                        .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
+                        .padding(
+                            start = horizontalPadding,
+                            end = horizontalPadding,
+                            bottom = 16.dp
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     item {
@@ -137,7 +141,11 @@ fun BabyFeedingGraphScreen(
                                         .fillMaxWidth()
                                         .height(260.dp)
                                         .horizontalScroll(rememberScrollState())
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                alpha = 0.3f
+                                            )
+                                        )
                                         .padding(horizontal = 16.dp)
                                 ) {
                                     FeedingHourCanvas(
@@ -167,7 +175,11 @@ fun BabyFeedingGraphScreen(
                                             .fillMaxWidth()
                                             .height(260.dp)
                                             .horizontalScroll(rememberScrollState())
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                            .background(
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                    alpha = 0.3f
+                                                )
+                                            )
                                             .padding(horizontal = 16.dp)
                                     ) {
                                         DailyAverageGapCanvas(
@@ -204,9 +216,8 @@ fun DailyAverageGapCanvas(
     val minScale = 0.2f
     val maxScale = 3.0f
 
-    @Suppress("DEPRECATION")
-    val transformState = rememberTransformableState { zoomChange, _, _ ->
-        scaleFactor = (scaleFactor * zoomChange).coerceIn(minScale, maxScale)
+    val transformState = rememberTransformableState { _, zoom, _, _ ->
+        scaleFactor = (scaleFactor * zoom).coerceIn(minScale, maxScale)
     }
 
     // 2. Base layout static metrics
@@ -235,7 +246,11 @@ fun DailyAverageGapCanvas(
             modifier = Modifier
                 .fillMaxHeight()
                 // 🌟 THE FIX: Multiply stepWidth by scaleFactor to widen/shrink graph lines dynamically
-                .width(leftAxisLabelSpace + ((baseStepWidth * scaleFactor) * dailyGaps.size.coerceAtLeast(1)))
+                .width(
+                    leftAxisLabelSpace + ((baseStepWidth * scaleFactor) * dailyGaps.size.coerceAtLeast(
+                        1
+                    ))
+                )
         ) {
             val canvasHeight = size.height
             val canvasWidth = size.width
@@ -299,7 +314,8 @@ fun DailyAverageGapCanvas(
 
                 item.rolling14DayAverageMinutes?.let { rollingAvg ->
                     val rollingRatio = (rollingAvg - yAxisMin).toFloat() / yAxisRange
-                    val rollingY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * rollingRatio))
+                    val rollingY =
+                        topPaddingSpace.toPx() + (chartHeight - (chartHeight * rollingRatio))
                     rollingPoints.add(Offset(x, rollingY))
                 }
 
@@ -315,23 +331,42 @@ fun DailyAverageGapCanvas(
                                 else -> parts[1]
                             }
                         }" else item.dateString
-                    } catch (e: Exception) { item.dateString }
+                    } catch (e: Exception) {
+                        item.dateString
+                    }
 
                     // Draw standard date text along the x-axis
-                    drawContext.canvas.nativeCanvas.drawText(displayDate, x, canvasHeight - 8.dp.toPx(), textPaint)
+                    drawContext.canvas.nativeCanvas.drawText(
+                        displayDate,
+                        x,
+                        canvasHeight - 8.dp.toPx(),
+                        textPaint
+                    )
 
                     // Draw the exact minute reading above each node dot
-                    drawContext.canvas.nativeCanvas.drawText("${item.averageGapMinutes}m", x, dailyY - 8.dp.toPx(), textPaint)
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "${item.averageGapMinutes}m",
+                        x,
+                        dailyY - 8.dp.toPx(),
+                        textPaint
+                    )
                 } else {
                     // 2. Zoomed Out: De-clutter layout by hiding text and showing clean day indices
                     val minimalDateMarker = try {
                         val parts = item.dateString.split("-")
                         parts.getOrNull(2) ?: "" // Show just the day number (e.g., "16")
-                    } catch (e: Exception) { "" }
+                    } catch (e: Exception) {
+                        ""
+                    }
 
                     // Only draw every second or third day number text label to prevent horizontal collisions
                     if (index % 3 == 0) {
-                        drawContext.canvas.nativeCanvas.drawText(minimalDateMarker, x, canvasHeight - 8.dp.toPx(), textPaint)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            minimalDateMarker,
+                            x,
+                            canvasHeight - 8.dp.toPx(),
+                            textPaint
+                        )
                     }
 
                     // (Note: The raw "${item.averageGapMinutes}m" text is omitted here to completely un-clutter the canvas background)
@@ -341,7 +376,12 @@ fun DailyAverageGapCanvas(
             // Draw Paths
             if (dailyPoints.size > 1) {
                 for (i in 0 until dailyPoints.size - 1) {
-                    drawLine(color = lineColor, start = dailyPoints[i], end = dailyPoints[i + 1], strokeWidth = 3.dp.toPx())
+                    drawLine(
+                        color = lineColor,
+                        start = dailyPoints[i],
+                        end = dailyPoints[i + 1],
+                        strokeWidth = 3.dp.toPx()
+                    )
                 }
             }
 

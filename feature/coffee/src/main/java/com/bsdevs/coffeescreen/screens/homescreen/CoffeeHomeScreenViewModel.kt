@@ -3,17 +3,11 @@ package com.bsdevs.coffeescreen.screens.homescreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.ButtonDestination
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.beanPreparationMethod
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeBeanTypes
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeRoasters
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.coffeeTastingNotesList
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
-import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,14 +15,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 

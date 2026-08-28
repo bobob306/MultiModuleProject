@@ -2,7 +2,10 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,17 +33,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
@@ -55,7 +55,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -71,14 +70,10 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
+import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-
-import com.bsdevs.uicomponents.MMPScaffold
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -298,7 +293,7 @@ private fun InputSection(
         ) {
             OutlinedTextField(
                 modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryEditable)
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
                     .onFocusChanged {

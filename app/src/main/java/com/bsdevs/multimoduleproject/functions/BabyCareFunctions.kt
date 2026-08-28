@@ -39,9 +39,6 @@ interface AppFunctionsEntryPoint {
 /**
  * AppFunctions for recording baby activities.
  */
-/**
- * AppFunctions for recording baby activities.
- */
 @RequiresApi(36)
 @AppFunctionServiceEntryPoint(
     serviceName = "MMPAppFunctionService",
