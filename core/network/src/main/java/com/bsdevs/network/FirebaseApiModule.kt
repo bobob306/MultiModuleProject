@@ -10,6 +10,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestoreSettings.*
+import com.google.firebase.firestore.persistentCacheSettings
 import com.google.firebase.firestore.firestoreSettings
 import dagger.Module
 import dagger.Provides
@@ -26,8 +27,11 @@ object FirebaseApiModule {
     fun provideFirestore(): FirebaseFirestore {
         val firestore = Firebase.firestore
         val settings = firestoreSettings {
-            isPersistenceEnabled = true
-            cacheSizeBytes = CACHE_SIZE_UNLIMITED
+            setLocalCacheSettings(
+                persistentCacheSettings {
+                    setSizeBytes(CACHE_SIZE_UNLIMITED)
+                }
+            )
         }
         firestore.firestoreSettings = settings
         return firestore

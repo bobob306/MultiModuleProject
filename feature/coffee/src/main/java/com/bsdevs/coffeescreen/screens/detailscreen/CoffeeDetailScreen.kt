@@ -3,7 +3,10 @@ package com.bsdevs.coffeescreen.screens.detailscreen
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -20,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -39,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
-import androidx.window.core.layout.WindowWidthSizeClass
+import androidx.window.core.layout.WindowSizeClass
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.components.CoffeeDetailsFirstHalf
 import com.bsdevs.coffeescreen.screens.detailscreen.components.EspressoShotInputSheetContent
@@ -47,14 +49,9 @@ import com.bsdevs.coffeescreen.screens.detailscreen.components.SecondHalfContent
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import java.nio.file.WatchEvent
+import com.bsdevs.uicomponents.MMPScaffold
 import java.time.LocalDate
 import java.util.UUID
-
-import com.bsdevs.uicomponents.MMPScaffold
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -112,10 +109,9 @@ fun CoffeeDetailContent(
     val configuration = LocalConfiguration.current
     @Suppress("DEPRECATION")
     val window = currentWindowAdaptiveInfo()
-    @Suppress("DEPRECATION")
     val isLandscape =
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
+                || window.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
     val sheetState = rememberModalBottomSheetState(

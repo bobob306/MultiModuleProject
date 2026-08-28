@@ -1,7 +1,6 @@
 package com.bsdevs.coffeescreen.network
 
 import android.util.Log
-import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
 import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenDto
 import com.google.firebase.firestore.FirebaseFirestore

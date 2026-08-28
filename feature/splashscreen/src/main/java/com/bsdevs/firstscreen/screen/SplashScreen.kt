@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavOptions
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
+
 private const val SPLASH_TIMEOUT = 1000L
 
 @Composable
@@ -34,7 +36,7 @@ fun SplashScreenRoute(
         CircularProgressIndicator(color = MaterialTheme.colorScheme.onBackground)
     }
     LaunchedEffect(true) {
-        delay(SPLASH_TIMEOUT)
+        delay(SPLASH_TIMEOUT.milliseconds)
         viewModel.onAppStart()
     }
     LaunchedEffect(key1 = Unit) {

@@ -1,22 +1,17 @@
 package com.bsdevs.coffeescreen.navigation
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
-import androidx.navigation.toRoute
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.CoffeeDetailScreenRoute
 import com.bsdevs.coffeescreen.screens.homescreen.CoffeeHomeScreenRoute
 import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenRoute
 import kotlinx.serialization.Serializable
-import kotlin.reflect.typeOf
 
 @Serializable
 data object CoffeeInputScreenRoute

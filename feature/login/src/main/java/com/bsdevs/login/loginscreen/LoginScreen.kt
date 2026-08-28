@@ -42,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -59,7 +58,6 @@ import androidx.navigation.NavOptions
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
-
 import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable

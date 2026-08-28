@@ -78,6 +78,7 @@ import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.renderer.RenderUI
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.shimmer
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -379,14 +380,14 @@ private fun LazyListScope.renderActivityFeed(
 
 
                         LaunchedEffect(key1 = true) {
-                            kotlinx.coroutines.delay((index % 10) * 50L)
+                            kotlinx.coroutines.delay(((index % 10) * 50L).milliseconds)
                             animatedOffset.animateTo(
                                 targetValue = 0f,
                                 animationSpec = tween(durationMillis = 400, easing = LinearOutSlowInEasing)
                             )
                         }
                         LaunchedEffect(key1 = true) {
-                            kotlinx.coroutines.delay((index % 10) * 50L)
+                            kotlinx.coroutines.delay(((index % 10) * 50L).milliseconds)
                             animatedAlpha.animateTo(
                                 targetValue = 1f,
                                 animationSpec = tween(durationMillis = 400)
