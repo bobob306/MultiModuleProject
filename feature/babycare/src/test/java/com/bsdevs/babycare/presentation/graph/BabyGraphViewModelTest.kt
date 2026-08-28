@@ -5,6 +5,8 @@ import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -39,7 +41,8 @@ class BabyGraphViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
+        val userRepository = mockk<UserRepository>(relaxed = true)
+        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
         viewModel = BabyGraphViewModel(repository, dispatchers)
     }
 

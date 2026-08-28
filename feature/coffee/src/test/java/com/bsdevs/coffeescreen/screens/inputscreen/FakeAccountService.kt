@@ -18,7 +18,7 @@ class FakeAccountService(
             return field
         }
 
-    override fun hasUser(): Boolean = currentUserId.isNotEmpty()
+    override fun hasUser(): Boolean = _currentUser.value != null
 
     override suspend fun signIn(email: String, password: String) {
         currentUserId = "fake_uid"

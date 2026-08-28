@@ -25,6 +25,10 @@ class HomeScreenViewModel @Inject constructor(
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
+    init {
+        android.util.Log.d("HomeScreenViewModel", "ViewModel Initialized: $this")
+    }
+
     private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)
     val viewData: StateFlow<Result<List<NetworkScreenData>>> = _viewData.onStart {
             getScreen()
@@ -35,8 +39,10 @@ class HomeScreenViewModel @Inject constructor(
         )
 
     fun getScreen() {
+        android.util.Log.d("HomeScreenViewModel", "getScreen() called")
         viewModelScope.launch {
             repository.getScreenFlow("home").collect { result ->
+                android.util.Log.d("HomeScreenViewModel", "Received result: $result")
                 when (result) {
                     is Result.Success -> {
                         val mappedData = withContext(dispatchers.default) {

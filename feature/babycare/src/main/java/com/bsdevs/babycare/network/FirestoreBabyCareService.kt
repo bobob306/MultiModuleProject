@@ -2,9 +2,9 @@ package com.bsdevs.babycare.network
 
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.repository.UserRepository
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -13,10 +13,12 @@ import javax.inject.Singleton
 
 @Singleton
 class FirestoreBabyCareService @Inject constructor(
-    private val firestore: FirebaseFirestore,
+    private val firestoreHolder: FirestoreHolder,
     private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider,
 ) : BabyCareFirestoreService {
+
+    private val firestore get() = firestoreHolder.firestore
 
     private suspend fun getAuthorizedBabyId(id: String): String? {
         val user = userRepository.userProfile.value ?: userRepository.getUser(id)
@@ -37,14 +39,15 @@ class FirestoreBabyCareService @Inject constructor(
     private fun getMonthsCollection(babyId: String) =
         firestore.collection("babyLogs").document(babyId).collection("months")
 
-    override suspend fun getLatestMonthId(userId: String): String? = withContext(dispatchers.io) {
+    override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? = withContext(dispatchers.io) {
         try {
             val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
-            Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId")
+            Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId (Force: $forceRefresh)")
+            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
             getMonthsCollection(babyId)
                 .orderBy(com.google.firebase.firestore.FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .limit(1)
-                .get()
+                .get(source)
                 .await()
                 .documents
                 .firstOrNull()?.id
@@ -87,10 +90,11 @@ class FirestoreBabyCareService @Inject constructor(
         }
     }
 
-    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? = withContext(dispatchers.io) {
+    override suspend fun fetchMonthDocument(userId: String, monthId: String, forceRefresh: Boolean): Map<String, Any?>? = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
-        Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId")
-        val snapshot = getMonthsCollection(babyId).document(monthId).get().await()
+        Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId (Force: $forceRefresh)")
+        val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
+        val snapshot = getMonthsCollection(babyId).document(monthId).get(source).await()
         if (snapshot.exists()) snapshot.data else null
     }
 

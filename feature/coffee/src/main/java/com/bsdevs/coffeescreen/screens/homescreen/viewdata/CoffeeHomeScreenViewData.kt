@@ -3,7 +3,8 @@ package com.bsdevs.coffeescreen.screens.homescreen.viewdata
 import com.bsdevs.coffeescreen.network.CoffeeDto
 
 data class CoffeeHomeScreenViewData(
-    val viewData: List<CoffeeHomeScreenViewDatas>
+    val viewData: List<CoffeeHomeScreenViewDatas>,
+    val isRefreshing: Boolean = false
 )
 
 sealed class CoffeeHomeScreenViewDatas {

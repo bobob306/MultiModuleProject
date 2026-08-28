@@ -9,6 +9,7 @@ import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
 import io.mockk.*
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeedingViewModelTest {
@@ -49,7 +51,8 @@ class FeedingViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
+        val userRepository = mockk<UserRepository>(relaxed = true)
+        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
         accountService = FakeAccountService(userId)
         timeProvider = mockk()
         every { timeProvider.elapsedRealtime() } returns 0L
@@ -118,7 +121,7 @@ class FeedingViewModelTest {
         // Advance 10s
         every { timeProvider.elapsedRealtime() } returns 11000L
         // Delay inside launch will trigger with advanceTimeBy
-        advanceTimeBy(10001) 
+        advanceTimeBy(10001.milliseconds)
         
         assertEquals(10L, viewModel.uiState.value.leftDuration)
 

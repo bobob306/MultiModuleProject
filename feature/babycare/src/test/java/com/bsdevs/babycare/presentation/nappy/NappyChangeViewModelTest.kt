@@ -8,8 +8,10 @@ import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
 import java.util.UUID
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +49,8 @@ class NappyChangeViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
+        val userRepo = mockk<UserRepository>(relaxed = true)
+        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers)
         accountService = FakeAccountService(userId)
     }
 

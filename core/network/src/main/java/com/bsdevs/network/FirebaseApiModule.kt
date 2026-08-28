@@ -5,13 +5,6 @@ import com.bsdevs.network.repository.ScreenRepositoryImpl
 import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.network.repository.UserRepositoryImpl
 import com.bsdevs.common.DispatcherProvider
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
-import com.google.firebase.Firebase
-import com.google.firebase.firestore.FirebaseFirestoreSettings.*
-import com.google.firebase.firestore.persistentCacheSettings
-import com.google.firebase.firestore.firestoreSettings
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -23,26 +16,6 @@ import javax.inject.Singleton
 object FirebaseApiModule {
 
     @Provides
-    @Singleton
-    fun provideFirestore(): FirebaseFirestore {
-        val firestore = Firebase.firestore
-        val settings = firestoreSettings {
-            setLocalCacheSettings(
-                persistentCacheSettings {
-                    setSizeBytes(CACHE_SIZE_UNLIMITED)
-                }
-            )
-        }
-        firestore.firestoreSettings = settings
-        return firestore
-    }
-
-    @Provides
-    @Singleton
-    fun provideFirebaseFirestoreCollection(): CollectionReference =
-        FirebaseFirestore.getInstance().collection("screens")
-
-    @Provides
     fun provideMapper(): ScreenDtoMapper {
         return ScreenDtoMapperImpl()
     }
@@ -50,19 +23,20 @@ object FirebaseApiModule {
     @Provides
     @Singleton
     fun provideScreenRepository(
-        scr: CollectionReference,
+        firestoreHolder: FirestoreHolder,
+        userRepository: UserRepository,
         mapper: ScreenDtoMapper,
         dispatchers: DispatcherProvider
     ): ScreenRepository {
-        return ScreenRepositoryImpl(scr, mapper, dispatchers)
+        return ScreenRepositoryImpl(firestoreHolder, userRepository, mapper, dispatchers)
     }
 
     @Provides
     @Singleton
     fun provideUserRepository(
-        firestore: FirebaseFirestore,
+        firestoreHolder: FirestoreHolder,
         dispatchers: DispatcherProvider
     ): UserRepository {
-        return UserRepositoryImpl(firestore, dispatchers)
+        return UserRepositoryImpl(firestoreHolder, dispatchers)
     }
 }

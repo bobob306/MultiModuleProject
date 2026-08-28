@@ -1,6 +1,7 @@
 package com.bsdevs.coffeescreen.network
 
 import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
+import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.*
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -15,13 +16,16 @@ import org.junit.Test
 class FirestoreCoffeeApiServiceTest {
 
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var firestoreHolder: FirestoreHolder
     private lateinit var service: FirestoreCoffeeApiService
 
     @Before
     fun setUp() {
         mockkStatic("kotlinx.coroutines.tasks.TasksKt")
         firestore = mockk(relaxed = true)
-        service = FirestoreCoffeeApiService(firestore)
+        firestoreHolder = mockk(relaxed = true)
+        every { firestoreHolder.firestore } returns firestore
+        service = FirestoreCoffeeApiService(firestoreHolder)
     }
 
     @After

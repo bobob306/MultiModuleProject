@@ -2,9 +2,9 @@ package com.bsdevs.network.repository
 
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,24 +13,34 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+interface Clearable {
+    fun clearCache()
+}
+
 interface UserRepository {
     val userProfile: StateFlow<UserDto?>
     suspend fun saveUser(user: UserDto)
     suspend fun saveBaby(baby: BabyDto)
     suspend fun babyExists(babyId: String): Boolean
-    suspend fun getUser(userId: String): UserDto?
-    suspend fun getBaby(babyId: String): BabyDto?
+    suspend fun getUser(userId: String, forceRefresh: Boolean = false): UserDto?
+    suspend fun getBaby(babyId: String, forceRefresh: Boolean = false): BabyDto?
     suspend fun deleteUserData(userId: String)
+    suspend fun clearCache()
+    fun registerClearable(clearable: Clearable)
 }
 
 @Singleton
 class UserRepositoryImpl @Inject constructor(
-    private val firestore: FirebaseFirestore,
+    private val firestoreHolder: FirestoreHolder,
     private val dispatchers: DispatcherProvider
 ) : UserRepository {
 
+    private val firestore get() = firestoreHolder.firestore
+
     private val _userProfile = MutableStateFlow<UserDto?>(null)
     override val userProfile: StateFlow<UserDto?> = _userProfile.asStateFlow()
+
+    private val clearables = mutableListOf<Clearable>()
 
     override suspend fun saveUser(user: UserDto): Unit = withContext(dispatchers.io) {
         user.id?.let { id ->
@@ -56,12 +66,13 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getUser(userId: String): UserDto? = withContext(dispatchers.io) {
-        if (_userProfile.value?.id == userId) return@withContext _userProfile.value
+    override suspend fun getUser(userId: String, forceRefresh: Boolean): UserDto? = withContext(dispatchers.io) {
+        if (!forceRefresh && _userProfile.value?.id == userId) return@withContext _userProfile.value
 
         try {
-            Log.d("FIREBASE_CALL", "Read User: $userId")
-            val user = firestore.collection("users").document(userId).get().await()
+            Log.d("FIREBASE_CALL", "Read User: $userId (Force: $forceRefresh)")
+            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
+            val user = firestore.collection("users").document(userId).get(source).await()
                 .toObject(UserDto::class.java)
             _userProfile.value = user
             user
@@ -70,10 +81,11 @@ class UserRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getBaby(babyId: String): BabyDto? = withContext(dispatchers.io) {
+    override suspend fun getBaby(babyId: String, forceRefresh: Boolean): BabyDto? = withContext(dispatchers.io) {
         try {
-            Log.d("FIREBASE_CALL", "Read Baby: $babyId")
-            firestore.collection("babies").document(babyId).get().await()
+            Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
+            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
+            firestore.collection("babies").document(babyId).get(source).await()
                 .toObject(BabyDto::class.java)
         } catch (e: Exception) {
             null
@@ -127,5 +139,20 @@ class UserRepositoryImpl @Inject constructor(
         Log.d("FIREBASE_CALL", "Delete User: $userId")
         firestore.collection("users").document(userId).delete().await()
         _userProfile.value = null
+    }
+
+    override suspend fun clearCache(): Unit = withContext(dispatchers.io) {
+        try {
+            firestoreHolder.reset()
+            clearables.forEach { it.clearCache() }
+        } catch (e: Exception) {
+            Log.e("UserRepository", "Failed to clear cache", e)
+        } finally {
+            _userProfile.value = null
+        }
+    }
+
+    override fun registerClearable(clearable: Clearable) {
+        clearables.add(clearable)
     }
 }

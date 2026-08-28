@@ -45,8 +45,16 @@ fun NavGraphBuilder.homeScreenSection(
                 onNavigateToBabyCare,
             )
         }
+    }
+}
+
+fun NavGraphBuilder.settingsSection(
+    onShowSnackBar: suspend (String, String?) -> Unit,
+    onLogout: () -> Unit,
+) {
+    navigation<SettingsBaseRoute>(startDestination = SettingsRoute) {
         composable<SettingsRoute> {
-            SettingsRoute(onShowSnackBar)
+            SettingsRoute(onShowSnackBar, onLogout)
         }
     }
 }

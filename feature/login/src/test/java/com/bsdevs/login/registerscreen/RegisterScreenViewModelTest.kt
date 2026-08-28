@@ -179,14 +179,19 @@ class RegisterScreenViewModelTest {
     @Test
     fun `updateBabyFields updates viewData correctly`() = runTest {
         ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_ID))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyId("baby123"))
+        
+        var result = viewModel.viewData.value as Result.Success
+        assertEquals("baby123", result.data.babyId)
+
+        viewModel.processIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_DETAILS))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyFirstName("Baby"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyLastName("Boy"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyMiddleName("M"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyBirthDate("2023-01-01"))
 
-        val result = viewModel.viewData.value as Result.Success
-        assertEquals("baby123", result.data.babyId)
+        result = viewModel.viewData.value as Result.Success
         assertEquals("Baby", result.data.babyFirstName)
         assertEquals("Boy", result.data.babyLastName)
         assertEquals("M", result.data.babyMiddleName)
@@ -194,15 +199,15 @@ class RegisterScreenViewModelTest {
     }
 
     @Test
-    fun `register with parent role and missing baby info shows error`() = runTest {
+    fun `register with parent role and no method selected shows error`() = runTest {
         ensureReady()
         viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
-        // Missing baby info
+        // No method selected (defaults to NONE)
         
         viewModel.processIntent(RegisterScreenIntent.Register)
         
         val result = viewModel.viewData.value as Result.Success
-        assertNotNull(result.data.babyError)
+        assertEquals("Please choose how to add your baby.", result.data.babyError)
         assertEquals(0, accountService.signUpCallCount)
     }
 
@@ -212,6 +217,7 @@ class RegisterScreenViewModelTest {
         viewModel.processIntent(RegisterScreenIntent.UpdateEmail("test@example.com"))
         viewModel.processIntent(RegisterScreenIntent.UpdatePassword("password"))
         viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        viewModel.processIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_DETAILS))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyFirstName("Baby"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyLastName("Boy"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyBirthDate("2023-01-01"))
@@ -232,6 +238,8 @@ class RegisterScreenViewModelTest {
         
         viewModel.processIntent(RegisterScreenIntent.UpdateEmail("test@example.com"))
         viewModel.processIntent(RegisterScreenIntent.UpdatePassword("password"))
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("parent"))
+        viewModel.processIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_ID))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyId("existing_baby"))
 
         viewModel.navigationEvent.test {
@@ -245,18 +253,20 @@ class RegisterScreenViewModelTest {
     }
 
     @Test
-    fun `register failure updates error messages and stops loading`() = runTest {
-
+    fun `register failure updates error messages and sends failure event`() = runTest {
         ensureReady()
         accountService.shouldSucceed = false
         
-        viewModel.processIntent(RegisterScreenIntent.Register)
-        advanceUntilIdle()
+        viewModel.navigationEvent.test {
+            viewModel.processIntent(RegisterScreenIntent.Register)
+            val event = awaitItem()
+            assertTrue(event is RegisterNavigationEvent.Failure)
+        }
 
         val result = viewModel.viewData.value as Result.Success
         assertFalse(result.data.isLoading)
-        assertNotNull(result.data.emailError)
-        assertNotNull(result.data.passwordError)
+        // General error is set if message doesn't contain "email" or "password"
+        assertNotNull(result.data.generalError)
     }
 
     @Test

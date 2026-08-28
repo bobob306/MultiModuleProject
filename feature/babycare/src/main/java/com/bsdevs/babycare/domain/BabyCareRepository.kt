@@ -13,7 +13,7 @@ data class RepositoryFetchResult(
 interface BabyCareRepository {
     val cachedDays: StateFlow<List<DailyLogDto>>
 
-    suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult
+    suspend fun loadInitialData(userId: String, pageSize: Int, forceRefresh: Boolean = false): RepositoryFetchResult
     suspend fun refreshData(userId: String, pageSize: Int): RepositoryFetchResult
     suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult
     suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto)
@@ -21,4 +21,5 @@ interface BabyCareRepository {
     suspend fun getNappyEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto)
     suspend fun deleteActivityEvent(userId: String, date: String, eventId: String)
+    fun clearCache()
 }

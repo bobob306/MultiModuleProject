@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -38,12 +40,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +70,8 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
 import com.bsdevs.uicomponents.MMPScaffold
+import java.time.Instant
+import java.time.ZoneId
 
 @Composable
 fun RegisterScreenRoute(
@@ -85,8 +93,16 @@ fun RegisterScreenRoute(
         viewModel.navigationEvent.collect { navigationEvent ->
             when (navigationEvent) {
                 is RegisterNavigationEvent.SuccessfulAccountCreation -> {
-                    onShowSnackBar("Account Created", null)
-                    onNavigateToLogin.invoke(null)
+                    onShowSnackBar("Account Created Successfully", null)
+                    onNavigateToLogin.invoke(
+                        NavOptions.Builder()
+                            .setPopUpTo(route = com.bsdevs.login.RegisterScreenRoute, inclusive = true)
+                            .build()
+                    )
+                }
+
+                is RegisterNavigationEvent.Failure -> {
+                    onShowSnackBar("Registration Failed: ${navigationEvent.message}", null)
                 }
 
                 RegisterNavigationEvent.NavigateToLogin -> onNavigateToLogin.invoke(null)
@@ -151,6 +167,34 @@ fun RegisterScreenContent(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState()
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let {
+                        val date =
+                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+                        onIntent(RegisterScreenIntent.UpdateBabyBirthDate(date.toString()))
+                    }
+                    showDatePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
     MMPScaffold(
         title = "Register Screen",
         scrollBehavior = scrollBehavior
@@ -182,6 +226,7 @@ fun RegisterScreenContent(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Email Address") },
                         supportingText = { emailError?.let { Text(it) } },
+                        isError = emailError != null,
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         keyboardOptions = KeyboardOptions(
@@ -247,94 +292,123 @@ fun RegisterScreenContent(
                     if (roles.contains("parent")) {
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "Baby Details",
+                            "Baby Registration Method",
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.align(Alignment.Start)
                         )
-
-                        OutlinedTextField(
-                            value = babyId,
-                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyId(it)) },
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Existing Baby ID (Optional)") },
-                            singleLine = true,
-                            leadingIcon = { Icon(Icons.Default.Info, contentDescription = null) },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            supportingText = {
-                                if (babyId.isEmpty()) {
-                                    Text("If empty, a new baby profile will be created.")
-                                }
-                            }
-                        )
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterChip(
+                                selected = babyEntryMethod == BabyEntryMethod.BY_ID,
+                                onClick = { onIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_ID)) },
+                                label = { Text("Existing Baby ID") }
+                            )
+                            FilterChip(
+                                selected = babyEntryMethod == BabyEntryMethod.BY_DETAILS,
+                                onClick = { onIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_DETAILS)) },
+                                label = { Text("New Baby Profile") }
+                            )
+                        }
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
+                        if (babyEntryMethod == BabyEntryMethod.BY_ID) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
-                                value = babyFirstName,
-                                onValueChange = {
-                                    onIntent(
-                                        RegisterScreenIntent.UpdateBabyFirstName(
-                                            it
-                                        )
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Baby First Name ${if (babyId.isEmpty()) "*" else ""}") },
+                                value = babyId,
+                                onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyId(it)) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Existing Baby ID *") },
                                 singleLine = true,
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Default.Person,
+                                        Icons.Default.Info,
                                         contentDescription = null
                                     )
                                 },
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+
+                        if (babyEntryMethod == BabyEntryMethod.BY_DETAILS) {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedTextField(
+                                    value = babyFirstName,
+                                    onValueChange = {
+                                        onIntent(
+                                            RegisterScreenIntent.UpdateBabyFirstName(
+                                                it
+                                            )
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    label = { Text("Baby First Name *") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                OutlinedTextField(
+                                    value = babyLastName,
+                                    onValueChange = {
+                                        onIntent(
+                                            RegisterScreenIntent.UpdateBabyLastName(
+                                                it
+                                            )
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    label = { Text("Baby Last Name *") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
                             OutlinedTextField(
-                                value = babyLastName,
+                                value = babyMiddleName,
                                 onValueChange = {
                                     onIntent(
-                                        RegisterScreenIntent.UpdateBabyLastName(
+                                        RegisterScreenIntent.UpdateBabyMiddleName(
                                             it
                                         )
                                     )
                                 },
-                                modifier = Modifier.weight(1f),
-                                label = { Text("Baby Last Name ${if (babyId.isEmpty()) "*" else ""}") },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Baby Middle Name (Optional)") },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                             )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = babyBirthDate,
+                                onValueChange = { },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Baby Birth Date *") },
+                                readOnly = true,
+                                singleLine = true,
+                                leadingIcon = {
+                                    IconButton(onClick = { showDatePicker = true }) {
+                                        Icon(
+                                            Icons.Default.DateRange,
+                                            contentDescription = "Select Date"
+                                        )
+                                    }
+                                },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                placeholder = { Text("YYYY-MM-DD") }
+                            )
                         }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = babyMiddleName,
-                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyMiddleName(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Baby Middle Name (Optional)") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        OutlinedTextField(
-                            value = babyBirthDate,
-                            onValueChange = { onIntent(RegisterScreenIntent.UpdateBabyBirthDate(it)) },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Baby Birth Date ${if (babyId.isEmpty()) "*" else "(Optional)"}") },
-                            singleLine = true,
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.DateRange,
-                                    contentDescription = null
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            placeholder = { Text("YYYY-MM-DD") }
-                        )
 
                         babyError?.let {
                             Text(
@@ -353,6 +427,7 @@ fun RegisterScreenContent(
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Password") },
                         supportingText = { passwordError?.let { Text(it) } },
+                        isError = passwordError != null,
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
@@ -399,9 +474,24 @@ fun RegisterScreenContent(
                             imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        supportingText = {
+                            if (passwordConfirmation.isNotEmpty() && password != passwordConfirmation) {
+                                Text("Passwords do not match")
+                            }
+                        },
+                        isError = passwordConfirmation.isNotEmpty() && password != passwordConfirmation
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
+
+                    generalError?.let {
+                        Text(
+                            it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
 
                     Button(
                         onClick = { onIntent(RegisterScreenIntent.Register) },

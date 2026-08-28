@@ -18,6 +18,7 @@ import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
 import com.bsdevs.firstscreen.navigation.splashScreenSection
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.homeScreenSection
+import com.bsdevs.homescreen.navigation.settingsSection
 import com.bsdevs.login.loginScreenSection
 import com.bsdevs.login.navigateToLoginScreen
 import com.bsdevs.login.navigateToRegisterScreen
@@ -55,6 +56,16 @@ fun MMPNavHost(
                         navController.navigate(HomeScreenBaseRoute)
                     }
                 },
+            )
+            settingsSection(
+                onShowSnackBar = onShowSnackBar,
+                onLogout = {
+                    navController.navigate(SplashScreenBaseRoute) {
+                        popUpTo(navController.graph.id) {
+                            inclusive = true
+                        }
+                    }
+                }
             )
             coffeeScreenSection(
                 onShowSnackBar,
