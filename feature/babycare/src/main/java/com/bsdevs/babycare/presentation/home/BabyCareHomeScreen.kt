@@ -536,21 +536,21 @@ fun ActivityFeedItem(
         is BabyActivity.Temperature -> item.dto.id
     }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onDelete()
-                    false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onEdit()
-                    false
-                }
-                else -> false
+    val dismissState = rememberSwipeToDismissBoxState()
+
+    LaunchedEffect(dismissState.currentValue) {
+        when (dismissState.currentValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                onDelete()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
+            SwipeToDismissBoxValue.EndToStart -> {
+                onEdit()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+            SwipeToDismissBoxValue.Settled -> {}
         }
-    )
+    }
 
     SwipeToDismissBox(
         state = dismissState,

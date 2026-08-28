@@ -204,6 +204,7 @@ fun DailyAverageGapCanvas(
     val minScale = 0.2f
     val maxScale = 3.0f
 
+    @Suppress("DEPRECATION")
     val transformState = rememberTransformableState { zoomChange, _, _ ->
         scaleFactor = (scaleFactor * zoomChange).coerceIn(minScale, maxScale)
     }

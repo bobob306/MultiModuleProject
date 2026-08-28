@@ -231,7 +231,7 @@ fun generateSampleCoffeeDto(count: Int): List<CoffeeDto> {
         val year = 2024
         val month = random.nextInt(12) + 1
         val day = random.nextInt(28) + 1
-        val roastDate = String.format("%d-%02d-%02d", year, month, day)
+        val roastDate = String.format(java.util.Locale.ROOT, "%d-%02d-%02d", year, month, day)
 
         val numBeanTypes = if (i % 4 == 0) 2 else 1
         val beans = coffeeBeanTypes.shuffled().take(numBeanTypes)

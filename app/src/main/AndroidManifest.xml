@@ -57,7 +57,7 @@
         </activity>
 
         <service
-            android:name=".functions.MMPAppFunctionService"
+            android:name=".functions.MMPAppFunctions"
             android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
             android:exported="true"
             tools:targetApi="36">

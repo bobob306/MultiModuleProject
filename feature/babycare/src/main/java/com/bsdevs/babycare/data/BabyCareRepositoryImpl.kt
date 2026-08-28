@@ -144,7 +144,7 @@ class BabyCareRepositoryImpl @Inject constructor(
 
     override suspend fun getNappyEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
 
-    private fun formatYearMonth(ym: YearMonth) = String.format("%04d-%02d", ym.year, ym.monthValue)
+    private fun formatYearMonth(ym: YearMonth) = String.format(java.util.Locale.ROOT, "%04d-%02d", ym.year, ym.monthValue)
     private fun extractMonthString(date: String) = date.substring(0, 7)
 
     private fun toMap(e: UnifiedEventDto) = mapOf(

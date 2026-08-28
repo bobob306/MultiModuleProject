@@ -190,7 +190,7 @@ private fun CoffeeInputScreenContent(
             scrollState.maxValue > 0
         }
     }
-    val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
+    val scrollProgressFromTop by remember(scrollState.maxValue) {
         derivedStateOf {
             if (scrollState.maxValue > 0) {
                 scrollState.value.toFloat() / scrollState.maxValue.toFloat()

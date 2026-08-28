@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -69,9 +70,8 @@ fun HorizontalWheelPicker(
     onItemSelected: (Int) -> Unit,
 ) {
     val isDecimal = isDecimal
-    val screenWidthDp = LocalContext.current.resources.displayMetrics.run {
-        widthPixels / density
-    }.dp
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
     val totalItems = (endNumber - startNumber)
     val effectiveWidth = wheelPickerWidth ?: screenWidthDp
     // Adjust initialSelectedItem to be 0-based index for LazyListState
@@ -271,10 +271,9 @@ fun HorizontalWheelPicker(
     maxFadeAlpha: Float = 0.9f,
     onItemSelected: (Int) -> Unit
 ) {
-    val screenWidthDp = LocalContext.current.resources.displayMetrics.run {
-        widthPixels / density
-    }.dp
-    val totalItems = endNumber - startNumber
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val totalItems = (endNumber - startNumber)
     val effectiveWidth = pickerWidth ?: screenWidthDp
     // Adjust initialSelectedItem to be 0-based index for LazyListState
     val initialScrollIndex = (initialSelectedItem - startNumber)

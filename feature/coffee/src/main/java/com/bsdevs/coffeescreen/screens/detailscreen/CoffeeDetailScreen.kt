@@ -313,5 +313,5 @@ data class EspressoShotDetails(
     val weightInGrams: Int = 175,
     val weightOutGrams: Int = 360,
     val rating: Int = 0,
-    @SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
+    @param:SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
 )

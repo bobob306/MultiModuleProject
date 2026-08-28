@@ -5,7 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import android.widget.RemoteViews
 import com.bsdevs.babycare.R
 import com.google.firebase.auth.FirebaseAuth
@@ -41,13 +41,13 @@ class BabyCareWidgetProvider : AppWidgetProvider() {
             
             if (isLoggedIn) {
                 data = when (action) {
-                    "left" -> Uri.parse("babycare://feeding?startSide=left")
-                    "right" -> Uri.parse("babycare://feeding?startSide=right")
-                    "nappy" -> Uri.parse("babycare://nappy")
+                    "left" -> "babycare://feeding?startSide=left".toUri()
+                    "right" -> "babycare://feeding?startSide=right".toUri()
+                    "nappy" -> "babycare://nappy".toUri()
                     else -> null
                 }
             } else {
-                data = Uri.parse("babycare://login")
+                data = "babycare://login".toUri()
             }
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }

@@ -39,12 +39,15 @@ interface AppFunctionsEntryPoint {
 /**
  * AppFunctions for recording baby activities.
  */
+/**
+ * AppFunctions for recording baby activities.
+ */
 @RequiresApi(36)
 @AppFunctionServiceEntryPoint(
     serviceName = "MMPAppFunctionService",
     appFunctionXmlFileName = "mmp_app_functions"
 )
-abstract class BaseMMPAppFunctionService : AppFunctionService() {
+abstract class MMPAppFunctions : AppFunctionService() {
 
     private val entryPoint by lazy {
         EntryPointAccessors.fromApplication(applicationContext, AppFunctionsEntryPoint::class.java)

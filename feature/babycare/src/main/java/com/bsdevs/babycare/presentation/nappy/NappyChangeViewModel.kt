@@ -78,7 +78,7 @@ class NappyChangeViewModel @Inject constructor(
     }
 
     fun onTimeSelected(hour: Int, minute: Int) {
-        val formattedTime = String.format("%02d:%02d", hour, minute)
+        val formattedTime = String.format(java.util.Locale.ROOT, "%02d:%02d", hour, minute)
         _uiState.update { it.copy(time = formattedTime, error = null) }
     }
 

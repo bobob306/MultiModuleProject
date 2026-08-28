@@ -1,13 +1,10 @@
 package com.bsdevs.babycare.network
 
-import android.os.Parcelable
 import com.google.firebase.firestore.IgnoreExtraProperties
-import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 @IgnoreExtraProperties
 @Serializable
-@Parcelize
 data class NappyChangeDto(
     val id: String? = null,
     val userId: String? = null,
@@ -16,4 +13,4 @@ data class NappyChangeDto(
     val dateTime: String = "",
     val comment: String? = null,
     val type: String? = null   // "Wet", "Dirty", "Both"
-) : Parcelable
+)

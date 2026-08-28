@@ -1,6 +1,6 @@
 [versions]
-agp = "9.3.1"
-appfunctions = "1.0.0-alpha10"
+agp = "9.3.2"
+appfunctions = "1.0.0-alpha11"
 coilCompose = "2.7.0"
 converterGson = "3.0.0"
 firebaseBom = "34.18.0"
@@ -9,7 +9,8 @@ hiltAndroidCompiler = "2.60.1"
 hiltCompiler = "2.60.1"
 hiltNavigationCompose = "1.4.0"
 javaxInject = "1"
-kotlin = "2.4.10"
+kotlin = "2.1.0"
+ksp = "2.1.0-1.0.29"
 coreKtx = "1.19.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -23,15 +24,11 @@ composeBom = "2026.08.00"
 appcompat = "1.8.0"
 loggingInterceptor = "5.5.0"
 material = "1.14.0"
-navigationCompose = "2.9.8"
+navigationCompose = "2.10.0"
 playServicesBase = "18.10.1"
 retrofit = "3.0.0"
 runtimeAndroid = "1.12.0"
 material3Android = "1.4.0"
-uiToolingPreviewAndroid = "1.12.0"
-uiTooling = "1.12.0"
-uiToolingVersion = "1.12.0"
-uiToolingPreviewAndroidVersion = "1.12.0"
 adaptiveAndroid = "1.3.0"
 mockk = "1.14.11"
 turbine = "1.2.1"
@@ -41,7 +38,7 @@ baselineprofile = "1.5.0-rc02"
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
 javax-inject = { module = "javax.inject:javax.inject", version.ref = "javaxInject" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
-ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version = "2.1.0-1.0.29" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
 androidx-appfunctions-common = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }
 androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -83,16 +80,12 @@ play-services-base = { module = "com.google.android.gms:play-services-base", ver
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 androidx-runtime-android = { group = "androidx.compose.runtime", name = "runtime-android", version.ref = "runtimeAndroid" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
-androidx-ui-tooling-preview-android = { group = "androidx.compose.ui", name = "ui-tooling-preview-android", version.ref = "uiToolingPreviewAndroid" }
-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiTooling" }
-androidx-compose-ui-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiToolingVersion" }
-ui-tooling-preview-android = { group = "androidx.compose.ui", name = "ui-tooling-preview-android", version.ref = "uiToolingPreviewAndroidVersion" }
 androidx-adaptive-android = { group = "androidx.compose.material3.adaptive", name = "adaptive-android", version.ref = "adaptiveAndroid" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesCore" }
 androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "baselineprofile" }
-androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version = "2.3.0" }
+androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version = "2.4.0" }
 
 [bundles]
 compose = [
@@ -118,7 +111,7 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-ksp = { id = "com.google.devtools.ksp", version = "2.3.11" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
-
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }
