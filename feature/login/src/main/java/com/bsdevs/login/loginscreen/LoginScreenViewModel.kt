@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LoginScreenViewModel @Inject constructor(
     private val accountService: AccountService,
+    private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<LoginViewData>>(value = Result.Loading)
@@ -74,6 +76,8 @@ class LoginScreenViewModel @Inject constructor(
                     email = data.email,
                     password = data.password,
                 )
+                val userId = accountService.currentUserId
+                userRepository.getUser(userId)
                 _navigationEvent.send(NavigationEvent.NavigateToCoffeeHome)
                 _viewData.update { res ->
                     if (res is Result.Success) Result.Success(res.data.copy(isLoading = false)) else res

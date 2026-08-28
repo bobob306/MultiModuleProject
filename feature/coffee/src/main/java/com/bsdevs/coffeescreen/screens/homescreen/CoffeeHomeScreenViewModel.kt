@@ -88,6 +88,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             when (intent) {
                 is CoffeeHomeScreenIntent.LoadData -> loadData()
+                is CoffeeHomeScreenIntent.RefreshData -> refreshData()
                 is CoffeeHomeScreenIntent.NavigateToInput -> {
                     // Handle navigation to a destination
                     _navigationEvent.send(NavigationEvent.NavigateToInput)
@@ -116,10 +117,19 @@ class CoffeeHomeScreenViewModel @Inject constructor(
             _navigationEvent.send(NavigationEvent.NavigateToLogin)
         }
     }
+
+    private fun refreshData() {
+        viewModelScope.launch {
+            val current = (_viewData.value as? Result.Success)?.data ?: loadedData
+            _viewData.value = Result.Success(current.copy(isRefreshing = true))
+            loadDataFromNetwork()
+        }
+    }
 }
 
 sealed class CoffeeHomeScreenIntent {
     data object LoadData : CoffeeHomeScreenIntent()
+    data object RefreshData : CoffeeHomeScreenIntent()
     data object NavigateToInput : CoffeeHomeScreenIntent()
     data class ShowSnackBar(val message: String, val actionLabel: String?) :
         CoffeeHomeScreenIntent()

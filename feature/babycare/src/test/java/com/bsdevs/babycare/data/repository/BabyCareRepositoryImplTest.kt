@@ -3,6 +3,8 @@ package com.bsdevs.babycare.data.repository
 import app.cash.turbine.test
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.repository.UserRepository
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -18,6 +20,7 @@ class BabyCareRepositoryImplTest {
 
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
+    private lateinit var userRepository: UserRepository
     private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "testUser"
@@ -31,7 +34,8 @@ class BabyCareRepositoryImplTest {
             override val default = testDispatcher
         }
         fakeService = FakeBabyCareFirestoreService()
-        repository = BabyCareRepositoryImpl(fakeService, dispatchers)
+        userRepository = mockk(relaxed = true)
+        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
     }
 
     // --- INITIAL LOAD TESTS ---
@@ -236,9 +240,9 @@ class BabyCareRepositoryImplTest {
     fun `loadInitialData rethrows unexpected exceptions`() = runTest {
         // Create a fake that throws
         val crashingService = object : BabyCareFirestoreService by fakeService {
-            override suspend fun getLatestMonthId(userId: String) = throw RuntimeException("Firestore Down")
+            override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean) = throw RuntimeException("Firestore Down")
         }
-        val repo = BabyCareRepositoryImpl(crashingService, dispatchers)
+        val repo = BabyCareRepositoryImpl(crashingService, userRepository, dispatchers)
 
         // When/Then
         repo.loadInitialData(userId, 20)

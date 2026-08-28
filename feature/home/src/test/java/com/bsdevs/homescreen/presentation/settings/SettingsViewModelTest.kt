@@ -52,8 +52,8 @@ class SettingsViewModelTest {
         val user = UserDto(id = userId, firstName = "John", lastName = "Doe", babyId = babyId)
         val baby = BabyDto(id = babyId, firstName = "Junior")
 
-        coEvery { userRepository.getUser(userId) } returns user
-        coEvery { userRepository.getBaby(babyId) } returns baby
+        coEvery { userRepository.getUser(userId, any()) } returns user
+        coEvery { userRepository.getBaby(babyId, any()) } returns baby
 
         viewModel = SettingsViewModel(userRepository, accountService)
 
@@ -66,7 +66,7 @@ class SettingsViewModelTest {
 
     @Test
     fun `deleteAccount calls userRepository and accountService then updates state`() = runTest {
-        coEvery { userRepository.getUser(userId) } returns UserDto(id = userId)
+        coEvery { userRepository.getUser(userId, any()) } returns UserDto(id = userId)
         coEvery { userRepository.deleteUserData(any()) } returns Unit
         coEvery { accountService.deleteAccount() } returns Unit
         

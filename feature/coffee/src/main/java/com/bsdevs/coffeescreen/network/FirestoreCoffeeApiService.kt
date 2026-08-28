@@ -3,7 +3,7 @@ package com.bsdevs.coffeescreen.network
 import android.util.Log
 import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
 import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenDto
-import com.google.firebase.firestore.FirebaseFirestore
+import com.bsdevs.network.FirestoreHolder
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject
@@ -11,8 +11,10 @@ import javax.inject.Singleton
 
 @Singleton
 class FirestoreCoffeeApiService @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestoreHolder: FirestoreHolder
 ) : CoffeeApiService {
+
+    private val firestore get() = firestoreHolder.firestore
 
     override suspend fun getCoffeeInputScreenData(): CoffeeInputScreenDto? {
         Log.d("FIREBASE_CALL", "Read Screen: coffeeInput")

@@ -11,7 +11,7 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
         database.getOrPut(userId) { mutableMapOf() }[monthId] = data
     }
 
-    override suspend fun getLatestMonthId(userId: String): String? {
+    override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? {
         return database[userId]?.keys?.sortedDescending()?.firstOrNull()
     }
 
@@ -23,7 +23,7 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
         return database[userId]?.keys?.toList() ?: emptyList()
     }
 
-    override suspend fun fetchMonthDocument(userId: String, monthId: String): Map<String, Any?>? {
+    override suspend fun fetchMonthDocument(userId: String, monthId: String, forceRefresh: Boolean): Map<String, Any?>? {
         return database[userId]?.get(monthId)
     }
 

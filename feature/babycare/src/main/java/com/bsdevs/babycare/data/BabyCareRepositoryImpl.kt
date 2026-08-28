@@ -7,6 +7,8 @@ import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.Clearable
+import com.bsdevs.network.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,17 +20,22 @@ import javax.inject.Singleton
 @Singleton
 class BabyCareRepositoryImpl @Inject constructor(
     private val apiService: BabyCareFirestoreService,
+    private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider,
-) : BabyCareRepository {
+) : BabyCareRepository, Clearable {
+
+    init {
+        userRepository.registerClearable(this)
+    }
 
     private val _cachedDays = MutableStateFlow<List<DailyLogDto>>(emptyList())
     override val cachedDays: StateFlow<List<DailyLogDto>> = _cachedDays.asStateFlow()
 
     private var currentAnchorMonth: YearMonth? = null
 
-    override suspend fun loadInitialData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
+    override suspend fun loadInitialData(userId: String, pageSize: Int, forceRefresh: Boolean): RepositoryFetchResult = withContext(dispatchers.io) {
         // Optimization: If we already have data in memory, don't hit the network unless force refreshed
-        if (_cachedDays.value.isNotEmpty()) {
+        if (!forceRefresh && _cachedDays.value.isNotEmpty()) {
             return@withContext RepositoryFetchResult(
                 nextAnchorMonth = currentAnchorMonth,
                 hasMoreData = currentAnchorMonth != null
@@ -36,7 +43,7 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
         
         try {
-            val latestMonthId = apiService.getLatestMonthId(userId)
+            val latestMonthId = apiService.getLatestMonthId(userId, forceRefresh)
 
             if (latestMonthId == null) {
                 _cachedDays.value = emptyList()
@@ -44,7 +51,7 @@ class BabyCareRepositoryImpl @Inject constructor(
                 return@withContext RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
             }
 
-            val monthlyDays = fetchMonthFromService(userId, latestMonthId)
+            val monthlyDays = fetchMonthFromService(userId, latestMonthId, forceRefresh)
             _cachedDays.value = monthlyDays.sortedByDescending { it.date }
 
             val nextMonthId = apiService.getMonthIdBefore(userId, latestMonthId)
@@ -60,8 +67,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun fetchMonthFromService(userId: String, monthId: String): List<DailyLogDto> {
-        val data = apiService.fetchMonthDocument(userId, monthId) ?: return emptyList()
+    private suspend fun fetchMonthFromService(userId: String, monthId: String, forceRefresh: Boolean = false): List<DailyLogDto> {
+        val data = apiService.fetchMonthDocument(userId, monthId, forceRefresh) ?: return emptyList()
         val daysMap = data["days"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
 
         return daysMap.map { (dateString, eventsArray) ->
@@ -98,7 +105,7 @@ class BabyCareRepositoryImpl @Inject constructor(
     override suspend fun refreshData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
         _cachedDays.value = emptyList()
         currentAnchorMonth = null
-        loadInitialData(userId, pageSize)
+        loadInitialData(userId, pageSize, forceRefresh = true)
     }
 
     override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
@@ -181,5 +188,10 @@ class BabyCareRepositoryImpl @Inject constructor(
             list[index] = list[index].copy(events = list[index].events.filterNot { it.id == eventId })
             _cachedDays.value = list
         }
+    }
+
+    override fun clearCache() {
+        _cachedDays.value = emptyList()
+        currentAnchorMonth = null
     }
 }

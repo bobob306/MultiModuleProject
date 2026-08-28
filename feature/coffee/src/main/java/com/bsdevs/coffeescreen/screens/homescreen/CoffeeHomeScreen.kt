@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -120,39 +121,45 @@ fun CoffeeHomeScreenContent(
         title = "Coffee Home Screen",
         scrollBehavior = scrollBehavior
     ) { innerPadding ->
-
-        Box(
+        PullToRefreshBox(
+            isRefreshing = viewData.isRefreshing,
+            onRefresh = { onIntent(CoffeeHomeScreenIntent.RefreshData) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
-            contentAlignment = Alignment.TopCenter
         ) {
-            Column {
-                CoffeeHomeButtons(
-                    onIntent = onIntent,
-                    isLandscape = isLandscape,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-                LazyVerticalGrid(
-                    columns = if (isLandscape) GridCells.Fixed(2) else GridCells.Fixed(1),
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    coffeeListItems?.let { list ->
-                        items(
-                            count = list.size,
-                            key = { index ->
-                                list[index].id ?: index
-                            } // Provide a stable key
-                        ) { index ->
-                            CoffeeListItem(
-                                coffee = list[index],
-                                onIntent = onIntent,
-                                isLandscape = isLandscape,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope
-                            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Column {
+                    CoffeeHomeButtons(
+                        onIntent = onIntent,
+                        isLandscape = isLandscape,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                    LazyVerticalGrid(
+                        columns = if (isLandscape) GridCells.Fixed(2) else GridCells.Fixed(1),
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        coffeeListItems?.let { list ->
+                            items(
+                                count = list.size,
+                                key = { index ->
+                                    list[index].id ?: index
+                                } // Provide a stable key
+                            ) { index ->
+                                CoffeeListItem(
+                                    coffee = list[index],
+                                    onIntent = onIntent,
+                                    isLandscape = isLandscape,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            }
                         }
                     }
                 }

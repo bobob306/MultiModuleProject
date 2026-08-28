@@ -3,6 +3,7 @@ package com.bsdevs.network.repository
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
+import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
@@ -23,6 +24,7 @@ class UserRepositoryImplTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var firestoreHolder: FirestoreHolder
     private lateinit var userRepository: UserRepositoryImpl
     private lateinit var dispatchers: DispatcherProvider
 
@@ -30,12 +32,15 @@ class UserRepositoryImplTest {
     fun setUp() {
         mockkStatic("kotlinx.coroutines.tasks.TasksKt")
         firestore = mockk(relaxed = true)
+        firestoreHolder = mockk(relaxed = true)
+        every { firestoreHolder.firestore } returns firestore
+        
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
             override val io = testDispatcher
             override val default = testDispatcher
         }
-        userRepository = UserRepositoryImpl(firestore, dispatchers)
+        userRepository = UserRepositoryImpl(firestoreHolder, dispatchers)
     }
 
     @After
@@ -78,11 +83,11 @@ class UserRepositoryImplTest {
         every { firestore.collection("users") } returns collection
         every { collection.document(userId) } returns document
 
-        val result = userRepository.getUser(userId)
+        val result = userRepository.getUser(userId, forceRefresh = false)
         
         assertEquals(user, result)
         // Verify no NEW read was performed
-        verify(exactly = 0) { document.get() }
+        verify(exactly = 0) { document.get(any<com.google.firebase.firestore.Source>()) }
     }
 
     @Test
@@ -95,10 +100,10 @@ class UserRepositoryImplTest {
         
         every { firestore.collection("users") } returns collection
         every { collection.document(userId) } returns document
-        coEvery { document.get().await() } returns snapshot
+        coEvery { document.get(any<com.google.firebase.firestore.Source>()).await() } returns snapshot
         every { snapshot.toObject(UserDto::class.java) } returns user
         
-        val result = userRepository.getUser(userId)
+        val result = userRepository.getUser(userId, forceRefresh = false)
         
         assertEquals(user, result)
         assertEquals(user, userRepository.userProfile.value)
@@ -144,9 +149,9 @@ class UserRepositoryImplTest {
         
         every { firestore.collection("users") } returns collection
         every { collection.document(userId) } returns document
-        coEvery { document.get().await() } throws Exception("Network error")
+        coEvery { document.get(any<com.google.firebase.firestore.Source>()).await() } throws Exception("Network error")
         
-        val result = userRepository.getUser(userId)
+        val result = userRepository.getUser(userId, forceRefresh = false)
         
         assertNull(result)
     }
@@ -163,7 +168,7 @@ class UserRepositoryImplTest {
         
         every { firestore.collection("users") } returns userCollection
         every { userCollection.document(userId) } returns userDoc
-        coEvery { userDoc.get().await() } returns userSnapshot
+        coEvery { userDoc.get(any<com.google.firebase.firestore.Source>()).await() } returns userSnapshot
         every { userSnapshot.toObject(UserDto::class.java) } returns user
         
         // Mock baby lookup and deletion
@@ -220,7 +225,7 @@ class UserRepositoryImplTest {
         
         every { firestore.collection("users") } returns userCollection
         every { userCollection.document(userId) } returns userDoc
-        coEvery { userDoc.get().await() } returns userSnapshot
+        coEvery { userDoc.get(any<com.google.firebase.firestore.Source>()).await() } returns userSnapshot
         every { userSnapshot.toObject(UserDto::class.java) } returns user
         
         val babyCollection = mockk<CollectionReference>(relaxed = true)
@@ -262,7 +267,7 @@ class UserRepositoryImplTest {
         val userSnapshot = mockk<DocumentSnapshot>(relaxed = true)
         every { firestore.collection("users") } returns userCollection
         every { userCollection.document(userId) } returns userDoc
-        coEvery { userDoc.get().await() } returns userSnapshot
+        coEvery { userDoc.get(any<com.google.firebase.firestore.Source>()).await() } returns userSnapshot
         every { userSnapshot.toObject(UserDto::class.java) } returns user
         
         val coffeeCollection = mockk<CollectionReference>(relaxed = true)

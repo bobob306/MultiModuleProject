@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +31,7 @@ import com.bsdevs.uicomponents.MMPScaffold
 @Composable
 fun SettingsRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
+    onLogout: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -39,12 +39,14 @@ fun SettingsRoute(
     if (uiState.accountDeleted) {
         LaunchedEffect(Unit) {
             onShowSnackBar("Account deleted successfully", null)
+            onLogout()
         }
     }
 
     SettingsScreen(
         uiState = uiState,
         onDeleteAccount = viewModel::deleteAccount,
+        onLogout = { viewModel.signOut(onLogout) }
     )
 }
 
@@ -52,7 +54,8 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
-    onDeleteAccount: () -> Unit
+    onDeleteAccount: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var showFirstConfirmation by remember { mutableStateOf(false) }
     var showSecondConfirmation by remember { mutableStateOf(false) }
@@ -86,8 +89,18 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Logout")
+                }
+
+                Button(
                     onClick = { showFirstConfirmation = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Delete Account & Wipe Data")
@@ -136,7 +149,7 @@ fun SettingsScreen(
                         showSecondConfirmation = false
                         onDeleteAccount()
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text("DELETE EVERYTHING")
                 }

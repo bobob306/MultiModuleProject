@@ -60,11 +60,26 @@ class SettingsViewModel @Inject constructor(
             try {
                 // 1. Delete data from Firestore
                 userRepository.deleteUserData(userId)
-                // 2. Delete the auth account
+                // 2. Wipe cache
+                userRepository.clearCache()
+                // 3. Delete the auth account
                 accountService.deleteAccount()
                 _uiState.update { it.copy(isLoading = false, accountDeleted = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Failed to delete account") }
+            }
+        }
+    }
+
+    fun signOut(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                userRepository.clearCache()
+                accountService.signOut()
+                onSuccess()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Logout failed") }
             }
         }
     }

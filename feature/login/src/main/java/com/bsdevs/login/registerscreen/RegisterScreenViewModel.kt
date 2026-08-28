@@ -10,8 +10,6 @@ import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -63,6 +61,7 @@ class RegisterScreenViewModel @Inject constructor(
             is RegisterScreenIntent.UpdateBabyLastName -> handleUpdateBabyLastName(intent.babyLastName)
             is RegisterScreenIntent.UpdateBabyMiddleName -> handleUpdateBabyMiddleName(intent.babyMiddleName)
             is RegisterScreenIntent.UpdateBabyBirthDate -> handleUpdateBabyBirthDate(intent.babyBirthDate)
+            is RegisterScreenIntent.SetBabyEntryMethod -> handleSetBabyEntryMethod(intent.method)
             RegisterScreenIntent.Register -> onRegisterClick()
             RegisterScreenIntent.UpdatePasswordVisibility -> handleUpdatePasswordVisibility()
             RegisterScreenIntent.UpdatePasswordConfirmationVisibility -> handleUpdatePasswordConfirmationVisibility()
@@ -74,75 +73,122 @@ class RegisterScreenViewModel @Inject constructor(
         val currentResult = _viewData.value
         if (currentResult is Result.Success) {
             val data = currentResult.data
-            
+
             // Validation for parent role
-            if (data.roles.contains("parent") && data.babyId.isEmpty()) {
-                if (data.babyFirstName.isEmpty() || data.babyLastName.isEmpty() || data.babyBirthDate.isEmpty()) {
-                    _viewData.update { res ->
-                        if (res is Result.Success) Result.Success(res.data.copy(babyError = "Baby first name, last name and birth date are mandatory for parents without an existing Baby ID.")) else res
+            if (data.roles.contains("parent")) {
+                when (data.babyEntryMethod) {
+                    BabyEntryMethod.BY_ID -> {
+                        if (data.babyId.isEmpty()) {
+                            _viewData.update { res ->
+                                if (res is Result.Success) Result.Success(res.data.copy(babyError = "Existing Baby ID is required.")) else res
+                            }
+                            return
+                        }
                     }
-                    return
+
+                    BabyEntryMethod.BY_DETAILS -> {
+                        if (data.babyFirstName.isEmpty() || data.babyLastName.isEmpty() || data.babyBirthDate.isEmpty()) {
+                            _viewData.update { res ->
+                                if (res is Result.Success) Result.Success(res.data.copy(babyError = "Baby first name, last name and birth date are mandatory.")) else res
+                            }
+                            return
+                        }
+                    }
+
+                    BabyEntryMethod.NONE -> {
+                        _viewData.update { res ->
+                            if (res is Result.Success) Result.Success(res.data.copy(babyError = "Please choose how to add your baby.")) else res
+                        }
+                        return
+                    }
                 }
             }
 
-            launchCatching {
+            viewModelScope.launch {
                 _viewData.update { res ->
-                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = true)) else res
+                    if (res is Result.Success) Result.Success(
+                        res.data.copy(
+                            isLoading = true,
+                            emailError = null,
+                            passwordError = null,
+                            babyError = null,
+                            generalError = null
+                        )
+                    ) else res
                 }
-                
-                accountService.signUp(
-                    email = data.email,
-                    password = data.password
-                )
-                
-                val userId = accountService.currentUserId
-                
-                var finalBabyId: String? = null
-                
-                if (data.babyId.isNotEmpty()) {
-                    if (userRepository.babyExists(data.babyId)) {
-                        finalBabyId = data.babyId
+
+                try {
+                    accountService.signUp(
+                        email = data.email,
+                        password = data.password
+                    )
+
+                    val userId = accountService.currentUserId
+
+                    var finalBabyId: String? = null
+
+                    if (data.babyEntryMethod == BabyEntryMethod.BY_ID && data.babyId.isNotEmpty()) {
+                        if (userRepository.babyExists(data.babyId)) {
+                            finalBabyId = data.babyId
+                        } else {
+                            _viewData.update { res ->
+                                if (res is Result.Success) Result.Success(
+                                    res.data.copy(
+                                        isLoading = false,
+                                        babyError = "Baby ID does not exist."
+                                    )
+                                ) else res
+                            }
+                            return@launch
+                        }
+                    } else if (data.roles.contains("parent") && data.babyEntryMethod == BabyEntryMethod.BY_DETAILS) {
+                        finalBabyId = UUID.randomUUID().toString()
+                        userRepository.saveBaby(
+                            BabyDto(
+                                id = finalBabyId,
+                                firstName = data.babyFirstName,
+                                lastName = data.babyLastName,
+                                middleName = data.babyMiddleName.takeIf { it.isNotEmpty() },
+                                birthDate = data.babyBirthDate
+                            )
+                        )
                     }
-                } else if (data.roles.contains("parent")) {
-                    finalBabyId = UUID.randomUUID().toString()
-                    userRepository.saveBaby(
-                        BabyDto(
-                            id = finalBabyId,
-                            firstName = data.babyFirstName,
-                            lastName = data.babyLastName,
-                            middleName = data.babyMiddleName.takeIf { it.isNotEmpty() },
-                            birthDate = data.babyBirthDate
+
+                    userRepository.saveUser(
+                        UserDto(
+                            id = userId,
+                            firstName = data.firstName,
+                            lastName = data.lastName,
+                            middleName = data.middleName.takeIf { it.isNotEmpty() },
+                            roles = data.roles,
+                            babyId = finalBabyId,
+                            babyIds = finalBabyId?.let { listOf(it) } ?: emptyList()
                         )
                     )
-                }
 
-                userRepository.saveUser(
-                    UserDto(
-                        id = userId,
-                        firstName = data.firstName,
-                        lastName = data.lastName,
-                        middleName = data.middleName.takeIf { it.isNotEmpty() },
-                        roles = data.roles,
-                        babyId = finalBabyId,
-                        babyIds = finalBabyId?.let { listOf(it) } ?: emptyList()
-                    )
-                )
-
-                _navigationEvent.send(RegisterNavigationEvent.SuccessfulAccountCreation)
-                _viewData.update { res ->
-                    if (res is Result.Success) Result.Success(res.data.copy(isLoading = false)) else res
-                }
-            }.invokeOnCompletion { throwable ->
-                if (throwable != null) {
+                    _navigationEvent.send(RegisterNavigationEvent.SuccessfulAccountCreation)
+                    _viewData.update { res ->
+                        if (res is Result.Success) Result.Success(res.data.copy(isLoading = false)) else res
+                    }
+                } catch (e: Exception) {
+                    Log.e("RegisterViewModel", "Registration failed", e)
                     _viewData.update { res ->
                         if (res is Result.Success) {
-                            Result.Success(
-                                res.data.copy(
-                                    isLoading = false,
-                                    emailError = "Please ensure this is a valid email and not already in use.",
-                                    passwordError = "Please ensure the passwords match and are valid."
-                                )
-                            )
+                            val message = e.message ?: "An unexpected error occurred"
+                            viewModelScope.launch {
+                                _navigationEvent.send(RegisterNavigationEvent.Failure(message))
+                            }
+                            when {
+                                message.contains("email", ignoreCase = true) -> {
+                                    Result.Success(res.data.copy(isLoading = false, emailError = message))
+                                }
+                                message.contains("password", ignoreCase = true) -> {
+                                    Result.Success(res.data.copy(isLoading = false, passwordError = message))
+                                }
+                                else -> {
+                                    Result.Success(res.data.copy(isLoading = false, generalError = message))
+                                }
+                            }
                         } else {
                             res
                         }
@@ -152,18 +198,10 @@ class RegisterScreenViewModel @Inject constructor(
         }
     }
 
-    private fun launchCatching(block: suspend CoroutineScope.() -> Unit) =
-        viewModelScope.launch(
-            CoroutineExceptionHandler { _, throwable ->
-                Log.d("COFFEE_ERROR_TAG", throwable.message.orEmpty())
-            },
-            block = block
-        )
-
     private fun handleUpdateFirstName(firstName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(firstName = firstName))
+                Result.Success(currentResult.data.copy(firstName = firstName, generalError = null))
             } else {
                 currentResult
             }
@@ -173,7 +211,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateLastName(lastName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(lastName = lastName))
+                Result.Success(currentResult.data.copy(lastName = lastName, generalError = null))
             } else {
                 currentResult
             }
@@ -183,7 +221,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateMiddleName(middleName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(middleName = middleName))
+                Result.Success(currentResult.data.copy(middleName = middleName, generalError = null))
             } else {
                 currentResult
             }
@@ -199,7 +237,7 @@ class RegisterScreenViewModel @Inject constructor(
                 } else {
                     currentRoles + role
                 }
-                Result.Success(currentResult.data.copy(roles = newRoles, babyError = null))
+                Result.Success(currentResult.data.copy(roles = newRoles, babyError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -209,7 +247,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateBabyId(babyId: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(babyId = babyId, babyError = null))
+                Result.Success(currentResult.data.copy(babyId = babyId, babyError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -219,7 +257,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateBabyFirstName(babyFirstName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(babyFirstName = babyFirstName, babyError = null))
+                Result.Success(currentResult.data.copy(babyFirstName = babyFirstName, babyError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -229,7 +267,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateBabyLastName(babyLastName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(babyLastName = babyLastName, babyError = null))
+                Result.Success(currentResult.data.copy(babyLastName = babyLastName, babyError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -239,7 +277,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateBabyMiddleName(babyMiddleName: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(babyMiddleName = babyMiddleName, babyError = null))
+                Result.Success(currentResult.data.copy(babyMiddleName = babyMiddleName, babyError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -249,7 +287,28 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateBabyBirthDate(babyBirthDate: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(babyBirthDate = babyBirthDate, babyError = null))
+                Result.Success(currentResult.data.copy(babyBirthDate = babyBirthDate, babyError = null, generalError = null))
+            } else {
+                currentResult
+            }
+        }
+    }
+
+    private fun handleSetBabyEntryMethod(method: BabyEntryMethod) {
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                Result.Success(
+                    currentResult.data.copy(
+                        babyEntryMethod = method,
+                        babyId = "",
+                        babyFirstName = "",
+                        babyLastName = "",
+                        babyMiddleName = "",
+                        babyBirthDate = "",
+                        babyError = null,
+                        generalError = null
+                    )
+                )
             } else {
                 currentResult
             }
@@ -259,7 +318,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdateEmail(email: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(email = email, emailError = null))
+                Result.Success(currentResult.data.copy(email = email, emailError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -269,7 +328,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdatePassword(password: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(password = password, passwordError = null))
+                Result.Success(currentResult.data.copy(password = password, passwordError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -279,7 +338,7 @@ class RegisterScreenViewModel @Inject constructor(
     private fun handleUpdatePasswordConfirmation(password: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(passwordConfirmation = password, passwordError = null))
+                Result.Success(currentResult.data.copy(passwordConfirmation = password, passwordError = null, generalError = null))
             } else {
                 currentResult
             }
@@ -326,6 +385,7 @@ sealed class RegisterScreenIntent {
     data class UpdateBabyLastName(val babyLastName: String) : RegisterScreenIntent()
     data class UpdateBabyMiddleName(val babyMiddleName: String) : RegisterScreenIntent()
     data class UpdateBabyBirthDate(val babyBirthDate: String) : RegisterScreenIntent()
+    data class SetBabyEntryMethod(val method: BabyEntryMethod) : RegisterScreenIntent()
     data object Register : RegisterScreenIntent()
     data object UpdatePasswordVisibility : RegisterScreenIntent()
     data object UpdatePasswordConfirmationVisibility : RegisterScreenIntent()
@@ -334,7 +394,14 @@ sealed class RegisterScreenIntent {
 
 sealed class RegisterNavigationEvent {
     data object SuccessfulAccountCreation : RegisterNavigationEvent()
+    data class Failure(val message: String) : RegisterNavigationEvent()
     data object NavigateToLogin : RegisterNavigationEvent()
+}
+
+enum class BabyEntryMethod {
+    BY_ID,
+    BY_DETAILS,
+    NONE
 }
 
 data class RegisterScreenViewData(
@@ -345,6 +412,7 @@ data class RegisterScreenViewData(
     val lastName: String = "",
     val middleName: String = "",
     val roles: List<String> = emptyList(),
+    val babyEntryMethod: BabyEntryMethod = BabyEntryMethod.NONE,
     val babyId: String = "",
     val babyFirstName: String = "",
     val babyLastName: String = "",
@@ -357,4 +425,5 @@ data class RegisterScreenViewData(
     val emailError: String? = null,
     val passwordError: String? = null,
     val babyError: String? = null,
+    val generalError: String? = null,
 )

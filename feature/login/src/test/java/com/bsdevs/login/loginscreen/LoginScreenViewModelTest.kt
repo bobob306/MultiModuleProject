@@ -3,6 +3,9 @@ package com.bsdevs.login.loginscreen
 import app.cash.turbine.test
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.repository.UserRepository
+import io.mockk.coVerify
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterIsInstance
@@ -20,6 +23,7 @@ class LoginScreenViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
     
     private lateinit var accountService: FakeAccountService
+    private lateinit var userRepository: UserRepository
     private lateinit var viewModel: LoginScreenViewModel
     private lateinit var dispatchers: DispatcherProvider
 
@@ -34,7 +38,8 @@ class LoginScreenViewModelTest {
         }
 
         accountService = FakeAccountService()
-        viewModel = LoginScreenViewModel(accountService, dispatchers)
+        userRepository = mockk(relaxed = true)
+        viewModel = LoginScreenViewModel(accountService, userRepository, dispatchers)
     }
 
     @After
@@ -104,6 +109,7 @@ class LoginScreenViewModelTest {
         }
         advanceUntilIdle()
         assertEquals("test@example.com", accountService.lastSignedInEmail)
+        coVerify { userRepository.getUser(any()) }
     }
 
     @Test

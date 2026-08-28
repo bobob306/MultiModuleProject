@@ -93,7 +93,11 @@ class BabyCareHomeViewModel @Inject constructor(
             }
         }
     }
-    private suspend fun updateDisplayFeed(dailyLogs: List<DailyLogDto>, canLoadMore: Boolean = true) {
+
+    private suspend fun updateDisplayFeed(
+        dailyLogs: List<DailyLogDto>,
+        canLoadMore: Boolean = true
+    ) {
         val processedFeed = processFeed(
             dailyLogs = dailyLogs,
             filter = _currentFilter.value,
@@ -119,6 +123,18 @@ class BabyCareHomeViewModel @Inject constructor(
         viewModelScope.launch {
             // Turn on pull-to-refresh spinner indicator
             _viewData.value = Result.Success(current.copy(isRefreshing = true))
+
+            // Refresh Screen Config too
+            launch {
+                screenRepository.getScreenFlow("baby_home", forceRefresh = true).collect { result ->
+                    if (result is Result.Success) {
+                        val mappedData = withContext(dispatchers.default) {
+                            mapper.mapToData(result.data)
+                        }
+                        _dynamicUi.value = mappedData
+                    }
+                }
+            }
 
             try {
                 val refreshResult = repository.refreshData(accountService.currentUserId, pageSize)
@@ -178,22 +194,22 @@ class BabyCareHomeViewModel @Inject constructor(
             day.events.sortedByDescending { it.dateTimeString }
         }
 
-        val absoluteLastNappy = allEventsFlattened.firstOrNull { 
-            it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" 
+        val absoluteLastNappy = allEventsFlattened.firstOrNull {
+            it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both"
         }?.let { "Last nappy: ${it.time}" }
 
-        val absoluteLastFeeding = allEventsFlattened.firstOrNull { 
-            it.type == "FEEDING" 
+        val absoluteLastFeeding = allEventsFlattened.firstOrNull {
+            it.type == "FEEDING"
         }?.let { "Last feed: ${it.time}" }
 
-        val lastTempEvent = allEventsFlattened.firstOrNull { 
+        val lastTempEvent = allEventsFlattened.firstOrNull {
             it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
         }
 
-        val absoluteLastTemperature = lastTempEvent?.let { 
-            "Last temp: ${it.temperature}°C" 
+        val absoluteLastTemperature = lastTempEvent?.let {
+            "Last temp: ${it.temperature}°C"
         }
-        
+
         dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
@@ -210,11 +226,19 @@ class BabyCareHomeViewModel @Inject constructor(
             }
 
             val feedingCount = visibleEvents.count { it.type == "FEEDING" }
-            val nappyCount = visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
+            val nappyCount =
+                visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
             val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
-            finalizedFeed.add(HomeFeedItem.Header(displayHeaderTitle, feedingCount, nappyCount, temperatureCount))
+            finalizedFeed.add(
+                HomeFeedItem.Header(
+                    displayHeaderTitle,
+                    feedingCount,
+                    nappyCount,
+                    temperatureCount
+                )
+            )
 
             if (!collapsed.contains(displayHeaderTitle)) {
                 visibleEvents.forEach { unifiedEvent ->
@@ -238,7 +262,7 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private fun mapToBabyActivity(event: UnifiedEventDto, parentDate: String): BabyActivity {
         // 🔄 Fix 1: Extract the "HH:mm" time segment dynamically from the dateTimeString if the time field is blank
-        val extractedTime = if (!event.time.isNullOrEmpty()) {
+        val extractedTime = if (event.time.isNotEmpty()) {
             event.time
         } else {
             event.dateTimeString.split(" ").getOrNull(1) ?: ""
@@ -260,7 +284,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     date = parentDate,
                     time = extractedTime, // ✨ Time is now safely populated
                     dateTime = event.dateTimeString,
-                    type = correctedNappyType ?: "Wet",
+                    type = correctedNappyType,
                     comment = event.comment,
                 )
             )

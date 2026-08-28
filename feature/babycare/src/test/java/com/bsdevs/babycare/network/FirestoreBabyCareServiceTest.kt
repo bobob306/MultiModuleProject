@@ -3,6 +3,7 @@ package com.bsdevs.babycare.network
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.*
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +22,7 @@ class FirestoreBabyCareServiceTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var firestore: FirebaseFirestore
+    private lateinit var firestoreHolder: FirestoreHolder
     private lateinit var userRepository: UserRepository
     private lateinit var service: FirestoreBabyCareService
     private lateinit var dispatchers: DispatcherProvider
@@ -32,13 +34,16 @@ class FirestoreBabyCareServiceTest {
     fun setUp() {
         mockkStatic("kotlinx.coroutines.tasks.TasksKt")
         firestore = mockk(relaxed = true)
+        firestoreHolder = mockk(relaxed = true)
+        every { firestoreHolder.firestore } returns firestore
+        
         userRepository = mockk(relaxed = true)
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
             override val io = testDispatcher
             override val default = testDispatcher
         }
-        service = FirestoreBabyCareService(firestore, userRepository, dispatchers)
+        service = FirestoreBabyCareService(firestoreHolder, userRepository, dispatchers)
     }
 
     @After
@@ -51,7 +56,7 @@ class FirestoreBabyCareServiceTest {
         // User with no babies
         every { userRepository.userProfile } returns MutableStateFlow(UserDto(id = userId))
         
-        val result = service.getLatestMonthId(userId)
+        val result = service.getLatestMonthId(userId, forceRefresh = false)
         
         assertNull(result)
     }
@@ -69,11 +74,11 @@ class FirestoreBabyCareServiceTest {
         every { firestore.collection("babyLogs").document(babyId).collection("months") } returns collection
         every { collection.orderBy(any<FieldPath>(), any()) } returns query
         every { query.limit(1) } returns query
-        coEvery { query.get().await() } returns querySnapshot
+        coEvery { query.get(any<Source>()).await() } returns querySnapshot
         every { querySnapshot.documents } returns listOf(document)
         every { document.id } returns "2026-08"
 
-        val result = service.getLatestMonthId(userId)
+        val result = service.getLatestMonthId(userId, forceRefresh = false)
         
         assertEquals("2026-08", result)
     }
