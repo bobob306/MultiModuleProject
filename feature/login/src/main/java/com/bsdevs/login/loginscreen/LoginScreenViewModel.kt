@@ -85,7 +85,8 @@ class LoginScreenViewModel @Inject constructor(
                             Result.Success(
                                 res.data.copy(
                                     isLoading = false,
-                                    emailError = "The details you have provided do not match our records."
+                                    emailError = "The details you have provided do not match our records.",
+                                    passwordError = "Please check your password."
                                 )
                             )
                         } else {
@@ -114,7 +115,7 @@ class LoginScreenViewModel @Inject constructor(
     private fun handleUpdateEmail(email: String) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
-                Result.Success(currentResult.data.copy(email = email, emailError = null))
+                Result.Success(currentResult.data.copy(email = email, emailError = null, passwordError = null))
             } else {
                 currentResult
             }
@@ -126,7 +127,7 @@ class LoginScreenViewModel @Inject constructor(
             if (currentResult is Result.Success) {
                 val data = currentResult.data
                 val visible = if (password.isEmpty()) false else data.isPasswordVisible
-                Result.Success(data.copy(password = password, isPasswordVisible = visible, emailError = null))
+                Result.Success(data.copy(password = password, isPasswordVisible = visible, emailError = null, passwordError = null))
             } else {
                 currentResult
             }
@@ -154,5 +155,6 @@ data class LoginViewData(
     val isEnabled: Boolean = false,
     val isPasswordVisible: Boolean = false,
     val emailError: String? = null,
+    val passwordError: String? = null,
     val otherError: String? = null
 )

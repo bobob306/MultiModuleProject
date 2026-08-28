@@ -1,13 +1,10 @@
 package com.bsdevs.babycare.network
 
-import android.os.Parcelable
 import com.google.firebase.firestore.IgnoreExtraProperties
-import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 @IgnoreExtraProperties
 @Serializable
-@Parcelize
 data class FeedingDto(
     val id: String? = null,
     val userId: String? = null,
@@ -20,4 +17,4 @@ data class FeedingDto(
     val mainFeedingSide: String? = null, // "Left", "Right", "Both", "Bottle"
     val bottleAmountMl: Int? = null,
     val comment: String? = null,
-) : Parcelable
+)

@@ -41,7 +41,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -204,6 +204,7 @@ fun DailyAverageGapCanvas(
     val minScale = 0.2f
     val maxScale = 3.0f
 
+    @Suppress("DEPRECATION")
     val transformState = rememberTransformableState { zoomChange, _, _ ->
         scaleFactor = (scaleFactor * zoomChange).coerceIn(minScale, maxScale)
     }

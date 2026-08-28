@@ -19,4 +19,8 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.logging.interceptor)
     implementation(libs.retrofit)
+
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
+    testImplementation(libs.mockk)
 }

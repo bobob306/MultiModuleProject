@@ -49,6 +49,15 @@ class FirestoreCoffeeApiService @Inject constructor(
         return snapshot.toObjects(CoffeeDto::class.java).firstOrNull()
     }
 
+    override suspend fun getAllCoffee(userId: String): List<CoffeeDto> {
+        Log.d("FIREBASE_CALL", "Read All Coffee for user: $userId")
+        val snapshot = firestore.collection("coffeeUploads")
+            .whereEqualTo("userId", userId)
+            .get()
+            .await()
+        return snapshot.toObjects(CoffeeDto::class.java)
+    }
+
     override suspend fun getShotsForCoffee(coffeeLabel: String): List<ShotDto> {
         Log.d("FIREBASE_CALL", "Read Shots for Coffee: $coffeeLabel")
         val snapshot = firestore.collection("coffeeUploads")

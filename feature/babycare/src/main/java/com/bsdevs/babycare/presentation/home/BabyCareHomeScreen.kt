@@ -70,7 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.result.Result
@@ -536,21 +536,21 @@ fun ActivityFeedItem(
         is BabyActivity.Temperature -> item.dto.id
     }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onDelete()
-                    false
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    onEdit()
-                    false
-                }
-                else -> false
+    val dismissState = rememberSwipeToDismissBoxState()
+
+    LaunchedEffect(dismissState.currentValue) {
+        when (dismissState.currentValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                onDelete()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
+            SwipeToDismissBoxValue.EndToStart -> {
+                onEdit()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+            SwipeToDismissBoxValue.Settled -> {}
         }
-    )
+    }
 
     SwipeToDismissBox(
         state = dismissState,

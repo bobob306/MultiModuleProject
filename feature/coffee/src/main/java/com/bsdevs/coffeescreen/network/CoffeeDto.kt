@@ -1,15 +1,12 @@
 package com.bsdevs.coffeescreen.network
 
-import android.os.Parcelable
 import androidx.annotation.Keep
 import com.google.firebase.firestore.IgnoreExtraProperties
 import com.google.firebase.firestore.PropertyName
-import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.Serializable
 
 @IgnoreExtraProperties
 @Serializable
-@Parcelize
 @Keep
 data class CoffeeDto(
     val roastDate: String? = null,
@@ -23,4 +20,4 @@ data class CoffeeDto(
     val userId: String? = null,
     val id: String? = null,
     val rating: Int? = null,
-) : Parcelable
+)

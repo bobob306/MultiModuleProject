@@ -119,6 +119,7 @@ class LoginScreenViewModelTest {
         val result = viewModel.viewData.value as Result.Success
         assertFalse(result.data.isLoading)
         assertNotNull(result.data.emailError)
+        assertNotNull(result.data.passwordError)
     }
 
     @Test
@@ -130,7 +131,7 @@ class LoginScreenViewModelTest {
     }
 
     @Test
-    fun `typing email clears existing email error`() = runTest {
+    fun `typing email clears existing errors`() = runTest {
         ensureReady()
         accountService.shouldSucceed = false
 
@@ -145,11 +146,13 @@ class LoginScreenViewModelTest {
             // await error state
             val errorState = awaitItem() as Result.Success
             assertNotNull(errorState.data.emailError)
+            assertNotNull(errorState.data.passwordError)
 
             viewModel.processIntent(LoginScreenIntent.UpdateEmail("new@email.com"))
 
             val clearedState = awaitItem() as Result.Success
             assertNull(clearedState.data.emailError)
+            assertNull(clearedState.data.passwordError)
             assertEquals("new@email.com", clearedState.data.email)
         }
     }

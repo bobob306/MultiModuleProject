@@ -19,6 +19,10 @@ class FakeCoffeeApiService : CoffeeApiService {
         return uploadedCoffees.firstOrNull { it.userId == userId && it.id == coffeeId }
     }
 
+    override suspend fun getAllCoffee(userId: String): List<CoffeeDto> {
+        return uploadedCoffees.filter { it.userId == userId }
+    }
+
     private val shotsDatabase = mutableMapOf<String, MutableList<com.bsdevs.coffeescreen.screens.detailscreen.ShotDto>>()
 
     override suspend fun getShotsForCoffee(coffeeLabel: String): List<com.bsdevs.coffeescreen.screens.detailscreen.ShotDto> {

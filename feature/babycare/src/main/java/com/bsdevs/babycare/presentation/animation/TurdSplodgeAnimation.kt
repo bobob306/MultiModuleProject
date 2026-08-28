@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.unit.sp
 import kotlin.math.cos
@@ -108,21 +109,20 @@ fun TurdSplodgeAnimation(
                 if (dynamicScale > 0.1f) {
                     emojiPaint.textSize = item.startSizePx * dynamicScale
 
-                    drawContext.canvas.nativeCanvas.save()
-
                     // Rotate the emoji based on current progression splits
                     val currentRotation = currentProgress * 360f * item.rotationDirection
-                    drawContext.canvas.nativeCanvas.rotate(currentRotation, targetX, targetY)
 
-                    // Draw the canonical poop emoji string onto the system canvas lip
-                    drawContext.canvas.nativeCanvas.drawText(
-                        "💩",
-                        targetX - (emojiPaint.textSize / 2f),
-                        targetY + (emojiPaint.textSize / 2f),
-                        emojiPaint
-                    )
-
-                    drawContext.canvas.nativeCanvas.restore()
+                    withTransform({
+                        rotate(currentRotation, Offset(targetX, targetY))
+                    }) {
+                        // Draw the canonical poop emoji string onto the system canvas lip
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "💩",
+                            targetX - (emojiPaint.textSize / 2f),
+                            targetY + (emojiPaint.textSize / 2f),
+                            emojiPaint
+                        )
+                    }
                 }
             }
         }

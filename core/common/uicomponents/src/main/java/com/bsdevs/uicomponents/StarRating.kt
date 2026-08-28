@@ -7,7 +7,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -21,7 +21,7 @@ fun StarRating(
     starColor: Color = Color.Yellow,
     onRatingChanged: (Int) -> Unit = {}
 ) {
-    var currentRating by remember { mutableStateOf(initialRating.coerceIn(0, 5)) }
+    var currentRating by remember { mutableIntStateOf(initialRating.coerceIn(0, 5)) }
 
     Row(modifier = modifier) {
         for (i in 1..5) {

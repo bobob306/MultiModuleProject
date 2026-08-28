@@ -92,15 +92,23 @@ class BabyCareRepositoryImplTest {
     }
 
     @Test
-    fun `refreshData resets anchor and fetches initial data`() = runTest {
+    fun `refreshData resets anchor and fetches initial data bypassing cache`() = runTest {
         val monthAug = "2026-08"
         fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
+        
+        repository.loadInitialData(userId, 20)
+        assertEquals(1, repository.cachedDays.value.size)
+
+        // Add more data and refresh
+        val monthJuly = "2026-07"
+        fakeService.injectMonth(userId, monthJuly, mapOf("days" to mapOf("2026-07-01" to emptyList<Any>())))
         
         val result = repository.refreshData(userId, 20)
         
         assertNotNull(result)
-        // Verify cache was populated
+        // Verify cache was reset to only the new initial month (since refresh starts from scratch)
         assertEquals(1, repository.cachedDays.value.size)
+        assertEquals("2026-08-01", repository.cachedDays.value.first().date)
     }
 
     // --- CRUD TESTS ---

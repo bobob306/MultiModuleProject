@@ -36,7 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import androidx.window.core.layout.WindowWidthSizeClass
@@ -110,7 +110,9 @@ fun CoffeeDetailContent(
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val configuration = LocalConfiguration.current
+    @Suppress("DEPRECATION")
     val window = currentWindowAdaptiveInfo()
+    @Suppress("DEPRECATION")
     val isLandscape =
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                 || window.windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
@@ -311,5 +313,5 @@ data class EspressoShotDetails(
     val weightInGrams: Int = 175,
     val weightOutGrams: Int = 360,
     val rating: Int = 0,
-    @SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
+    @param:SuppressLint("NewApi") val date: LocalDate = LocalDate.now()
 )

@@ -19,6 +19,8 @@ interface UserRepository {
     suspend fun saveBaby(baby: BabyDto)
     suspend fun babyExists(babyId: String): Boolean
     suspend fun getUser(userId: String): UserDto?
+    suspend fun getBaby(babyId: String): BabyDto?
+    suspend fun deleteUserData(userId: String)
 }
 
 @Singleton
@@ -66,5 +68,64 @@ class UserRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+
+    override suspend fun getBaby(babyId: String): BabyDto? = withContext(dispatchers.io) {
+        try {
+            Log.d("FIREBASE_CALL", "Read Baby: $babyId")
+            firestore.collection("babies").document(babyId).get().await()
+                .toObject(BabyDto::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override suspend fun deleteUserData(userId: String): Unit = withContext(dispatchers.io) {
+        val user = getUser(userId) ?: return@withContext
+        val babyIds = (user.babyIds ?: emptyList()) + listOfNotNull(user.babyId)
+
+        for (babyId in babyIds) {
+            // Check if others are linked to this babyId
+            val otherParents = firestore.collection("users")
+                .whereEqualTo("babyId", babyId)
+                .get().await()
+                .documents
+                .filter { it.id != userId }
+
+            val otherParentsFromList = firestore.collection("users")
+                .whereArrayContains("babyIds", babyId)
+                .get().await()
+                .documents
+                .filter { it.id != userId }
+
+            if (otherParents.isEmpty() && otherParentsFromList.isEmpty()) {
+                // Delete baby data
+                Log.d("FIREBASE_CALL", "Delete Baby: $babyId")
+                firestore.collection("babies").document(babyId).delete().await()
+
+                // Delete baby logs
+                Log.d("FIREBASE_CALL", "Delete Baby Logs for: $babyId")
+                val months = firestore.collection("babyLogs").document(babyId).collection("months").get().await()
+                months.documents.forEach { it.reference.delete().await() }
+                firestore.collection("babyLogs").document(babyId).delete().await()
+            }
+        }
+
+        // Delete coffee logs
+        Log.d("FIREBASE_CALL", "Delete Coffee Logs for: $userId")
+        val coffeeUploads = firestore.collection("coffeeUploads")
+            .whereEqualTo("userId", userId)
+            .get().await()
+
+        for (doc in coffeeUploads.documents) {
+            val shots = doc.reference.collection("shots").get().await()
+            shots.documents.forEach { it.reference.delete().await() }
+            doc.reference.delete().await()
+        }
+
+        // Delete user document
+        Log.d("FIREBASE_CALL", "Delete User: $userId")
+        firestore.collection("users").document(userId).delete().await()
+        _userProfile.value = null
     }
 }

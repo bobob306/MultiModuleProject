@@ -13,6 +13,7 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,7 +33,8 @@ fun MMPNavigationRail(navController: NavController, userRoles: List<String>) {
     val items = listOfNotNull(
         BottomNavItem.Home,
         BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
-        BottomNavItem.Baby.takeIf { userRoles.contains("parent") }
+        BottomNavItem.Baby.takeIf { userRoles.contains("parent") },
+        BottomNavItem.Settings
     )
     NavigationRail {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -42,7 +44,9 @@ fun MMPNavigationRail(navController: NavController, userRoles: List<String>) {
                 icon = {
                     val tooltipState = rememberTooltipState()
                     TooltipBox(
-                        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                            positioning = TooltipAnchorPosition.Above
+                        ),
                         tooltip = {
                             PlainTooltip {
                                 Text(item.label)

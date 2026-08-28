@@ -102,7 +102,7 @@ internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<Shot
 
 @Composable
 internal fun ScrollBar(scrollState: ScrollState) {
-    val scrollProgressFromTop by remember(scrollState.value, scrollState.maxValue) {
+    val scrollProgressFromTop by remember(scrollState.maxValue) {
         derivedStateOf {
             if (scrollState.maxValue > 0) {
                 scrollState.value.toFloat() / scrollState.maxValue.toFloat()

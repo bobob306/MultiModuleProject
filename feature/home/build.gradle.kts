@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:renderer"))
     implementation(project(":core:common:uicomponents"))
+    implementation(project(":core:authentication"))
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.firestore)
