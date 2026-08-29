@@ -88,6 +88,10 @@ class BabyCareHomeViewModelTest {
         val event = mapOf("id" to "e1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")
         fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(event))))
 
+        // Add a measurement
+        val measurement = mapOf("id" to "m1", "type" to "MEASUREMENT", "weight" to 3.5, "dateTimeString" to "$date 11:00")
+        fakeService.saveMeasurement(userId, "m1", measurement)
+
         // When - triggering a refresh or just observing (init already triggered it)
         viewModel.refreshData()
 
@@ -96,8 +100,9 @@ class BabyCareHomeViewModelTest {
             val result = awaitItem()
             assertTrue(result is Result.Success)
             val data = (result as Result.Success).data
-            assertEquals(1, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
+            assertEquals(2, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
             assertEquals("Last feed: 10:00", data.lastFeeding)
+            assertEquals("Last: 3.50kg", data.lastMeasurement)
         }
     }
 
@@ -220,6 +225,9 @@ class BabyCareHomeViewModelTest {
         )
         fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to events)))
 
+        // Measurement
+        fakeService.saveMeasurement(userId, "m1", mapOf("id" to "m1", "type" to "MEASUREMENT", "dateTimeString" to "$date 13:00"))
+
         // When
         viewModel.refreshData()
 
@@ -229,6 +237,7 @@ class BabyCareHomeViewModelTest {
         assertEquals(2, header.feedingCount)
         assertEquals(1, header.nappyCount)
         assertEquals(0, header.temperatureCount)
+        assertEquals(1, header.measurementCount)
     }
 
     @Test

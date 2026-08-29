@@ -132,6 +132,32 @@ class BabyCareRepositoryImplTest {
     }
 
     @Test
+    fun `saveActivityEvent for measurement updates separate collection and cache`() = runTest {
+        val date = "2026-08-26"
+        val event = UnifiedEventDto(id = "m1", type = "MEASUREMENT", weight = 3.5, dateTimeString = "$date 10:00")
+
+        repository.saveActivityEvent(userId, date, event)
+
+        // Check cache
+        repository.cachedDays.test {
+            val cached = awaitItem()
+            assertTrue(cached.any { it.date == date && it.events.any { e -> e.id == "m1" } })
+        }
+        
+        // Check measurements flow
+        repository.measurements.test {
+            val measurements = awaitItem()
+            assertEquals(1, measurements.size)
+            assertEquals("m1", measurements.first().id)
+        }
+
+        // Check fake database
+        val measurements = fakeService.fetchAllMeasurements(userId)
+        assertEquals(1, measurements.size)
+        assertEquals("m1", measurements.first()["id"])
+    }
+
+    @Test
     fun `updateActivityEvent updates document and cache`() = runTest {
         val date = "2026-08-26"
         val event = UnifiedEventDto(id = "e1", type = "FEEDING", comment = "Old")
@@ -158,6 +184,31 @@ class BabyCareRepositoryImplTest {
             val cached = awaitItem()
             assertTrue(cached.first { it.date == date }.events.isEmpty())
         }
+    }
+
+    @Test
+    fun `deleteActivityEvent for measurement updates separate collection and cache`() = runTest {
+        val date = "2026-08-26"
+        val event = UnifiedEventDto(id = "m1", type = "MEASUREMENT", weight = 3.5, dateTimeString = "$date 10:00")
+        repository.saveActivityEvent(userId, date, event)
+
+        repository.deleteActivityEvent(userId, date, "m1")
+
+        // Check cache
+        repository.cachedDays.test {
+            val cached = awaitItem()
+            assertTrue(cached.isEmpty() || cached.none { day -> day.events.any { it.id == "m1" } })
+        }
+
+        // Check measurements flow
+        repository.measurements.test {
+            val measurements = awaitItem()
+            assertTrue(measurements.isEmpty())
+        }
+        
+        // Check fake database
+        val measurements = fakeService.fetchAllMeasurements(userId)
+        assertTrue(measurements.isEmpty())
     }
 
     // --- CACHE & DATA PARSING TESTS ---
@@ -223,6 +274,31 @@ class BabyCareRepositoryImplTest {
     }
 
     // --- EDGE CASE ERROR HANDLING ---
+
+    @Test
+    fun `loadInitialData merges measurements from separate collection`() = runTest {
+        val date = "2026-08-26"
+        val monthId = "2026-08"
+        // Feeding event in months collection
+        val monthData = mapOf("days" to mapOf(date to listOf(
+            mapOf("id" to "feed1", "type" to "FEEDING", "dateTimeString" to "$date 10:00")
+        )))
+        fakeService.injectMonth(userId, monthId, monthData)
+
+        // Measurement in measurements collection
+        val measurement = mapOf("id" to "m1", "type" to "MEASUREMENT", "weight" to 3.5, "dateTimeString" to "$date 11:00")
+        fakeService.saveMeasurement(userId, "m1", measurement)
+
+        repository.loadInitialData(userId, 20)
+
+        repository.cachedDays.test {
+            val cached = awaitItem()
+            val day = cached.first { it.date == date }
+            assertEquals(2, day.events.size)
+            assertTrue(day.events.any { it.id == "feed1" })
+            assertTrue(day.events.any { it.id == "m1" })
+        }
+    }
 
     @Test
     fun `fetchMonthDocument handles missing days field gracefully`() = runTest {

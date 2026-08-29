@@ -74,6 +74,7 @@ import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -424,9 +425,10 @@ private fun RadioInputRow(
 @Composable
 private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDate) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MM yy") }
     Button(onClick = { showDatePicker = true }) {
         roastDate?.let {
-            Text("Update Roast Date from $it")
+            Text("Update Roast Date from ${it.format(dateFormatter)}")
         } ?: Text("Select Roast Date")
     }
     // Date Picker Dialog

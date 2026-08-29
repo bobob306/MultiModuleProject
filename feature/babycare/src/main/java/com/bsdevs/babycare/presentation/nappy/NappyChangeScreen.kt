@@ -161,8 +161,14 @@ internal fun NappyChangeScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Date Field
+                    val displayDate = try {
+                        val parts = uiState.date.split("-")
+                        if (parts.size >= 3) {
+                            "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+                        } else uiState.date
+                    } catch (e: Exception) { uiState.date }
                     OutlinedTextField(
-                        value = uiState.date,
+                        value = displayDate,
                         onValueChange = {},
                         label = { Text("Date") },
                         readOnly = true,
@@ -248,8 +254,14 @@ internal fun NappyChangeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val displayDate = try {
+                    val parts = uiState.date.split("-")
+                    if (parts.size >= 3) {
+                        "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+                    } else uiState.date
+                } catch (e: Exception) { uiState.date }
                 OutlinedTextField(
-                    value = uiState.date,
+                    value = displayDate,
                     onValueChange = {},
                     label = { Text("Date") },
                     readOnly = true,

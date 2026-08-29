@@ -7,9 +7,93 @@ import com.bsdevs.network.dto.SizeDto
 import com.bsdevs.network.dto.SpacerType
 import javax.inject.Inject
 
-interface ScreenDtoMapper : FirebaseMapper<HashMap<*, *>, List<ScreenDto>>
+interface ScreenDtoMapper : FirebaseMapper<HashMap<*, *>, List<ScreenDto>> {
+    fun mapToFirebase(dtos: List<ScreenDto>): Map<String, Any?>
+}
 
 class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
+    override fun mapToFirebase(dtos: List<ScreenDto>): Map<String, Any?> {
+        val components = dtos.map { dto ->
+            when (dto) {
+                is ScreenDto.CardDto -> mapOf(
+                    "type" to "CARD",
+                    "index" to dto.index,
+                    "title" to dto.title,
+                    "subtitle" to dto.subtitle,
+                    "backgroundColor" to dto.backgroundColor,
+                    "IMAGE" to mapOf(
+                        "index" to dto.image.index,
+                        "url" to dto.image.url,
+                        "contentDescription" to dto.image.contentDescription,
+                        "height" to dto.image.height,
+                        "width" to dto.image.width
+                    )
+                )
+                is ScreenDto.ImageDto -> mapOf(
+                    "type" to "IMAGE",
+                    "index" to dto.index,
+                    "url" to dto.url,
+                    "contentDescription" to dto.contentDescription,
+                    "height" to dto.height,
+                    "width" to dto.width
+                )
+                is ScreenDto.TitleDto -> mapOf(
+                    "type" to "TITLE",
+                    "index" to dto.index,
+                    "content" to dto.content
+                )
+                is ScreenDto.SubtitleDto -> mapOf(
+                    "type" to "SUBTITLE",
+                    "index" to dto.index,
+                    "content" to dto.content
+                )
+                is ScreenDto.SpacerDto -> mapOf(
+                    "type" to "SPACER",
+                    "index" to dto.index,
+                    "size" to arrayListOf(
+                        dto.size.type.name,
+                        if (dto.size.type == SpacerType.HEIGHT) dto.size.size else dto.size.weight
+                    )
+                )
+                is ScreenDto.NavigationButtonDto -> mapOf(
+                    "type" to "NAVIGATION_BUTTON",
+                    "index" to dto.index,
+                    "label" to dto.label,
+                    "destination" to dto.destination,
+                    "location" to dto.location?.name,
+                    "sort" to dto.sort?.name
+                )
+                is ScreenDto.SmallTitleDto -> mapOf(
+                    "type" to "SMALL_TITLE",
+                    "index" to dto.index,
+                    "content" to dto.content
+                )
+                is ScreenDto.ActivityFeedDto -> mapOf(
+                    "type" to "ACTIVITY_FEED",
+                    "index" to dto.index
+                )
+                is ScreenDto.TileRowDto -> mapOf(
+                    "type" to "TILE_ROW",
+                    "index" to dto.index,
+                    "tiles" to dto.tiles.map { tile ->
+                        mapOf(
+                            "index" to tile.index,
+                            "title" to tile.title,
+                            "iconName" to tile.iconName,
+                            "destination" to tile.destination,
+                            "subtitleType" to tile.subtitleType,
+                            "sharedElementKey" to tile.sharedElementKey
+                        )
+                    }
+                )
+                else -> emptyMap<String, Any?>()
+            }
+        }
+        // By default, we'll put everything under a "components" key to keep it simple
+        // since the current mapper just flattens everything anyway.
+        return mapOf("components" to components)
+    }
+
     override fun mapToDto(map: HashMap<*, *>): List<ScreenDto> {
         val listOfLists = map.map {
             val listedItems = it.value as List<HashMap<*, *>>

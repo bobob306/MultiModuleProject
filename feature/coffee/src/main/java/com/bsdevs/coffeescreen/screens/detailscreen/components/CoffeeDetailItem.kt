@@ -49,7 +49,13 @@ internal fun CoffeeDetailGrid(coffeeDto: CoffeeDto) {
     ) {
         item {
             coffeeDto.roastDate?.takeIf { it.isNotBlank() }?.let {
-                CoffeeDetailItem(label = "Roast Date", value = it)
+                val displayDate = try {
+                    val parts = it.split("-")
+                    if (parts.size >= 3) {
+                        "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+                    } else it
+                } catch (e: Exception) { it }
+                CoffeeDetailItem(label = "Roast Date", value = displayDate)
             }
         }
         item {

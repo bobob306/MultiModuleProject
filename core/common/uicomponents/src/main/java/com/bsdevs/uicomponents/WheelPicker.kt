@@ -361,7 +361,7 @@ fun HorizontalWheelPicker(
 
 @Composable
 fun WheelInput(
-    isDecimal: Boolean?,
+    decimalPlaces: Int = 0,
     startNumber: Int,
     endNumber: Int,
     initialSelectedItem: Int,
@@ -375,9 +375,11 @@ fun WheelInput(
         verticalArrangement = Arrangement.Center
     ) {
         var selectedItem by remember { mutableIntStateOf(initialSelectedItem) }
-        val df = DecimalFormat("#.#")
-        val text = if (isDecimal == true) {
-            df.format(selectedItem.toDouble() / 10.0)
+        val pattern = if (decimalPlaces > 0) "#." + "#".repeat(decimalPlaces) else "#"
+        val df = DecimalFormat(pattern)
+        val divisor = Math.pow(10.0, decimalPlaces.toDouble())
+        val text = if (decimalPlaces > 0) {
+            df.format(selectedItem.toDouble() / divisor)
         } else selectedItem.toString()
         Row(horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, modifier = Modifier.padding(end = 8.dp))
@@ -392,7 +394,7 @@ fun WheelInput(
                 selectedItem = item
                 onItemSelected(item)
             },
-            isDecimal = isDecimal ?: false
+            isDecimal = decimalPlaces > 0
         )
     }
 }
@@ -405,27 +407,30 @@ private fun VerticalLinePreview() {
             Modifier.wrapContentSize(), Arrangement.Center, Alignment.CenterHorizontally
         ) {
             var selectedItem by remember { mutableIntStateOf(330) }
-            val df = DecimalFormat("#.#")
-            Text(text = df.format(selectedItem.toDouble() / 10.0), fontSize = 46.sp)
+            Text(text = "Preview", fontSize = 46.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalWheelPicker(
-                isDecimal = true,
+            WheelInput(
+                decimalPlaces = 1,
                 startNumber = 300,
                 endNumber = 400,
                 initialSelectedItem = selectedItem,
                 onItemSelected = { item: Int ->
                     selectedItem = item
-                })
+                },
+                label = "Temp"
+            )
             var selectedItem2 by remember { mutableIntStateOf(27) }
-            Text(text = selectedItem2.toString(), fontSize = 46.sp)
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalWheelPicker(
+            WheelInput(
+                decimalPlaces = 0,
                 startNumber = 20,
                 endNumber = 60,
                 initialSelectedItem = selectedItem2,
                 onItemSelected = { item: Int ->
                     selectedItem2 = item
-                })
+                },
+                label = "Age"
+            )
         }
     }
 }

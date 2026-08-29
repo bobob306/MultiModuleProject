@@ -424,8 +424,15 @@ fun DayNavigationHeader(
             )
         }
 
+        val displayDate = try {
+            val parts = date.split("-")
+            if (parts.size >= 3) {
+                "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+            } else date
+        } catch (e: Exception) { date }
+
         Text(
-            text = date,
+            text = displayDate,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
@@ -510,8 +517,15 @@ fun TemperatureForm(
         
         HorizontalDivider()
 
+        val displayDate = try {
+            val parts = uiState.date.split("-")
+            if (parts.size >= 3) {
+                "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+            } else uiState.date
+        } catch (e: Exception) { uiState.date }
+
         MMPClickableTextField(
-            value = uiState.date,
+            value = displayDate,
             label = "Date",
             onClick = onDateSelected,
             enabled = !uiState.isLoading,
@@ -529,7 +543,7 @@ fun TemperatureForm(
         )
 
         WheelInput(
-            isDecimal = true,
+            decimalPlaces = 1,
             startNumber = 350,
             endNumber = 420,
             initialSelectedItem = uiState.temperatureValue,

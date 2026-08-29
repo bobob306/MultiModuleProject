@@ -324,13 +324,9 @@ fun DailyAverageGapCanvas(
                     // 1. Zoomed In: Show complete detailed labels normally
                     val displayDate = try {
                         val parts = item.dateString.split("-")
-                        if (parts.size >= 3) "${parts[2]} ${
-                            when (parts[1]) {
-                                "01" -> "Jan"; "02" -> "Feb"; "03" -> "Mar"; "04" -> "Apr"; "05" -> "May"; "06" -> "Jun";
-                                "07" -> "Jul"; "08" -> "Aug"; "09" -> "Sep"; "10" -> "Oct"; "11" -> "Nov"; "12" -> "Dec";
-                                else -> parts[1]
-                            }
-                        }" else item.dateString
+                        if (parts.size >= 3) {
+                            "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+                        } else item.dateString
                     } catch (e: Exception) {
                         item.dateString
                     }
