@@ -7,7 +7,7 @@ import com.bsdevs.network.ScreenDtoMapper
 import com.bsdevs.network.dto.ScreenDto
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
-import jakarta.inject.Inject
+import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
@@ -18,6 +18,8 @@ interface ScreenRepository {
     suspend fun getScreen(screen: String): Task<DocumentSnapshot>
 
     suspend fun getScreenFlow(screen: String, forceRefresh: Boolean = false): Flow<Result<List<ScreenDto>>>
+
+    suspend fun updateScreen(screen: String, dtos: List<ScreenDto>)
 
     fun clearCache()
 }
@@ -56,6 +58,13 @@ class ScreenRepositoryImpl @Inject constructor(
                 flowOf(Result.Error(e))
             }
         }
+    }
+
+    override suspend fun updateScreen(screen: String, dtos: List<ScreenDto>) = withContext(dispatchers.io) {
+        val map = mapper.mapToFirebase(dtos)
+        android.util.Log.d("FIREBASE_CALL", "Update Screen: $screen")
+        scr.document(screen).set(map).await()
+        cacheFlowMap[screen] = dtos
     }
 
     override fun clearCache() {

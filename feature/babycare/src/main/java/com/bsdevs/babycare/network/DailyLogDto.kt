@@ -28,5 +28,10 @@ data class UnifiedEventDto(
     val bottleAmountMl: Int? = null,
 
     // Temperature-specific fields (nullable)
-    val temperature: Double? = null
+    val temperature: Double? = null,
+
+    // Measurement-specific fields (nullable)
+    val height: Double? = null,
+    val weight: Double? = null,
+    val isMedical: Boolean? = null
 )

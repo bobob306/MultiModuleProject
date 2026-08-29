@@ -6,6 +6,9 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
     
     // Map<UserId, Map<MonthId, Map<String, Any>>>
     private val database = mutableMapOf<String, MutableMap<String, Map<String, Any>>>()
+    
+    // Map<UserId, Map<EventId, Map<String, Any>>>
+    private val measurementsDb = mutableMapOf<String, MutableMap<String, Map<String, Any>>>()
 
     fun injectMonth(userId: String, monthId: String, data: Map<String, Any>) {
         database.getOrPut(userId) { mutableMapOf() }[monthId] = data
@@ -61,5 +64,33 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
         }
         monthData["days"] = days
         userDb[monthId] = monthData as Map<String, Any>
+    }
+
+    override suspend fun fetchAllMeasurements(userId: String): List<Map<String, Any?>> {
+        val allData = measurementsDb[userId]?.get("all_data") as? Map<String, Any?>
+        val items = allData?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+        return items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
+    }
+
+    override suspend fun saveMeasurement(userId: String, eventId: String, measurement: Map<String, Any?>) {
+        val userDb = measurementsDb.getOrPut(userId) { mutableMapOf() }
+        val allData = userDb.getOrDefault("all_data", mutableMapOf<String, Any?>()).toMutableMap()
+        val items = (allData["items"] as? Map<String, Map<String, Any?>> ?: emptyMap()).toMutableMap()
+        items[eventId] = measurement
+        allData["items"] = items
+        userDb["all_data"] = allData as Map<String, Any>
+    }
+
+    override suspend fun updateMeasurement(userId: String, eventId: String, updatedMeasurement: Map<String, Any?>) {
+        saveMeasurement(userId, eventId, updatedMeasurement)
+    }
+
+    override suspend fun deleteMeasurement(userId: String, eventId: String) {
+        val userDb = measurementsDb[userId] ?: return
+        val allData = userDb["all_data"]?.toMutableMap() ?: return
+        val items = (allData["items"] as? Map<String, Map<String, Any?>> ?: return).toMutableMap()
+        items.remove(eventId)
+        allData["items"] = items
+        userDb["all_data"] = allData as Map<String, Any>
     }
 }

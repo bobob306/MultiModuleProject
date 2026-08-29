@@ -70,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
@@ -86,10 +87,12 @@ fun BabyCareHomeScreenRoute(
     onNavigateToNappyChange: () -> Unit,
     onNavigateToFeeding: () -> Unit,
     onNavigateToTemperature: () -> Unit,
+    onNavigateToMeasurement: () -> Unit,
     onNavigateToGraph: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
+    onNavigateToEditMeasurement: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
@@ -101,6 +104,7 @@ fun BabyCareHomeScreenRoute(
             "babycare://nappy" -> onNavigateToNappyChange()
             "babycare://feeding" -> onNavigateToFeeding()
             "babycare://temperature" -> onNavigateToTemperature()
+            "babycare://measurement" -> onNavigateToMeasurement()
             "babycare://graph" -> onNavigateToGraph()
             else -> {
                 // Handle unknown or generic navigation if necessary
@@ -116,6 +120,7 @@ fun BabyCareHomeScreenRoute(
                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                 onNavigateToEditTemperature = onNavigateToEditTemperature,
+                onNavigateToEditMeasurement = onNavigateToEditMeasurement,
                 onToggleFilter = viewModel::toggleActivityFilter,
                 onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                 onLoadMore = viewModel::loadMore,
@@ -147,6 +152,7 @@ internal fun BabyCareHomeScreen(
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
+    onNavigateToEditMeasurement: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onToggleHeaderCollapse: (String) -> Unit,
     onLoadMore: () -> Unit,
@@ -216,6 +222,7 @@ internal fun BabyCareHomeScreen(
                                 onNavigateToEditNappyChange = onNavigateToEditNappyChange,
                                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                                 onNavigateToEditTemperature = onNavigateToEditTemperature,
+                                onNavigateToEditMeasurement = onNavigateToEditMeasurement,
                                 onToggleFilter = onToggleFilter,
                                 onDeleteActivity = { activityToDelete = it },
                                 onLoadMore = onLoadMore,
@@ -291,6 +298,7 @@ private fun LazyListScope.renderActivityFeed(
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
+    onNavigateToEditMeasurement: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onDeleteActivity: (BabyActivity) -> Unit,
     onLoadMore: () -> Unit,
@@ -344,6 +352,12 @@ private fun LazyListScope.renderActivityFeed(
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
+                            if (feedItem.measurementCount > 0) {
+                                Text(
+                                    text = "⚖️ ${feedItem.measurementCount}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -355,6 +369,7 @@ private fun LazyListScope.renderActivityFeed(
                     is BabyActivity.Nappy -> currentActivity.dto.id
                     is BabyActivity.Feeding -> currentActivity.dto.id
                     is BabyActivity.Temperature -> currentActivity.dto.id
+                    is BabyActivity.Measurement -> currentActivity.dto.id
                 }
 
                 item(key = "row_$uniqueId") {
@@ -407,12 +422,14 @@ private fun LazyListScope.renderActivityFeed(
                                         is BabyActivity.Nappy -> currentActivity.dto.id
                                         is BabyActivity.Feeding -> currentActivity.dto.id
                                         is BabyActivity.Temperature -> currentActivity.dto.id
+                                        is BabyActivity.Measurement -> currentActivity.dto.id
                                     }
                                     activityId?.let {
                                         when (currentActivity) {
                                             is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
                                             is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
                                             is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
+                                            is BabyActivity.Measurement -> onNavigateToEditMeasurement(activityId)
                                         }
                                     }
                                 },
@@ -421,6 +438,7 @@ private fun LazyListScope.renderActivityFeed(
                                         is BabyActivity.Nappy -> ActivityFilter.NAPPY
                                         is BabyActivity.Feeding -> ActivityFilter.FEEDING
                                         is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
+                                        is BabyActivity.Measurement -> ActivityFilter.MEASUREMENT
                                     }
                                     onToggleFilter(targetFilter)
                                 },
@@ -460,6 +478,7 @@ private fun BabyCareTileRow(
                 "NAPPY" -> viewData.lastNappyChange
                 "FEEDING" -> viewData.lastFeeding
                 "TEMPERATURE" -> viewData.lastTemperature
+                "MEASUREMENT" -> viewData.lastMeasurement
                 else -> null
             }
             BabyCareTile(
@@ -486,6 +505,7 @@ private fun mapIconNameToVector(iconName: String): ImageVector {
         "Restaurant" -> Icons.Default.Restaurant
         "Thermostat" -> Icons.Default.Thermostat
         "AutoGraph" -> Icons.Default.AutoGraph
+        "Scale" -> Icons.Default.AutoGraph
         else -> Icons.Default.ChildCare
     }
 }
@@ -516,6 +536,11 @@ fun ActivityFeedItem(
             Color(0xFFFFF3E0), // Light Orange
             Color(0xFFE65100)  // Dark Orange
         )
+        is BabyActivity.Measurement -> Triple(
+            Icons.Default.AutoGraph,
+            Color(0xFFF3E5F5), // Light Purple
+            Color(0xFF7B1FA2)  // Dark Purple
+        )
     }
 
     val title = when (item) {
@@ -529,12 +554,19 @@ fun ActivityFeedItem(
             }
         }
         is BabyActivity.Temperature -> "Temperature: ${item.dto.temperature}°C"
+        is BabyActivity.Measurement -> {
+            val weightStr = item.dto.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
+            val heightStr = item.dto.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+            val typeStr = if (item.dto.isMedical) " (Medical)" else " (Self)"
+            "Measurement: $weightStr $heightStr$typeStr"
+        }
     }
 
     val activityId = when (item) {
         is BabyActivity.Nappy -> item.dto.id
         is BabyActivity.Feeding -> item.dto.id
         is BabyActivity.Temperature -> item.dto.id
+        is BabyActivity.Measurement -> item.dto.id
     }
 
     val dismissState = rememberSwipeToDismissBoxState()

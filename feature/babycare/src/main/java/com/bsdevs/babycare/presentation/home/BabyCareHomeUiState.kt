@@ -8,7 +8,8 @@ sealed class HomeFeedItem {
         val title: String,
         val feedingCount: Int,
         val nappyCount: Int,
-        val temperatureCount: Int
+        val temperatureCount: Int,
+        val measurementCount: Int
     ) : HomeFeedItem()
 
     data class ActivityRow(val activity: BabyActivity) : HomeFeedItem()
@@ -18,6 +19,7 @@ data class BabyCareHomeViewData(
     val lastNappyChange: String? = null,
     val lastFeeding: String? = null,
     val lastTemperature: String? = null,
+    val lastMeasurement: String? = null,
     val activityFeed: List<HomeFeedItem> = emptyList(),
     val dynamicUi: List<NetworkScreenData> = emptyList(),
     val canLoadMore: Boolean = true,
@@ -27,4 +29,4 @@ data class BabyCareHomeViewData(
     val collapsedHeaders: Set<String> = emptySet(),
 )
 
-enum class ActivityFilter { NONE, NAPPY, FEEDING, TEMPERATURE }
+enum class ActivityFilter { NONE, NAPPY, FEEDING, TEMPERATURE, MEASUREMENT }

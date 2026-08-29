@@ -31,6 +31,9 @@ class BabyCareRepositoryImpl @Inject constructor(
     private val _cachedDays = MutableStateFlow<List<DailyLogDto>>(emptyList())
     override val cachedDays: StateFlow<List<DailyLogDto>> = _cachedDays.asStateFlow()
 
+    private val _measurements = MutableStateFlow<List<UnifiedEventDto>>(emptyList())
+    override val measurements: StateFlow<List<UnifiedEventDto>> = _measurements.asStateFlow()
+
     private var currentAnchorMonth: YearMonth? = null
 
     override suspend fun loadInitialData(userId: String, pageSize: Int, forceRefresh: Boolean): RepositoryFetchResult = withContext(dispatchers.io) {
@@ -45,14 +48,19 @@ class BabyCareRepositoryImpl @Inject constructor(
         try {
             val latestMonthId = apiService.getLatestMonthId(userId, forceRefresh)
 
+            // 1. Fetch all measurements once (Separate collection)
+            val measurementList = apiService.fetchAllMeasurements(userId).map { parseUnifiedEvent(it) }
+            _measurements.value = measurementList
+
             if (latestMonthId == null) {
                 _cachedDays.value = emptyList()
+                mergeAndSortCachedDays(emptyList(), measurementList, userId)
                 currentAnchorMonth = null
                 return@withContext RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
             }
 
             val monthlyDays = fetchMonthFromService(userId, latestMonthId, forceRefresh)
-            _cachedDays.value = monthlyDays.sortedByDescending { it.date }
+            mergeAndSortCachedDays(monthlyDays, measurementList, userId)
 
             val nextMonthId = apiService.getMonthIdBefore(userId, latestMonthId)
             currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
@@ -98,7 +106,10 @@ class BabyCareRepositoryImpl @Inject constructor(
             rightDuration = (eventMap["rightDuration"] as? Number)?.toLong() ?: 0L,
             totalDuration = (eventMap["totalDuration"] as? Number)?.toLong() ?: 0L,
             bottleAmountMl = (eventMap["bottleAmountMl"] as? Number)?.toInt(),
-            temperature = (eventMap["temperature"] as? Number)?.toDouble()
+            temperature = (eventMap["temperature"] as? Number)?.toDouble(),
+            height = (eventMap["height"] as? Number)?.toDouble(),
+            weight = (eventMap["weight"] as? Number)?.toDouble(),
+            isMedical = eventMap["isMedical"] as? Boolean
         )
     }
 
@@ -113,7 +124,26 @@ class BabyCareRepositoryImpl @Inject constructor(
         val monthId = formatYearMonth(anchor)
 
         val newMonthlyDays = fetchMonthFromService(userId, monthId)
-        _cachedDays.value = (_cachedDays.value + newMonthlyDays).sortedByDescending { it.date }
+        val currentDays = _cachedDays.value
+        
+        // We need to filter out the measurements from the current cached days before merging new monthly days
+        // to avoid duplicating them if we call mergeAndSortCachedDays again.
+        // Actually, mergeAndSortCachedDays handles merging measurements into days.
+        
+        // Let's improve the merging logic.
+        val measurementsOnly = _measurements.value
+        
+        // Combine old and new days from 'months' collection
+        // But we need to extract only the non-measurement events from currentDays first?
+        // No, let's just use a more robust merging function.
+        
+        val allMonthlyDays = (currentDays.map { day -> 
+            day.copy(events = day.events.filter { it.type != "MEASUREMENT" }) 
+        } + newMonthlyDays).groupBy { it.date }.map { (date, logs) ->
+            DailyLogDto(date, userId, logs.flatMap { it.events })
+        }
+
+        mergeAndSortCachedDays(allMonthlyDays, measurementsOnly, userId)
 
         val nextMonthId = apiService.getMonthIdBefore(userId, monthId)
         currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
@@ -122,20 +152,36 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) = withContext(dispatchers.io) {
-        val monthId = extractMonthString(date)
-        apiService.saveEvent(userId, monthId, date, toMap(event))
+        if (event.type == "MEASUREMENT") {
+            apiService.saveMeasurement(userId, event.id, toMap(event))
+            _measurements.value = (_measurements.value + event).sortedByDescending { it.dateTimeString }
+        } else {
+            val monthId = extractMonthString(date)
+            apiService.saveEvent(userId, monthId, date, toMap(event))
+        }
         updateLocalCacheWithNewEvent(date, userId, event)
     }
 
     override suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto) = withContext(dispatchers.io) {
-        val monthId = extractMonthString(date)
-        apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
+        if (updatedEvent.type == "MEASUREMENT") {
+            apiService.updateMeasurement(userId, eventId, toMap(updatedEvent))
+            _measurements.value = _measurements.value.map { if (it.id == eventId) updatedEvent else it }
+        } else {
+            val monthId = extractMonthString(date)
+            apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
+        }
         updateLocalCacheWithModifiedEvent(date, eventId, updatedEvent)
     }
 
     override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) = withContext(dispatchers.io) {
-        val monthId = extractMonthString(date)
-        apiService.deleteEvent(userId, monthId, date, eventId)
+        val cachedEvent = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == eventId }
+        if (cachedEvent?.type == "MEASUREMENT") {
+            apiService.deleteMeasurement(userId, eventId)
+            _measurements.value = _measurements.value.filterNot { it.id == eventId }
+        } else {
+            val monthId = extractMonthString(date)
+            apiService.deleteEvent(userId, monthId, date, eventId)
+        }
         updateLocalCacheWithDeletedEvent(date, eventId)
     }
 
@@ -150,6 +196,31 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getNappyEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
+    override suspend fun getMeasurementEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
+
+    private fun mergeAndSortCachedDays(monthlyDays: List<DailyLogDto>, measurements: List<UnifiedEventDto>, userId: String) {
+        // 1. Group measurements by date (YYYY-MM-DD)
+        val measurementsByDate = measurements.groupBy { it.dateTimeString.split(" ").first() }
+
+        // 2. Take monthly days and merge measurements into them
+        val mergedDays = monthlyDays.toMutableList()
+        
+        measurementsByDate.forEach { (date, measurementEvents) ->
+            val existingDayIndex = mergedDays.indexOfFirst { it.date == date }
+            if (existingDayIndex != -1) {
+                // Day already exists in 'months' collection, append measurements
+                val existingDay = mergedDays[existingDayIndex]
+                // Filter out any old measurements that might be there (to be safe)
+                val cleanEvents = existingDay.events.filter { it.type != "MEASUREMENT" }
+                mergedDays[existingDayIndex] = existingDay.copy(events = cleanEvents + measurementEvents)
+            } else {
+                // Day doesn't exist in 'months' cache, create a new one just for measurements
+                mergedDays.add(DailyLogDto(date, userId, measurementEvents))
+            }
+        }
+
+        _cachedDays.value = mergedDays.sortedByDescending { it.date }
+    }
 
     private fun formatYearMonth(ym: YearMonth) = String.format(java.util.Locale.ROOT, "%04d-%02d", ym.year, ym.monthValue)
     private fun extractMonthString(date: String) = date.substring(0, 7)
@@ -158,7 +229,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         "id" to e.id, "type" to e.type, "time" to e.time, "dateTimeString" to e.dateTimeString,
         "comment" to e.comment, "nappyType" to e.nappyType, "mainFeedingSide" to e.mainFeedingSide,
         "leftDuration" to e.leftDuration, "rightDuration" to e.rightDuration, "totalDuration" to e.totalDuration,
-        "bottleAmountMl" to e.bottleAmountMl, "temperature" to e.temperature
+        "bottleAmountMl" to e.bottleAmountMl, "temperature" to e.temperature,
+        "height" to e.height, "weight" to e.weight, "isMedical" to e.isMedical
     )
 
     private fun updateLocalCacheWithNewEvent(date: String, userId: String, event: UnifiedEventDto) {
@@ -192,6 +264,7 @@ class BabyCareRepositoryImpl @Inject constructor(
 
     override fun clearCache() {
         _cachedDays.value = emptyList()
+        _measurements.value = emptyList()
         currentAnchorMonth = null
     }
 }

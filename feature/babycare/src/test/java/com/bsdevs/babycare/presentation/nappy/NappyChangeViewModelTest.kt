@@ -74,17 +74,17 @@ class NappyChangeViewModelTest {
         // Given
         val eventId = UUID.randomUUID().toString()
         val date = "2026-08-26"
-        val rawData = mapOf("days" to mapOf(date to listOf(
+        val correctData = mapOf("days" to mapOf(date to listOf(
             mapOf(
                 "id" to eventId, 
-                "type" to "NAPPY", 
+                "type" to "NAPPY",
                 "nappyType" to "Wet",
                 "time" to "11:00", 
                 "dateTimeString" to "$date 11:00",
                 "comment" to "Quick change"
             )
         )))
-        fakeService.injectMonth(userId, "2026-08", rawData)
+        fakeService.injectMonth(userId, "2026-08", correctData)
 
         // When
         createViewModel(activityId = eventId)

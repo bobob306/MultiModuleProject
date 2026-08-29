@@ -7,6 +7,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
+import com.bsdevs.babycare.network.MeasurementDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.TemperatureDto
 import com.bsdevs.babycare.network.UnifiedEventDto
@@ -24,7 +25,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
@@ -210,6 +210,16 @@ class BabyCareHomeViewModel @Inject constructor(
             "Last temp: ${it.temperature}°C"
         }
 
+        val lastMeasurementEvent = allEventsFlattened.firstOrNull {
+            it.type == "MEASUREMENT" && (it.weight != null || it.height != null)
+        }
+
+        val absoluteLastMeasurement = lastMeasurementEvent?.let {
+            val weight = it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
+            val height = it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
+            "Last: $weight $height".trim()
+        }
+
         dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
@@ -222,6 +232,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     ActivityFilter.NAPPY -> event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
                     ActivityFilter.FEEDING -> event.type == "FEEDING"
                     ActivityFilter.TEMPERATURE -> event.type == "TEMPERATURE"
+                    ActivityFilter.MEASUREMENT -> event.type == "MEASUREMENT"
                 }
             }
 
@@ -229,6 +240,7 @@ class BabyCareHomeViewModel @Inject constructor(
             val nappyCount =
                 visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
             val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
+            val measurementCount = visibleEvents.count { it.type == "MEASUREMENT" }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
             finalizedFeed.add(
@@ -236,7 +248,8 @@ class BabyCareHomeViewModel @Inject constructor(
                     displayHeaderTitle,
                     feedingCount,
                     nappyCount,
-                    temperatureCount
+                    temperatureCount,
+                    measurementCount
                 )
             )
 
@@ -252,6 +265,7 @@ class BabyCareHomeViewModel @Inject constructor(
             lastNappyChange = absoluteLastNappy,
             lastFeeding = absoluteLastFeeding,
             lastTemperature = absoluteLastTemperature,
+            lastMeasurement = absoluteLastMeasurement,
             activityFeed = finalizedFeed,
             dynamicUi = _dynamicUi.value,
             currentFilter = filter,
@@ -272,6 +286,7 @@ class BabyCareHomeViewModel @Inject constructor(
         val isNappy =
             event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
         val isTemperature = event.type == "TEMPERATURE"
+        val isMeasurement = event.type == "MEASUREMENT"
 
         return if (isNappy) {
             // Fallback: If nappyType is missing because it was saved under 'type', recover it here
@@ -296,6 +311,19 @@ class BabyCareHomeViewModel @Inject constructor(
                     time = extractedTime,
                     dateTime = event.dateTimeString,
                     temperature = event.temperature ?: 37.0,
+                    comment = event.comment
+                )
+            )
+        } else if (isMeasurement) {
+            BabyActivity.Measurement(
+                MeasurementDto(
+                    id = event.id,
+                    date = parentDate,
+                    time = extractedTime,
+                    dateTime = event.dateTimeString,
+                    height = event.height,
+                    weight = event.weight,
+                    isMedical = event.isMedical ?: false,
                     comment = event.comment
                 )
             )
@@ -328,16 +356,10 @@ class BabyCareHomeViewModel @Inject constructor(
                 today -> "Today"
                 today.minusDays(1) -> "Yesterday"
                 else -> {
-                    val day = targetDate.dayOfMonth
-                    val suffix = when {
-                        day in 11..13 -> "th"
-                        day % 10 == 1 -> "st"
-                        day % 10 == 2 -> "nd"
-                        day % 10 == 3 -> "rd"
-                        else -> "th"
-                    }
-                    val monthFormatter = DateTimeFormatter.ofPattern(" MMMM", Locale.ENGLISH)
-                    "$day$suffix${targetDate.format(monthFormatter)}"
+                    val yearShort = targetDate.year.toString().substring(2)
+                    val month = String.format(Locale.getDefault(), "%02d", targetDate.monthValue)
+                    val day = String.format(Locale.getDefault(), "%02d", targetDate.dayOfMonth)
+                    "$day $month $yearShort"
                 }
             }
         } catch (e: Exception) {
@@ -380,6 +402,7 @@ class BabyCareHomeViewModel @Inject constructor(
             is BabyActivity.Feeding -> activity.dto.date to activity.dto.id
             is BabyActivity.Nappy -> activity.dto.date to activity.dto.id
             is BabyActivity.Temperature -> activity.dto.date to activity.dto.id
+            is BabyActivity.Measurement -> activity.dto.date to activity.dto.id
         }
 
         if (date != null && eventId != null) {
@@ -392,4 +415,5 @@ class BabyCareHomeViewModel @Inject constructor(
             }
         }
     }
+
 }

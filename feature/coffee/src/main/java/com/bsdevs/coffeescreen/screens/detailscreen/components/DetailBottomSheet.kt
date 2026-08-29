@@ -42,7 +42,6 @@ import com.bsdevs.uicomponents.WheelInput
 import java.text.DecimalFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 @Composable
 internal fun SheetHeader() {
@@ -303,7 +302,7 @@ private fun InputFields(
         rangeStart = 70,
         rangeEnd = 250,
         onValueChange = { onWeightInChange.invoke(it) },
-        isDecimal = true,
+        decimalPlaces = 1,
     )
     Spacer(modifier = Modifier.height(16.dp))
     WheelInputRow(
@@ -312,7 +311,7 @@ private fun InputFields(
         rangeStart = 140,
         rangeEnd = 650,
         onValueChange = { onWeightOutChange.invoke(it) },
-        isDecimal = true,
+        decimalPlaces = 1,
     )
     Spacer(modifier = Modifier.height(16.dp))
     DateInputRow(
@@ -329,7 +328,7 @@ private fun InputFields(
 private fun WheelInputRow(
     label: String,
     initialNumber: Int,
-    isDecimal: Boolean? = null,
+    decimalPlaces: Int = 0,
     rangeStart: Int,
     rangeEnd: Int,
     onValueChange: (Int) -> Unit
@@ -340,7 +339,7 @@ private fun WheelInputRow(
         horizontalArrangement = Arrangement.Center
     ) {
         WheelInput(
-            isDecimal = isDecimal ?: false,
+            decimalPlaces = decimalPlaces,
             initialSelectedItem = initialNumber,
             startNumber = rangeStart,
             endNumber = rangeEnd,
@@ -358,7 +357,7 @@ private fun DateInputRow(
     onIncrement: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MM yy") }
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -397,7 +396,7 @@ fun PreviewWheelInputRow() {
                 rangeStart = 70,
                 rangeEnd = 250,
                 onValueChange = {},
-                isDecimal = true,
+                decimalPlaces = 1,
             )
             WheelInputRow(
                 label = "Weight Out (grams)",
@@ -405,7 +404,7 @@ fun PreviewWheelInputRow() {
                 rangeStart = 140,
                 rangeEnd = 650,
                 onValueChange = {},
-                isDecimal = true,
+                decimalPlaces = 1,
             )
             WheelInputRow(
                 label = "Time (seconds)",

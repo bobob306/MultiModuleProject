@@ -39,6 +39,9 @@ class FirestoreBabyCareService @Inject constructor(
     private fun getMonthsCollection(babyId: String) =
         firestore.collection("babyLogs").document(babyId).collection("months")
 
+    private fun getMeasurementsDocument(babyId: String) =
+        firestore.collection("babyLogs").document(babyId).collection("measurements").document("all_data")
+
     override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? = withContext(dispatchers.io) {
         try {
             val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
@@ -138,6 +141,37 @@ class FirestoreBabyCareService @Inject constructor(
             val updatedList = events.filterNot { it["id"] == eventId }
             transaction.update(docRef, "days.$date", updatedList)
         }.await()
+        Unit
+    }
+
+    override suspend fun fetchAllMeasurements(userId: String): List<Map<String, Any?>> = withContext(dispatchers.io) {
+        try {
+            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+            Log.d("FIREBASE_CALL", "Read All Measurements (Single Doc) for Baby: $babyId")
+            val snapshot = getMeasurementsDocument(babyId).get().await()
+            val items = snapshot.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+            items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Error fetching measurements", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun saveMeasurement(userId: String, eventId: String, measurement: Map<String, Any?>) = withContext(dispatchers.io) {
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        Log.d("FIREBASE_CALL", "Save Measurement into Single Doc for Baby: $babyId / $eventId")
+        getMeasurementsDocument(babyId).set(mapOf("items" to mapOf(eventId to measurement)), SetOptions.merge()).await()
+        Unit
+    }
+
+    override suspend fun updateMeasurement(userId: String, eventId: String, updatedMeasurement: Map<String, Any?>) = withContext(dispatchers.io) {
+        saveMeasurement(userId, eventId, updatedMeasurement)
+    }
+
+    override suspend fun deleteMeasurement(userId: String, eventId: String) = withContext(dispatchers.io) {
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        Log.d("FIREBASE_CALL", "Delete Measurement from Single Doc for Baby: $babyId / $eventId")
+        getMeasurementsDocument(babyId).update("items.$eventId", FieldValue.delete()).await()
         Unit
     }
 }
