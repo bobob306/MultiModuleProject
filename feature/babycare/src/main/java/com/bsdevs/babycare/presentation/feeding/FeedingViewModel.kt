@@ -55,7 +55,7 @@ class FeedingViewModel @Inject constructor(
                 else -> null
             }
             side?.let { 
-                timerManager.startTimer(it)
+                timerManager.startTimer(it, route.activityId)
                 FeedingTimerService.start(context)
             }
         }
@@ -67,6 +67,7 @@ class FeedingViewModel @Inject constructor(
         viewModelScope.launch {
             timerManager.timerState.collect { timerState ->
                 _uiState.update { it.copy(
+                    id = it.id ?: timerState.activityId,
                     leftDuration = timerState.leftDuration,
                     rightDuration = timerState.rightDuration,
                     isLeftRunning = timerState.isLeftRunning,
@@ -98,8 +99,8 @@ class FeedingViewModel @Inject constructor(
                             comment = feedingEvent.comment ?: ""
                         )
                     }
-                    timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration)
-                    timerManager.setDuration(FeedingSide.RIGHT, feedingEvent.rightDuration)
+                    timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration, feedingEvent.id)
+                    timerManager.setDuration(FeedingSide.RIGHT, feedingEvent.rightDuration, feedingEvent.id)
                 } else {
                     _uiState.update { it.copy(isLoading = false) }
                 }
@@ -114,18 +115,18 @@ class FeedingViewModel @Inject constructor(
     }
 
     fun toggleTimer(side: FeedingSide) {
-        timerManager.toggleTimer(side)
+        timerManager.toggleTimer(side, _uiState.value.id)
         if (timerManager.isAnyTimerRunning()) {
             FeedingTimerService.start(context)
         }
     }
 
     fun onLeftDurationChanged(duration: Long) {
-        timerManager.setDuration(FeedingSide.LEFT, duration)
+        timerManager.setDuration(FeedingSide.LEFT, duration, _uiState.value.id)
     }
 
     fun onRightDurationChanged(duration: Long) {
-        timerManager.setDuration(FeedingSide.RIGHT, duration)
+        timerManager.setDuration(FeedingSide.RIGHT, duration, _uiState.value.id)
     }
 
     fun onStartTimeSelected(hour: Int, minute: Int) {

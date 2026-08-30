@@ -277,7 +277,7 @@ internal fun BabyCareHomeScreen(
                     }
                 }
 
-                if (viewData.activityFeed.isEmpty()) {
+                if (viewData.activityFeed.isEmpty() && !viewData.isRefreshing) {
                     item {
                         Text(
                             text = "No recent activity recorded.",
