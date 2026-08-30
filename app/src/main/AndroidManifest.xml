@@ -19,7 +19,8 @@
             android:name="android.app.appfunctions.app_category"
             android:value="productivity" />
         <activity android:name="com.bsdevs.multimoduleproject.MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTop">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

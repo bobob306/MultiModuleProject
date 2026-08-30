@@ -86,7 +86,11 @@ class BabyCareHomeViewModel @Inject constructor(
                 val fetchResult = repository.loadInitialData(accountService.currentUserId, pageSize)
 
                 // Force switch the state to success immediately, even if the month is brand new/empty
-                updateDisplayFeed(repository.cachedDays.value, fetchResult.hasMoreData)
+                updateDisplayFeed(
+                    dailyLogs = repository.cachedDays.value,
+                    canLoadMore = fetchResult.hasMoreData,
+                    isRefreshing = false
+                )
             } catch (e: Exception) {
                 Log.e("HOME_INIT_ERROR", "Failed initial data block fetch", e)
                 _viewData.value = Result.Error(e)
@@ -96,8 +100,11 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private suspend fun updateDisplayFeed(
         dailyLogs: List<DailyLogDto>,
-        canLoadMore: Boolean = true
+        canLoadMore: Boolean? = null,
+        isRefreshing: Boolean? = null,
+        isLoadingMore: Boolean? = null
     ) {
+        val currentState = (_viewData.value as? Result.Success)?.data
         val processedFeed = processFeed(
             dailyLogs = dailyLogs,
             filter = _currentFilter.value,
@@ -105,9 +112,9 @@ class BabyCareHomeViewModel @Inject constructor(
         )
         _viewData.value = Result.Success(
             processedFeed.copy(
-                isRefreshing = false,
-                isLoadingMore = false,
-                canLoadMore = canLoadMore
+                isRefreshing = isRefreshing ?: currentState?.isRefreshing ?: false,
+                isLoadingMore = isLoadingMore ?: currentState?.isLoadingMore ?: false,
+                canLoadMore = canLoadMore ?: currentState?.canLoadMore ?: true
             )
         )
     }
@@ -138,7 +145,11 @@ class BabyCareHomeViewModel @Inject constructor(
 
             try {
                 val refreshResult = repository.refreshData(accountService.currentUserId, pageSize)
-                updateDisplayFeed(repository.cachedDays.value, refreshResult.hasMoreData)
+                updateDisplayFeed(
+                    dailyLogs = repository.cachedDays.value,
+                    canLoadMore = refreshResult.hasMoreData,
+                    isRefreshing = false
+                )
             } catch (exception: Exception) {
                 Log.e("REFRESH_ERROR", "Failed to clear refresh cycle", exception)
                 _viewData.value = Result.Success(current.copy(isRefreshing = false))

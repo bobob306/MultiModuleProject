@@ -16,6 +16,7 @@ import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
 
 data class FeedingTimerState(
+    val activityId: String? = null,
     val leftDuration: Long = 0,
     val rightDuration: Long = 0,
     val isLeftRunning: Boolean = false,
@@ -34,7 +35,7 @@ class FeedingTimerManager @Inject constructor(
     private val timerJobs = mutableMapOf<FeedingSide, Job?>()
     private val baseDurations = mutableMapOf<FeedingSide, Long>().withDefault { 0L }
 
-    fun toggleTimer(side: FeedingSide) {
+    fun toggleTimer(side: FeedingSide, activityId: String? = null) {
         val isRunning = when (side) {
             FeedingSide.LEFT -> _timerState.value.isLeftRunning
             FeedingSide.RIGHT -> _timerState.value.isRightRunning
@@ -43,20 +44,26 @@ class FeedingTimerManager @Inject constructor(
         if (isRunning) {
             pauseTimer(side)
         } else {
-            startTimer(side)
+            startTimer(side, activityId)
         }
     }
 
-    fun startTimer(side: FeedingSide) {
+    fun startTimer(side: FeedingSide, activityId: String? = null) {
         if (timerJobs[side]?.isActive == true) return
 
         val sessionStartTime = timeProvider.elapsedRealtime()
         val previousAccumulatedDuration = baseDurations.getValue(side)
 
         _timerState.update { state ->
-            when (side) {
+            val newState = when (side) {
                 FeedingSide.LEFT -> state.copy(isLeftRunning = true)
                 FeedingSide.RIGHT -> state.copy(isRightRunning = true)
+            }
+            // Update activityId if provided and not already set
+            if (activityId != null && newState.activityId == null) {
+                newState.copy(activityId = activityId)
+            } else {
+                newState
             }
         }
 
@@ -94,13 +101,14 @@ class FeedingTimerManager @Inject constructor(
         }
     }
 
-    fun setDuration(side: FeedingSide, duration: Long) {
+    fun setDuration(side: FeedingSide, duration: Long, activityId: String? = null) {
         baseDurations[side] = duration
         _timerState.update { state ->
-            when (side) {
+            val newState = when (side) {
                 FeedingSide.LEFT -> state.copy(leftDuration = duration)
                 FeedingSide.RIGHT -> state.copy(rightDuration = duration)
             }
+            if (activityId != null) newState.copy(activityId = activityId) else newState
         }
     }
 

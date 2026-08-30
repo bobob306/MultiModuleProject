@@ -11,6 +11,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,10 +72,19 @@ class FeedingTimerService : Service() {
     }
 
     private fun createNotification(contentText: String): Notification {
-        val intent = Intent().apply {
+        val state = timerManager.timerState.value
+        val deepLinkUri = if (state.activityId != null) {
+            "babycare://feeding?activityId=${state.activityId}"
+        } else {
+            "babycare://feeding"
+        }
+
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            deepLinkUri.toUri()
+        ).apply {
             setClassName(this@FeedingTimerService.packageName, "com.bsdevs.multimoduleproject.MainActivity")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            putExtra("navigate_to", "feeding")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         
         val pendingIntent = PendingIntent.getActivity(
