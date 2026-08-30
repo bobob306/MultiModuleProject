@@ -1,6 +1,10 @@
 package com.bsdevs.babycare.presentation.feeding
 
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -31,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,11 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.animation.MilkSplodgeAnimation
@@ -70,6 +77,23 @@ fun FeedingScreenRoute(
     viewModel: FeedingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -84,6 +108,9 @@ fun FeedingScreenRoute(
                 }
                 is FeedingEvent.SaveError -> {
                     onShowSnackBar("Error saving feeding: ${event.message}", null)
+                }
+                is FeedingEvent.CancelSuccess -> {
+                    onNavigateBack()
                 }
             }
         }
@@ -105,8 +132,14 @@ fun FeedingScreenRoute(
                 .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             uiState = uiState,
             // 🔄 Map your old explicit arguments to the commonised enum trigger function
-            onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },
-            onToggleRight = { viewModel.toggleTimer(FeedingSide.RIGHT) },
+            onToggleLeft = { 
+                checkAndRequestNotificationPermission()
+                viewModel.toggleTimer(FeedingSide.LEFT) 
+            },
+            onToggleRight = { 
+                checkAndRequestNotificationPermission()
+                viewModel.toggleTimer(FeedingSide.RIGHT) 
+            },
             onStartTimeSelected = viewModel::onStartTimeSelected,
             onLeftDurationChanged = viewModel::onLeftDurationChanged,
             onRightDurationChanged = viewModel::onRightDurationChanged,
@@ -114,6 +147,13 @@ fun FeedingScreenRoute(
             onCommentChanged = viewModel::onCommentChanged,
             onSave = viewModel::submitFeeding,
             onDelete = viewModel::deleteFeeding,
+            onCancel = viewModel::cancelFeeding,
+            onShowBottleDialog = { viewModel.setShowBottleDialog(it) },
+            onShowTimePicker = { viewModel.setShowTimePicker(it) },
+            onShowDurationDialog = { viewModel.setShowDurationDialog(it) },
+            onShowDeleteConfirmation = { viewModel.setShowDeleteConfirmation(it) },
+            onShowCancelConfirmation = { viewModel.setShowCancelConfirmation(it) },
+            onSetIsPlayingSplodge = { viewModel.setIsPlayingSplodge(it) },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope
         )
@@ -143,19 +183,20 @@ internal fun FeedingScreen(
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
+    onCancel: () -> Unit,
+    onShowBottleDialog: (Boolean) -> Unit,
+    onShowTimePicker: (Boolean) -> Unit,
+    onShowDurationDialog: (String?) -> Unit,
+    onShowDeleteConfirmation: (Boolean) -> Unit,
+    onShowCancelConfirmation: (Boolean) -> Unit,
+    onSetIsPlayingSplodge: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    var showBottleDialog by rememberSaveable { mutableStateOf(false) }
-    var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showDurationDialogForSide by rememberSaveable { mutableStateOf<String?>(null) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-
     // 🔄 1. Detect screen orientation
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val scrollState = rememberScrollState()
-    var isPlayingSplodge by remember { mutableStateOf(false) }
 
     // 📱 OPTION A: LANDSCAPE MODE (Two-Column Side-by-Side Layout)
     with(sharedTransitionScope) {
@@ -185,7 +226,7 @@ internal fun FeedingScreen(
                     MMPClickableTextField(
                         value = uiState.startTime,
                         label = "Start Time",
-                        onClick = { showTimePicker = true },
+                        onClick = { onShowTimePicker(true) },
                         enabled = !uiState.isLoading,
                         trailingIcon = Icons.Default.DateRange,
                         contentDescription = "Select Time"
@@ -203,11 +244,11 @@ internal fun FeedingScreen(
                             isSelected = uiState.isLeftRunning,
                             onClick = onToggleLeft,
                             onLongClick = {
-                                if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                                if (!uiState.isLeftRunning) onShowDurationDialog("Left")
                             },
                             showEditButton = showEdit,
                             onEditClick = {
-                                if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                                if (!uiState.isLeftRunning) onShowDurationDialog("Left")
                             }
                         )
                         FeedingTimerButton(
@@ -216,18 +257,18 @@ internal fun FeedingScreen(
                             isSelected = uiState.isRightRunning,
                             onClick = onToggleRight,
                             onLongClick = {
-                                if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                                if (!uiState.isRightRunning) onShowDurationDialog("Right")
                             },
                             showEditButton = showEdit,
                             onEditClick = {
-                                if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                                if (!uiState.isRightRunning) onShowDurationDialog("Right")
                             }
                         )
                         FeedingTimerButton(
                             label = "Bottle",
                             content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
                             isSelected = uiState.bottleAmountMl != null,
-                            onClick = { showBottleDialog = true },
+                            onClick = { onShowBottleDialog(true) },
                             onLongClick = {}
                         )
                     }
@@ -263,18 +304,34 @@ internal fun FeedingScreen(
                     Button(
                         onClick = {
                             // 2. Instead of navigating away instantly, trigger the animation flag first!
-                            isPlayingSplodge = true
+                            onSetIsPlayingSplodge(true)
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
+                        enabled = !uiState.isLoading && !uiState.isPlayingSplodge // Disable if loading or animating
                     ) {
                         Text("Save Feeding Session")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            if (uiState.leftDuration > 0 || uiState.rightDuration > 0 || uiState.bottleAmountMl != null || uiState.isLeftRunning || uiState.isRightRunning) {
+                                onShowCancelConfirmation(true)
+                            } else {
+                                onCancel()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading && !uiState.isPlayingSplodge
+                    ) {
+                        Text("Cancel Session")
                     }
 
                     if (uiState.id != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(
-                            onClick = { showDeleteConfirmation = true },
+                            onClick = { onShowDeleteConfirmation(true) },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             enabled = !uiState.isLoading
                         ) {
@@ -296,7 +353,7 @@ internal fun FeedingScreen(
                 MMPClickableTextField(
                     value = uiState.startTime,
                     label = "Start Time",
-                    onClick = { showTimePicker = true },
+                    onClick = { onShowTimePicker(true) },
                     enabled = !uiState.isLoading,
                     trailingIcon = Icons.Default.DateRange,
                     contentDescription = "Select Time",
@@ -314,11 +371,11 @@ internal fun FeedingScreen(
                         isSelected = uiState.isLeftRunning,
                         onClick = onToggleLeft,
                         onLongClick = {
-                            if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                            if (!uiState.isLeftRunning) onShowDurationDialog("Left")
                         },
                         showEditButton = showEdit,
                         onEditClick = {
-                            if (!uiState.isLeftRunning) showDurationDialogForSide = "Left"
+                            if (!uiState.isLeftRunning) onShowDurationDialog("Left")
                         }
                     )
                     FeedingTimerButton(
@@ -327,18 +384,18 @@ internal fun FeedingScreen(
                         isSelected = uiState.isRightRunning,
                         onClick = onToggleRight,
                         onLongClick = {
-                            if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                            if (!uiState.isRightRunning) onShowDurationDialog("Right")
                         },
                         showEditButton = showEdit,
                         onEditClick = {
-                            if (!uiState.isRightRunning) showDurationDialogForSide = "Right"
+                            if (!uiState.isRightRunning) onShowDurationDialog("Right")
                         }
                     )
                     FeedingTimerButton(
                         label = "Bottle",
                         content = if (uiState.bottleAmountMl != null) "${uiState.bottleAmountMl}ml" else "Add",
                         isSelected = uiState.bottleAmountMl != null,
-                        onClick = { showBottleDialog = true },
+                        onClick = { onShowBottleDialog(true) },
                         onLongClick = {}
                     )
                 }
@@ -363,18 +420,34 @@ internal fun FeedingScreen(
                 Button(
                     onClick = {
                         // 2. Instead of navigating away instantly, trigger the animation flag first!
-                        isPlayingSplodge = true
+                        onSetIsPlayingSplodge(true)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
+                    enabled = !uiState.isLoading && !uiState.isPlayingSplodge // Disable if loading or animating
                 ) {
                     Text("Save Feeding Session")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        if (uiState.leftDuration > 0 || uiState.rightDuration > 0 || uiState.bottleAmountMl != null || uiState.isLeftRunning || uiState.isRightRunning) {
+                            onShowCancelConfirmation(true)
+                        } else {
+                            onCancel()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading && !uiState.isPlayingSplodge
+                ) {
+                    Text("Cancel Session")
                 }
 
                 if (uiState.id != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(
-                        onClick = { showDeleteConfirmation = true },
+                        onClick = { onShowDeleteConfirmation(true) },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         enabled = !uiState.isLoading
                     ) {
@@ -385,7 +458,7 @@ internal fun FeedingScreen(
         }
 
         // 🍼 Bottle Entry Dialog
-        if (showBottleDialog) {
+        if (uiState.showBottleDialog) {
             var amountText by rememberSaveable {
                 mutableStateOf(
                     uiState.bottleAmountMl?.toString() ?: ""
@@ -393,7 +466,7 @@ internal fun FeedingScreen(
             }
 
             AlertDialog(
-                onDismissRequest = { showBottleDialog = false },
+                onDismissRequest = { onShowBottleDialog(false) },
                 title = { Text("Bottle Amount (ml)") },
                 text = {
                     OutlinedTextField(
@@ -413,7 +486,6 @@ internal fun FeedingScreen(
                     TextButton(
                         onClick = {
                             onUpdateBottleAmount(amountText.toIntOrNull())
-                            showBottleDialog = false
                         }
                     ) {
                         Text("OK")
@@ -423,7 +495,6 @@ internal fun FeedingScreen(
                     TextButton(
                         onClick = {
                             onUpdateBottleAmount(null)
-                            showBottleDialog = false
                         }
                     ) {
                         Text("Clear")
@@ -432,7 +503,7 @@ internal fun FeedingScreen(
             )
         }
 
-        if (showTimePicker) {
+        if (uiState.showTimePicker) {
             val initialTime = try {
                 LocalTime.parse(uiState.startTime)
             } catch (e: Exception) {
@@ -440,21 +511,21 @@ internal fun FeedingScreen(
             }
 
             MMPTimePickerDialog(
-                onDismissRequest = { showTimePicker = false },
+                onDismissRequest = { onShowTimePicker(false) },
                 initialTime = initialTime,
                 onTimeSelected = onStartTimeSelected
             )
         }
 
-        if (showDurationDialogForSide != null) {
-            val side = showDurationDialogForSide!!
+        if (uiState.showDurationDialogForSide != null) {
+            val side = uiState.showDurationDialogForSide
             val currentDuration =
                 if (side == "Left") uiState.leftDuration else uiState.rightDuration
             var minutesText by remember { mutableStateOf((currentDuration / 60).toString()) }
             var secondsText by remember { mutableStateOf((currentDuration % 60).toString()) }
 
             AlertDialog(
-                onDismissRequest = { showDurationDialogForSide = null },
+                onDismissRequest = { onShowDurationDialog(null) },
                 title = { Text("Edit $side Duration") },
                 text = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -493,47 +564,70 @@ internal fun FeedingScreen(
                             if (side == "Left") onLeftDurationChanged(total) else onRightDurationChanged(
                                 total
                             )
-                            showDurationDialogForSide = null
+                            onShowDurationDialog(null)
                         }
                     ) {
                         Text("OK")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDurationDialogForSide = null }) {
+                    TextButton(onClick = { onShowDurationDialog(null) }) {
                         Text("Cancel")
                     }
                 }
             )
         }
 
-        if (showDeleteConfirmation) {
+        if (uiState.showDeleteConfirmation) {
             AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
+                onDismissRequest = { onShowDeleteConfirmation(false) },
                 title = { Text("Delete Feeding Session") },
                 text = { Text("Are you sure you want to delete this record?") },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             onDelete()
-                            showDeleteConfirmation = false
+                            onShowDeleteConfirmation(false)
                         }
                     ) {
                         Text("Delete")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                    TextButton(onClick = { onShowDeleteConfirmation(false) }) {
                         Text("Cancel")
                     }
                 }
             )
         }
 
-        if (isPlayingSplodge) {
+        if (uiState.showCancelConfirmation) {
+            AlertDialog(
+                onDismissRequest = { onShowCancelConfirmation(false) },
+                title = { Text("Cancel Feeding") },
+                text = { Text("Are you sure you want to cancel this feeding session? All progress will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onCancel()
+                            onShowCancelConfirmation(false)
+                        }
+                    ) {
+                        Text("Yes, Cancel")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { onShowCancelConfirmation(false) }) {
+                        Text("No, Stay")
+                    }
+                }
+            )
+        }
+
+        if (uiState.isPlayingSplodge) {
             MilkSplodgeAnimation(
                 onAnimationEnd = {
-                    isPlayingSplodge = false // 🌟 Reset flag and proceed/navigate back
+                    onSetIsPlayingSplodge(false) // 🌟 Reset flag and proceed/navigate back
                     onSave()
                 }
             )

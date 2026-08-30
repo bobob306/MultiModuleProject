@@ -55,7 +55,7 @@ class CoffeeHomeScreenViewModelTest {
         fakeService.uploadedCoffees.add(coffee)
 
         // When
-        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService, dispatchers)
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
 
         // Then
         viewModel.viewData.test {
@@ -75,7 +75,7 @@ class CoffeeHomeScreenViewModelTest {
 
     @Test
     fun `NavigateToInput intent emits correct navigation event`() = runTest {
-        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService, dispatchers)
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
         
         viewModel.navigationEvent.test {
             viewModel.processIntent(CoffeeHomeScreenIntent.NavigateToInput)
@@ -85,7 +85,7 @@ class CoffeeHomeScreenViewModelTest {
 
     @Test
     fun `Logout intent signs out and navigates to login`() = runTest {
-        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService, dispatchers)
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
         
         viewModel.navigationEvent.test {
             viewModel.processIntent(CoffeeHomeScreenIntent.Logout)
@@ -97,7 +97,7 @@ class CoffeeHomeScreenViewModelTest {
 
     @Test
     fun `NavigateToDetail intent emits correct navigation event with coffeeId`() = runTest {
-        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService, dispatchers)
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
         
         viewModel.navigationEvent.test {
             viewModel.processIntent(CoffeeHomeScreenIntent.NavigateToDetail("c123"))
@@ -110,7 +110,7 @@ class CoffeeHomeScreenViewModelTest {
     fun `start failure navigates to login`() = runTest {
         accountService.signOut() // Clear user
         
-        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService, dispatchers)
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
         
         viewModel.navigationEvent.test {
             backgroundScope.launch {

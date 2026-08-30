@@ -179,4 +179,18 @@ class MeasurementViewModelTest {
             assertEquals(MeasurementEvent.DeleteSuccess, awaitItem())
         }
     }
+
+    @Test
+    fun `setShowSheet updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setShowSheet(true)
+        assertTrue(viewModel.uiState.value.showSheet)
+    }
+
+    @Test
+    fun `setShowDatePicker updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setShowDatePicker(true)
+        assertTrue(viewModel.uiState.value.showDatePicker)
+    }
 }

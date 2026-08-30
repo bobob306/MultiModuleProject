@@ -13,4 +13,7 @@ data class NappyChangeUiState(
     val isLoading: Boolean = false,
     val comment: String = "",
     val error: String? = null,
+    val showTimePicker: Boolean = false,
+    val showDeleteConfirmation: Boolean = false,
+    val isPlayingTurdAnimation: Boolean = false
 )

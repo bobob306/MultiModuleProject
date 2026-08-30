@@ -17,4 +17,10 @@ data class FeedingUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val comment: String = "",
+    val showBottleDialog: Boolean = false,
+    val showTimePicker: Boolean = false,
+    val showDurationDialogForSide: String? = null,
+    val showDeleteConfirmation: Boolean = false,
+    val showCancelConfirmation: Boolean = false,
+    val isPlayingSplodge: Boolean = false
 )

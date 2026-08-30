@@ -129,6 +129,22 @@ class MeasurementViewModel @Inject constructor(
         _uiState.update { it.copy(showMedicalOnly = medicalOnly) }
     }
 
+    fun setShowSheet(show: Boolean) {
+        _uiState.update { it.copy(showSheet = show) }
+    }
+
+    fun setShowTimePicker(show: Boolean) {
+        _uiState.update { it.copy(showTimePicker = show) }
+    }
+
+    fun setShowDatePicker(show: Boolean) {
+        _uiState.update { it.copy(showDatePicker = show) }
+    }
+
+    fun setShowDeleteConfirmation(show: Boolean) {
+        _uiState.update { it.copy(showDeleteConfirmation = show) }
+    }
+
     fun resetForm() {
         _uiState.update {
             it.copy(
@@ -141,12 +157,14 @@ class MeasurementViewModel @Inject constructor(
                 recordWeight = false,
                 isMedical = false,
                 comment = "",
-                error = null
+                error = null,
+                showSheet = true
             )
         }
     }
 
     fun onEditMeasurement(id: String) {
+        _uiState.update { it.copy(showSheet = true) }
         loadMeasurement(id)
     }
 

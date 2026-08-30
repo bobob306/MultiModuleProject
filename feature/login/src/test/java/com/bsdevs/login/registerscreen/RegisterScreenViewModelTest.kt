@@ -288,4 +288,14 @@ class RegisterScreenViewModelTest {
             assertFalse(finalItem.data.isLoading)
         }
     }
+
+    @Test
+    fun `setDatePickerVisibility updates viewData correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.SetDatePickerVisibility(true))
+        assertTrue((viewModel.viewData.value as Result.Success).data.isDatePickerVisible)
+
+        viewModel.processIntent(RegisterScreenIntent.SetDatePickerVisibility(false))
+        assertFalse((viewModel.viewData.value as Result.Success).data.isDatePickerVisible)
+    }
 }

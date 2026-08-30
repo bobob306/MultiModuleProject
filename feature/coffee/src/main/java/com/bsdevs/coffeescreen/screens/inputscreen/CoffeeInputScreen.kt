@@ -24,10 +24,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -40,15 +39,16 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -70,6 +70,8 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
+import com.bsdevs.uicomponents.MMPClickableTextField
+import com.bsdevs.uicomponents.MMPDatePickerDialog
 import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.LocalDate
@@ -158,7 +160,7 @@ private fun CoffeeInputScreenContent(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    var showSnackBar by remember { mutableStateOf(false) }
+    var showSnackBar by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
         if (showSnackBar) {
             var inputsContent = viewData.inputs.joinToString {
@@ -238,10 +240,13 @@ private fun CoffeeInputScreenContent(
                 viewData.inputs.forEach { inputViewData ->
                     when (inputViewData) {
                         is InputViewData.InputVD -> {
-                            InputSection(
-                                inputViewData = inputViewData,
-                                onIntent = onIntent // Pass the main onIntent callback
-                            )
+                            key(inputViewData.inputType) {
+                                InputSection(
+                                    inputViewData = inputViewData,
+                                    isExpanded = viewData.expandedInputType == inputViewData.inputType,
+                                    onIntent = onIntent // Pass the main onIntent callback
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 
@@ -251,9 +256,11 @@ private fun CoffeeInputScreenContent(
                         }
                     }
                 }
-                DatePickerSection(viewData.roastDate) { date ->
-                    onIntent(CoffeeInputScreenIntent.UpdateRoastDate(date = date))
-                }
+                DatePickerSection(
+                    roastDate = viewData.roastDate,
+                    isDatePickerVisible = viewData.isDatePickerVisible,
+                    onIntent = onIntent
+                )
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = {
@@ -278,16 +285,16 @@ private fun CoffeeInputScreenContent(
 @Composable
 private fun InputSection(
     inputViewData: InputViewData.InputVD,
+    isExpanded: Boolean,
     onIntent: (CoffeeInputScreenIntent) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
-    var isFocused by remember { mutableStateOf(false) }
+    var isFocused by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     inputViewData.run {
-        var expanded by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
+            expanded = isExpanded,
+            onExpandedChange = { onIntent(CoffeeInputScreenIntent.ToggleDropdown(if (it) inputType else null)) },
             modifier = Modifier
                 .wrapContentWidth()
                 .wrapContentHeight()
@@ -306,26 +313,26 @@ private fun InputSection(
                 readOnly = searchText?.let {
                     !(inputViewData.searchText == "" || !inputViewData.searchText?.isEmpty()!!)
                 } ?: true,
-                value = if (expanded && isFocused) searchText
+                value = if (isExpanded && isFocused) searchText
                     ?: "" else inputViewData.selectedSet.joinToString(", "),
                 onValueChange = {
                     onIntent(CoffeeInputScreenIntent.UpdateSearchText(inputType, it))
-                    expanded = true
+                    onIntent(CoffeeInputScreenIntent.ToggleDropdown(inputType))
                 },
                 label = { Text(inputViewData.label) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
                 colors = ExposedDropdownMenuDefaults.textFieldColors(),
                 suffix = {
-                    if (isFocused && expanded)
+                    if (isFocused && isExpanded)
                         Text(
                             selectedSet.joinToString(separator = ", "),
                             modifier = Modifier
-                                .fillMaxWidth(if (expanded && searchText != null) 0.5f else 1f)
-                                .padding(horizontal = if (!expanded || searchText == null) 16.dp else 0.dp)
+                                .fillMaxWidth(if (isExpanded && searchText != null) 0.5f else 1f)
+                                .padding(horizontal = if (!isExpanded || searchText == null) 16.dp else 0.dp)
 
                         )
                 })
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ExposedDropdownMenu(expanded = isExpanded, onDismissRequest = { onIntent(CoffeeInputScreenIntent.ToggleDropdown(null)) }) {
                 Column(modifier = Modifier.wrapContentHeight()) {
                     val filteredList = if (!searchText.isNullOrEmpty()) {
                         inputList.filter { it.contains(searchText, ignoreCase = true) }
@@ -366,7 +373,7 @@ private fun InputSection(
                                         )
                                     )
                                 }
-                                expanded = true
+                                onIntent(CoffeeInputScreenIntent.ToggleDropdown(inputType))
                             },
                             contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                         )
@@ -421,45 +428,32 @@ private fun RadioInputRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDate) -> Unit) {
-    var showDatePicker by remember { mutableStateOf(false) }
+private fun DatePickerSection(
+    roastDate: LocalDate?,
+    isDatePickerVisible: Boolean,
+    onIntent: (CoffeeInputScreenIntent) -> Unit
+) {
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MM yy") }
-    Button(onClick = { showDatePicker = true }) {
-        roastDate?.let {
-            Text("Update Roast Date from ${it.format(dateFormatter)}")
-        } ?: Text("Select Roast Date")
-    }
-    // Date Picker Dialog
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
 
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false }, // Dismiss dialog on request
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val selectedDateMillis = datePickerState.selectedDateMillis
-                        if (selectedDateMillis != null) {
-                            // Convert milliseconds to LocalDate and update ViewModel
-                            val selectedLocalDate = Instant.ofEpochMilli(selectedDateMillis)
-                                .atZone(ZoneId.systemDefault()).toLocalDate()
-                            onUpdateRoastDate(selectedLocalDate)
-                        }
-                        showDatePicker = false // Dismiss dialog after confirming
-                    }) {
-                    Text("OK")
-                }
-            }, dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDatePicker = false // Dismiss dialog on cancel
-                    }) {
-                    Text("Cancel")
-                }
-            }) {
-            DatePicker(state = datePickerState)
-        }
+    MMPClickableTextField(
+        value = roastDate?.format(dateFormatter) ?: "",
+        label = "Roast Date",
+        onClick = { onIntent(CoffeeInputScreenIntent.SetDatePickerVisibility(true)) },
+        trailingIcon = Icons.Default.DateRange,
+        contentDescription = "Select Roast Date",
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    // Date Picker Dialog
+    if (isDatePickerVisible) {
+        MMPDatePickerDialog(
+            onDismissRequest = { onIntent(CoffeeInputScreenIntent.SetDatePickerVisibility(false)) },
+            initialDate = roastDate ?: LocalDate.now(),
+            onDateSelected = { 
+                onIntent(CoffeeInputScreenIntent.UpdateRoastDate(it))
+                onIntent(CoffeeInputScreenIntent.SetDatePickerVisibility(false))
+            }
+        )
     }
 }

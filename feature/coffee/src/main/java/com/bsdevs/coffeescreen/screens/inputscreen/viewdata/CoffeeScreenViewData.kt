@@ -13,6 +13,8 @@ data class RadioInputViewData(
 data class CoffeeScreenViewData(
     val roastDate: LocalDate? = null,
     val isButtonEnabled: Boolean = false,
+    val isDatePickerVisible: Boolean = false,
+    val expandedInputType: InputType? = null,
     val inputs: List<InputViewData> = listOf<InputViewData>(
         InputVD(
             label = "Coffee Type(s)",

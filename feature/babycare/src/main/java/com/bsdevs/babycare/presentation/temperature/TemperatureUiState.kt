@@ -16,6 +16,10 @@ data class TemperatureUiState(
     val dailyReadings: Map<String, List<TemperatureItem>> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
+    val showSheet: Boolean = false,
+    val showTimePicker: Boolean = false,
+    val showDatePicker: Boolean = false,
+    val showDeleteConfirmation: Boolean = false
 )
 
 data class TemperatureItem(

@@ -86,6 +86,18 @@ class NappyChangeViewModel @Inject constructor(
         _uiState.update { it.copy(type = newType) }
     }
 
+    fun setShowTimePicker(show: Boolean) {
+        _uiState.update { it.copy(showTimePicker = show) }
+    }
+
+    fun setShowDeleteConfirmation(show: Boolean) {
+        _uiState.update { it.copy(showDeleteConfirmation = show) }
+    }
+
+    fun setIsPlayingTurdAnimation(isPlaying: Boolean) {
+        _uiState.update { it.copy(isPlayingTurdAnimation = isPlaying) }
+    }
+
     fun submitNappyChange() {
         val currentState = _uiState.value
         val userId = accountService.currentUserId

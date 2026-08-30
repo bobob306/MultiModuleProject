@@ -146,4 +146,26 @@ class CoffeeInputScreenViewModelTest {
         val tasteInput = data.inputs.filterIsInstance<InputVD>().first { it.inputType == InputType.TASTE }
         assertEquals("Fruit", tasteInput.searchText)
     }
+
+    @Test
+    fun `toggleDropdown updates expandedInputType`() = runTest {
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
+
+        viewModel.processIntent(CoffeeInputScreenIntent.ToggleDropdown(InputType.BEANS))
+        assertEquals(InputType.BEANS, (viewModel.viewData.value as Result.Success).data.expandedInputType)
+
+        viewModel.processIntent(CoffeeInputScreenIntent.ToggleDropdown(null))
+        assertNull((viewModel.viewData.value as Result.Success).data.expandedInputType)
+    }
+
+    @Test
+    fun `setDatePickerVisibility updates isDatePickerVisible`() = runTest {
+        viewModel = CoffeeInputScreenViewModel(accountService, fakeService, dispatchers)
+
+        viewModel.processIntent(CoffeeInputScreenIntent.SetDatePickerVisibility(true))
+        assertTrue((viewModel.viewData.value as Result.Success).data.isDatePickerVisible)
+
+        viewModel.processIntent(CoffeeInputScreenIntent.SetDatePickerVisibility(false))
+        assertFalse((viewModel.viewData.value as Result.Success).data.isDatePickerVisible)
+    }
 }

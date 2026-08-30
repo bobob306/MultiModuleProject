@@ -47,7 +47,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +68,7 @@ import androidx.navigation.NavOptions
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
+import com.bsdevs.uicomponents.MMPDatePickerDialog
 import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.ZoneId
@@ -167,32 +167,21 @@ fun RegisterScreenContent(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
-
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        val date =
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        onIntent(RegisterScreenIntent.UpdateBabyBirthDate(date.toString()))
-                    }
-                    showDatePicker = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
+    if (viewData.isDatePickerVisible) {
+        val initialDate = try {
+            java.time.LocalDate.parse(viewData.babyBirthDate)
+        } catch (_: Exception) {
+            java.time.LocalDate.now()
         }
+
+        MMPDatePickerDialog(
+            onDismissRequest = { onIntent(RegisterScreenIntent.SetDatePickerVisibility(false)) },
+            initialDate = initialDate,
+            onDateSelected = { selectedDate ->
+                onIntent(RegisterScreenIntent.UpdateBabyBirthDate(selectedDate.toString()))
+                onIntent(RegisterScreenIntent.SetDatePickerVisibility(false))
+            }
+        )
     }
 
     MMPScaffold(
@@ -398,7 +387,7 @@ fun RegisterScreenContent(
                                 readOnly = true,
                                 singleLine = true,
                                 leadingIcon = {
-                                    IconButton(onClick = { showDatePicker = true }) {
+                                    IconButton(onClick = { onIntent(RegisterScreenIntent.SetDatePickerVisibility(true)) }) {
                                         Icon(
                                             Icons.Default.DateRange,
                                             contentDescription = "Select Date"
