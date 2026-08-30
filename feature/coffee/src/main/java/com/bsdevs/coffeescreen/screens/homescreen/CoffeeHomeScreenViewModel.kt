@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,9 +38,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         viewModelScope.launch {
             start()
             repository.allCoffee.collect { coffeeListFromCache ->
-                if (coffeeListFromCache.isNotEmpty()) {
-                    updateDisplay(coffeeListFromCache)
-                }
+                updateDisplay(coffeeListFromCache)
             }
         }
     }
@@ -57,8 +56,9 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     }
 
     private fun updateDisplay(coffeeList: List<com.bsdevs.coffeescreen.network.CoffeeDto>) {
-        val vd = loadedData.copy(
-            viewData = loadedData.viewData.map {
+        _viewData.update { currentResult ->
+            val currentData = (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
+            val updatedViewData = currentData.viewData.map {
                 when (it) {
                     is CoffeeHomeScreenViewDatas.CoffeeList -> {
                         it.copy(coffeeList = coffeeList)
@@ -66,13 +66,13 @@ class CoffeeHomeScreenViewModel @Inject constructor(
                     else -> it
                 }
             }
-        )
-        _viewData.value = Result.Success(data = vd)
+            Result.Success(data = currentData.copy(viewData = updatedViewData, isRefreshing = false))
+        }
     }
 
     private fun loadData() {
         _viewData.value = Result.Success(
-            data = loadedData
+            data = loadedData.copy(isRefreshing = false)
         )
     }
 
@@ -81,9 +81,20 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         
         try {
             repository.loadInitialData(currentUser)
+            _viewData.update { current ->
+                if (current is Result.Success) {
+                    Result.Success(current.data.copy(isRefreshing = false))
+                } else {
+                    current
+                }
+            }
         } catch (e: Exception) {
-             if (_viewData.value is Result.Loading) {
-                 _viewData.value = Result.Error(e)
+             _viewData.update { current ->
+                 when (current) {
+                     is Result.Loading -> Result.Error(e)
+                     is Result.Success -> Result.Success(current.data.copy(isRefreshing = false))
+                     else -> current
+                 }
              }
         }
     }
