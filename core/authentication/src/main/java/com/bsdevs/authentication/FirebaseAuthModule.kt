@@ -14,6 +14,12 @@ import javax.inject.Singleton
 object FirebaseApiModule {
     @Provides
     @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth {
+        return Firebase.auth
+    }
+
+    @Provides
+    @Singleton
     fun provideAccountService(impl: AccountServiceImpl): AccountService {
         return impl
     }

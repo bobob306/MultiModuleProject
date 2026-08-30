@@ -1,6 +1,5 @@
 package com.bsdevs.network
 
-import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreSettings
 import com.google.firebase.firestore.firestore
@@ -11,14 +10,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FirestoreHolder @Inject constructor() {
-    private var _firestore: FirebaseFirestore = createFirestore()
+class FirestoreHolder @Inject constructor(
+    private val firestoreInstance: FirebaseFirestore
+) {
+    private var _firestore: FirebaseFirestore = setupFirestore(firestoreInstance)
 
     val firestore: FirebaseFirestore
         get() = _firestore
 
-    private fun createFirestore(): FirebaseFirestore {
-        val firestore = Firebase.firestore
+    private fun setupFirestore(firestore: FirebaseFirestore): FirebaseFirestore {
         val settings = firestoreSettings {
             setLocalCacheSettings(
                 persistentCacheSettings {
@@ -35,7 +35,7 @@ class FirestoreHolder @Inject constructor() {
             _firestore.terminate().await()
             _firestore.clearPersistence().await()
         } finally {
-            _firestore = createFirestore()
+            _firestore = setupFirestore(firestoreInstance)
         }
     }
 }

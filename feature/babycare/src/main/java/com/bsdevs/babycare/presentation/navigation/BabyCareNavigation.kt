@@ -116,7 +116,6 @@ fun NavGraphBuilder.babyCareSection(
             )
         ) {
             BabyGraphRoute(
-                onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable

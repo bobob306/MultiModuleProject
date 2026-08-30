@@ -98,7 +98,12 @@ class FirestoreBabyCareService @Inject constructor(
         Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId (Force: $forceRefresh)")
         val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
         val snapshot = getMonthsCollection(babyId).document(monthId).get(source).await()
-        if (snapshot.exists()) snapshot.data else null
+        val data = if (snapshot.exists()) snapshot.data else null
+        data?.let {
+            val sizeKb = it.toString().toByteArray().size / 1024.0
+            Log.d("FIREBASE_CALL", "Month Doc Size: %.2f KB".format(sizeKb))
+        }
+        data
     }
 
     override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) = withContext(dispatchers.io) {
@@ -147,9 +152,15 @@ class FirestoreBabyCareService @Inject constructor(
     override suspend fun fetchAllMeasurements(userId: String): List<Map<String, Any?>> = withContext(dispatchers.io) {
         try {
             val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+            
             Log.d("FIREBASE_CALL", "Read All Measurements (Single Doc) for Baby: $babyId")
             val snapshot = getMeasurementsDocument(babyId).get().await()
-            val items = snapshot.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+            val data = if (snapshot.exists()) snapshot.data else null
+            data?.let {
+                val sizeKb = it.toString().toByteArray().size / 1024.0
+                Log.d("FIREBASE_CALL", "Measurements Doc Size: %.2f KB".format(sizeKb))
+            }
+            val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
             items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
         } catch (e: Exception) {
             Log.e("BABYCARE_SERVICE", "Error fetching measurements", e)
@@ -160,7 +171,19 @@ class FirestoreBabyCareService @Inject constructor(
     override suspend fun saveMeasurement(userId: String, eventId: String, measurement: Map<String, Any?>) = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext
         Log.d("FIREBASE_CALL", "Save Measurement into Single Doc for Baby: $babyId / $eventId")
-        getMeasurementsDocument(babyId).set(mapOf("items" to mapOf(eventId to measurement)), SetOptions.merge()).await()
+        val docRef = getMeasurementsDocument(babyId)
+        try {
+            // Use dot notation to update a specific item in the map without overwriting other items
+            docRef.update("items.$eventId", measurement).await()
+        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
+            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
+                // Document doesn't exist yet, create it with the first item
+                docRef.set(mapOf("items" to mapOf(eventId to measurement))).await()
+            } else {
+                // If doc exists but field doesn't, merge it in
+                docRef.set(mapOf("items" to mapOf(eventId to measurement)), SetOptions.merge()).await()
+            }
+        }
         Unit
     }
 

@@ -6,8 +6,8 @@ import androidx.annotation.Keep
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.navigation.CoffeeDetailScreenRoute
-import com.bsdevs.coffeescreen.network.CoffeeApiService
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
@@ -37,7 +37,7 @@ data class CoffeeDetailsViewData(
 class CoffeeDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val accountService: AccountService,
-    private val apiService: CoffeeApiService,
+    private val repository: CoffeeRepository,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     
@@ -59,11 +59,11 @@ class CoffeeDetailsViewModel @Inject constructor(
     private suspend fun loadDataFromNetwork() {
         try {
             val currentUser = accountService.currentUserId
-            val coffee = apiService.getCoffeeById(currentUser, selectedCoffeeId)
+            val coffee = repository.getCoffeeById(currentUser, selectedCoffeeId)
                 ?: throw Exception("Coffee not found")
 
             val label = coffee.label ?: throw Exception("Coffee label missing")
-            val shots = apiService.getShotsForCoffee(label)
+            val shots = repository.getShotsForCoffee(label)
             
             val sortedShots = withContext(dispatchers.default) {
                 val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -134,9 +134,9 @@ class CoffeeDetailsViewModel @Inject constructor(
                             rating = intent.shot.rating,
                         )
                         
-                        apiService.uploadShot(label, shotDto)
+                        repository.uploadShot(label, shotDto)
                         
-                        val updatedShots = apiService.getShotsForCoffee(label)
+                        val updatedShots = repository.getShotsForCoffee(label)
                         val sortedShots = withContext(dispatchers.default) {
                             val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
                             updatedShots.sortedByDescending { s ->
