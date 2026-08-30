@@ -69,6 +69,7 @@ import androidx.navigation.NavOptions
 import com.bsdevs.common.result.Result
 import com.bsdevs.uicomponents.ErrorScreen
 import com.bsdevs.uicomponents.LoadingScreen
+import com.bsdevs.uicomponents.MMPDatePickerDialog
 import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.ZoneId
@@ -168,31 +169,21 @@ fun RegisterScreenContent(
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState()
 
     if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        val date =
-                            Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                        onIntent(RegisterScreenIntent.UpdateBabyBirthDate(date.toString()))
-                    }
-                    showDatePicker = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
+        val initialDate = try {
+            java.time.LocalDate.parse(viewData.babyBirthDate)
+        } catch (_: Exception) {
+            java.time.LocalDate.now()
         }
+
+        MMPDatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            initialDate = initialDate,
+            onDateSelected = { selectedDate ->
+                onIntent(RegisterScreenIntent.UpdateBabyBirthDate(selectedDate.toString()))
+            }
+        )
     }
 
     MMPScaffold(

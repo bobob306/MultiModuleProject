@@ -24,10 +24,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -40,9 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -70,6 +67,8 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeScreenViewData
 import com.bsdevs.common.result.Result
+import com.bsdevs.uicomponents.MMPClickableTextField
+import com.bsdevs.uicomponents.MMPDatePickerDialog
 import com.bsdevs.uicomponents.MMPScaffold
 import java.time.Instant
 import java.time.LocalDate
@@ -421,45 +420,26 @@ private fun RadioInputRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDate) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MM yy") }
-    Button(onClick = { showDatePicker = true }) {
-        roastDate?.let {
-            Text("Update Roast Date from ${it.format(dateFormatter)}")
-        } ?: Text("Select Roast Date")
-    }
+
+    MMPClickableTextField(
+        value = roastDate?.format(dateFormatter) ?: "",
+        label = "Roast Date",
+        onClick = { showDatePicker = true },
+        trailingIcon = Icons.Default.DateRange,
+        contentDescription = "Select Roast Date",
+        modifier = Modifier.fillMaxWidth()
+    )
+
     // Date Picker Dialog
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState()
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false }, // Dismiss dialog on request
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val selectedDateMillis = datePickerState.selectedDateMillis
-                        if (selectedDateMillis != null) {
-                            // Convert milliseconds to LocalDate and update ViewModel
-                            val selectedLocalDate = Instant.ofEpochMilli(selectedDateMillis)
-                                .atZone(ZoneId.systemDefault()).toLocalDate()
-                            onUpdateRoastDate(selectedLocalDate)
-                        }
-                        showDatePicker = false // Dismiss dialog after confirming
-                    }) {
-                    Text("OK")
-                }
-            }, dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDatePicker = false // Dismiss dialog on cancel
-                    }) {
-                    Text("Cancel")
-                }
-            }) {
-            DatePicker(state = datePickerState)
-        }
+        MMPDatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            initialDate = roastDate ?: LocalDate.now(),
+            onDateSelected = onUpdateRoastDate
+        )
     }
 }

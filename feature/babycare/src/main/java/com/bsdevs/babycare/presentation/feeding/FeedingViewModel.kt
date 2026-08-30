@@ -8,10 +8,8 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
-import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +27,9 @@ import kotlin.time.Duration.Companion.milliseconds
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
-    private val timeProvider: TimeProvider,
     private val dispatchers: DispatcherProvider,
+    private val timerManager: FeedingTimerManager,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -42,13 +41,8 @@ class FeedingViewModel @Inject constructor(
     private val _events = Channel<FeedingEvent>()
     val events = _events.receiveAsFlow()
 
-    // 🗃️ Store tracking details in an array or map indexed by the side
-    private val timerJobs = mutableMapOf<FeedingSide, Job?>()
-    private val baseDurations = mutableMapOf<FeedingSide, Long>().withDefault { 0L }
-
     init {
         route.activityId?.let { id ->
-            // 🔄 ONLY load from network if we haven't started tracking or loaded yet
             if (_uiState.value.id == null && !_uiState.value.isLoading) {
                 loadFeeding(id)
             }
@@ -60,7 +54,25 @@ class FeedingViewModel @Inject constructor(
                 "right" -> FeedingSide.RIGHT
                 else -> null
             }
-            side?.let { startTimer(it) }
+            side?.let { 
+                timerManager.startTimer(it)
+                FeedingTimerService.start(context)
+            }
+        }
+
+        observeTimer()
+    }
+
+    private fun observeTimer() {
+        viewModelScope.launch {
+            timerManager.timerState.collect { timerState ->
+                _uiState.update { it.copy(
+                    leftDuration = timerState.leftDuration,
+                    rightDuration = timerState.rightDuration,
+                    isLeftRunning = timerState.isLeftRunning,
+                    isRightRunning = timerState.isRightRunning
+                )}
+            }
         }
     }
 
@@ -69,11 +81,9 @@ class FeedingViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // 🔄 FIXED: Query data safely through the unified repository layer instead of flat collections
                 val feedingEvent = repository.getFeedingEventById(userId, id)
 
                 if (feedingEvent != null) {
-                    // Extract the date out of your YYYY-MM-DD space-split timestamp format layout string
                     val extractedDate = feedingEvent.dateTimeString.split(" ").firstOrNull() ?: _uiState.value.date
 
                     _uiState.update {
@@ -88,9 +98,8 @@ class FeedingViewModel @Inject constructor(
                             comment = feedingEvent.comment ?: ""
                         )
                     }
-                    // Seed your commonised base duration maps cleanly
-                    baseDurations[FeedingSide.LEFT] = feedingEvent.leftDuration
-                    baseDurations[FeedingSide.RIGHT] = feedingEvent.rightDuration
+                    timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration)
+                    timerManager.setDuration(FeedingSide.RIGHT, feedingEvent.rightDuration)
                 } else {
                     _uiState.update { it.copy(isLoading = false) }
                 }
@@ -105,76 +114,18 @@ class FeedingViewModel @Inject constructor(
     }
 
     fun toggleTimer(side: FeedingSide) {
-        val isRunning = when (side) {
-            FeedingSide.LEFT -> _uiState.value.isLeftRunning
-            FeedingSide.RIGHT -> _uiState.value.isRightRunning
-        }
-
-        if (isRunning) {
-            pauseTimer(side)
-        } else {
-            startTimer(side)
+        timerManager.toggleTimer(side)
+        if (timerManager.isAnyTimerRunning()) {
+            FeedingTimerService.start(context)
         }
     }
 
-    private fun startTimer(side: FeedingSide) {
-        val sessionStartTime = timeProvider.elapsedRealtime()
-        val previousAccumulatedDuration = baseDurations.getValue(side)
-
-        // Update the running state flag dynamically
-        _uiState.update { state ->
-            when (side) {
-                FeedingSide.LEFT -> state.copy(isLeftRunning = true)
-                FeedingSide.RIGHT -> state.copy(isRightRunning = true)
-            }
-        }
-
-        // Launch a single unified timer loop
-        timerJobs[side] = viewModelScope.launch {
-            while (true) {
-                val actualSecondsElapsed = (timeProvider.elapsedRealtime() - sessionStartTime) / 1000
-                val totalDuration = previousAccumulatedDuration + actualSecondsElapsed
-
-                _uiState.update { state ->
-                    when (side) {
-                        FeedingSide.LEFT -> state.copy(leftDuration = totalDuration)
-                        FeedingSide.RIGHT -> state.copy(rightDuration = totalDuration)
-                    }
-                }
-                delay(1000L.milliseconds)
-            }
-        }
-    }
-
-    private fun pauseTimer(side: FeedingSide) {
-        timerJobs[side]?.cancel()
-        timerJobs[side] = null
-
-        // Lock in the precise duration up to this millisecond
-        val finalDuration = when (side) {
-            FeedingSide.LEFT -> _uiState.value.leftDuration
-            FeedingSide.RIGHT -> _uiState.value.rightDuration
-        }
-        baseDurations[side] = finalDuration
-
-        // Flip the running state flag off
-        _uiState.update { state ->
-            when (side) {
-                FeedingSide.LEFT -> state.copy(isLeftRunning = false)
-                FeedingSide.RIGHT -> state.copy(isRightRunning = false)
-            }
-        }
-    }
-
-    // 📥 Make sure to update your existing duration setter endpoints too:
     fun onLeftDurationChanged(duration: Long) {
-        baseDurations[FeedingSide.LEFT] = duration
-        _uiState.update { it.copy(leftDuration = duration) }
+        timerManager.setDuration(FeedingSide.LEFT, duration)
     }
 
     fun onRightDurationChanged(duration: Long) {
-        baseDurations[FeedingSide.RIGHT] = duration
-        _uiState.update { it.copy(rightDuration = duration) }
+        timerManager.setDuration(FeedingSide.RIGHT, duration)
     }
 
     fun onStartTimeSelected(hour: Int, minute: Int) {
@@ -246,6 +197,7 @@ class FeedingViewModel @Inject constructor(
                     )
                 }
 
+                timerManager.reset()
                 _events.send(FeedingEvent.SaveSuccess)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
@@ -263,10 +215,18 @@ class FeedingViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.deleteActivityEvent(userId, date, eventId)
+                timerManager.reset()
                 _events.send(FeedingEvent.DeleteSuccess)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
+        }
+    }
+
+    fun cancelFeeding() {
+        timerManager.reset()
+        viewModelScope.launch {
+            _events.send(FeedingEvent.CancelSuccess)
         }
     }
 }

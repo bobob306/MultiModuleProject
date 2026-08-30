@@ -35,8 +35,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -47,7 +45,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +64,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
+import com.bsdevs.uicomponents.MMPDatePickerDialog
 import com.bsdevs.uicomponents.MMPScaffold
 import com.bsdevs.uicomponents.MMPTimePickerDialog
 import com.bsdevs.uicomponents.WheelInput
@@ -315,40 +313,23 @@ fun TemperatureScreen(
                     },
                     onDelete = { showDeleteConfirmation = true }
                 )
-            }
-        }
-    }
 
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = LocalDate.parse(uiState.date)
-                .atStartOfDay(ZoneId.systemDefault())
-                .toInstant()
-                .toEpochMilli()
-        )
-
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        val selectedDate = Instant.ofEpochMilli(it)
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate()
-                        onDateSelected(selectedDate.toString())
+                if (showDatePicker) {
+                    val initialDate = try {
+                        LocalDate.parse(uiState.date)
+                    } catch (_: Exception) {
+                        LocalDate.now()
                     }
-                    showDatePicker = false
-                }) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+
+                    MMPDatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        initialDate = initialDate,
+                        onDateSelected = { selectedDate ->
+                            onDateSelected(selectedDate.toString())
+                        }
+                    )
                 }
             }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 

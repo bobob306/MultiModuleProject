@@ -1,6 +1,10 @@
 package com.bsdevs.babycare.presentation.feeding
 
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -31,6 +35,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,11 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.animation.MilkSplodgeAnimation
@@ -70,6 +77,23 @@ fun FeedingScreenRoute(
     viewModel: FeedingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -84,6 +108,9 @@ fun FeedingScreenRoute(
                 }
                 is FeedingEvent.SaveError -> {
                     onShowSnackBar("Error saving feeding: ${event.message}", null)
+                }
+                is FeedingEvent.CancelSuccess -> {
+                    onNavigateBack()
                 }
             }
         }
@@ -105,8 +132,14 @@ fun FeedingScreenRoute(
                 .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
             uiState = uiState,
             // 🔄 Map your old explicit arguments to the commonised enum trigger function
-            onToggleLeft = { viewModel.toggleTimer(FeedingSide.LEFT) },
-            onToggleRight = { viewModel.toggleTimer(FeedingSide.RIGHT) },
+            onToggleLeft = { 
+                checkAndRequestNotificationPermission()
+                viewModel.toggleTimer(FeedingSide.LEFT) 
+            },
+            onToggleRight = { 
+                checkAndRequestNotificationPermission()
+                viewModel.toggleTimer(FeedingSide.RIGHT) 
+            },
             onStartTimeSelected = viewModel::onStartTimeSelected,
             onLeftDurationChanged = viewModel::onLeftDurationChanged,
             onRightDurationChanged = viewModel::onRightDurationChanged,
@@ -114,6 +147,7 @@ fun FeedingScreenRoute(
             onCommentChanged = viewModel::onCommentChanged,
             onSave = viewModel::submitFeeding,
             onDelete = viewModel::deleteFeeding,
+            onCancel = viewModel::cancelFeeding,
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope
         )
@@ -143,6 +177,7 @@ internal fun FeedingScreen(
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
+    onCancel: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
@@ -150,6 +185,7 @@ internal fun FeedingScreen(
     var showTimePicker by rememberSaveable { mutableStateOf(false) }
     var showDurationDialogForSide by rememberSaveable { mutableStateOf<String?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showCancelConfirmation by remember { mutableStateOf(false) }
 
     // 🔄 1. Detect screen orientation
     val configuration = LocalConfiguration.current
@@ -271,6 +307,22 @@ internal fun FeedingScreen(
                         Text("Save Feeding Session")
                     }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            if (uiState.leftDuration > 0 || uiState.rightDuration > 0 || uiState.bottleAmountMl != null || uiState.isLeftRunning || uiState.isRightRunning) {
+                                showCancelConfirmation = true
+                            } else {
+                                onCancel()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !uiState.isLoading && !isPlayingSplodge
+                    ) {
+                        Text("Cancel Session")
+                    }
+
                     if (uiState.id != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(
@@ -369,6 +421,22 @@ internal fun FeedingScreen(
                     enabled = !uiState.isLoading && !isPlayingSplodge // Disable if loading or animating
                 ) {
                     Text("Save Feeding Session")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        if (uiState.leftDuration > 0 || uiState.rightDuration > 0 || uiState.bottleAmountMl != null || uiState.isLeftRunning || uiState.isRightRunning) {
+                            showCancelConfirmation = true
+                        } else {
+                            onCancel()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading && !isPlayingSplodge
+                ) {
+                    Text("Cancel Session")
                 }
 
                 if (uiState.id != null) {
@@ -525,6 +593,29 @@ internal fun FeedingScreen(
                 dismissButton = {
                     TextButton(onClick = { showDeleteConfirmation = false }) {
                         Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showCancelConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showCancelConfirmation = false },
+                title = { Text("Cancel Feeding") },
+                text = { Text("Are you sure you want to cancel this feeding session? All progress will be lost.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onCancel()
+                            showCancelConfirmation = false
+                        }
+                    ) {
+                        Text("Yes, Cancel")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCancelConfirmation = false }) {
+                        Text("No, Stay")
                     }
                 }
             )

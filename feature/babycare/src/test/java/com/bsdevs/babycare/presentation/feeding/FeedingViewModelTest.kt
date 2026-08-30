@@ -34,6 +34,8 @@ class FeedingViewModelTest {
     private lateinit var timeProvider: com.bsdevs.babycare.presentation.common.TimeProvider
     private lateinit var viewModel: FeedingViewModel
     private lateinit var dispatchers: DispatcherProvider
+    private lateinit var timerManager: FeedingTimerManager
+    private val context = mockk<android.content.Context>(relaxed = true)
 
     private val userId = "testUser"
 
@@ -56,6 +58,7 @@ class FeedingViewModelTest {
         accountService = FakeAccountService(userId)
         timeProvider = mockk()
         every { timeProvider.elapsedRealtime() } returns 0L
+        timerManager = FeedingTimerManager(timeProvider, dispatchers)
     }
 
     @After
@@ -74,7 +77,7 @@ class FeedingViewModelTest {
         // Populate cache to ensure repository updates work
         repository.loadInitialData(userId, 20)
         
-        viewModel = FeedingViewModel(accountService, repository, timeProvider, dispatchers, savedStateHandle)
+        viewModel = FeedingViewModel(accountService, repository, dispatchers, timerManager, context, savedStateHandle)
     }
 
     @Test
@@ -200,5 +203,22 @@ class FeedingViewModelTest {
 
         // Then
         assertNull(repository.getFeedingEventById(userId, eventId))
+    }
+
+    @Test
+    fun `cancelFeeding resets timer and triggers success`() = runTest {
+        createViewModel()
+        
+        // Start a timer
+        viewModel.toggleTimer(FeedingSide.LEFT)
+        assertTrue(viewModel.uiState.value.isLeftRunning)
+
+        viewModel.events.test {
+            viewModel.cancelFeeding()
+            assertEquals(FeedingEvent.CancelSuccess, awaitItem())
+        }
+
+        assertFalse(viewModel.uiState.value.isLeftRunning)
+        assertEquals(0L, viewModel.uiState.value.leftDuration)
     }
 }
