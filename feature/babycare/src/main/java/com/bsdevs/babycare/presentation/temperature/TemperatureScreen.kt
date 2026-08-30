@@ -112,6 +112,10 @@ fun TemperatureScreenRoute(
         onDelete = viewModel::deleteTemperature,
         onResetForm = viewModel::resetForm,
         onEditItem = viewModel::onEditTemperature,
+        onShowSheet = viewModel::setShowSheet,
+        onShowTimePicker = viewModel::setShowTimePicker,
+        onShowDatePicker = viewModel::setShowDatePicker,
+        onShowDeleteConfirmation = viewModel::setShowDeleteConfirmation,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope
     )
@@ -130,27 +134,20 @@ fun TemperatureScreen(
     onDelete: () -> Unit,
     onResetForm: () -> Unit,
     onEditItem: (String) -> Unit,
+    onShowSheet: (Boolean) -> Unit,
+    onShowTimePicker: (Boolean) -> Unit,
+    onShowDatePicker: (Boolean) -> Unit,
+    onShowDeleteConfirmation: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val pagerState = rememberPagerState { uiState.dates.size }
-    var showSheet by rememberSaveable { mutableStateOf(uiState.id != null) }
-    var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    // Re-open sheet if id is set (e.g. from navigation)
-    LaunchedEffect(uiState.id) {
-        if (uiState.id != null) {
-            showSheet = true
-        }
-    }
 
     MMPScaffold(
         title = "Temperature History",
@@ -159,7 +156,6 @@ fun TemperatureScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = { 
                 onResetForm()
-                showSheet = true 
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Temperature")
             }
@@ -215,7 +211,6 @@ fun TemperatureScreen(
                                         items(readings) { item ->
                                             TemperatureHistoryItem(item = item, onClick = {
                                                 onEditItem(item.id)
-                                                showSheet = true
                                             })
                                         }
                                     }
@@ -264,7 +259,6 @@ fun TemperatureScreen(
                                     items(readings) { item ->
                                         TemperatureHistoryItem(item = item, onClick = {
                                             onEditItem(item.id)
-                                            showSheet = true
                                         })
                                     }
                                 }
@@ -286,16 +280,16 @@ fun TemperatureScreen(
                     }
                 }
 
-                if (uiState.isLoading && !showSheet) {
+                if (uiState.isLoading && !uiState.showSheet) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
 
-        if (showSheet) {
+        if (uiState.showSheet) {
             ModalBottomSheet(
                 onDismissRequest = { 
-                    showSheet = false 
+                    onShowSheet(false) 
                 },
                 sheetState = sheetState
             ) {
@@ -303,18 +297,18 @@ fun TemperatureScreen(
                     uiState = uiState,
                     onTemperatureValueSelected = onTemperatureValueSelected,
                     onCommentChanged = onCommentChanged,
-                    onDateSelected = { showDatePicker = true },
-                    onTimeSelected = { showTimePicker = true },
+                    onDateSelected = { onShowDatePicker(true) },
+                    onTimeSelected = { onShowTimePicker(true) },
                     onSave = {
                         onSave()
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) showSheet = false
+                            if (!sheetState.isVisible) onShowSheet(false)
                         }
                     },
-                    onDelete = { showDeleteConfirmation = true }
+                    onDelete = { onShowDeleteConfirmation(true) }
                 )
 
-                if (showDatePicker) {
+                if (uiState.showDatePicker) {
                     val initialDate = try {
                         LocalDate.parse(uiState.date)
                     } catch (_: Exception) {
@@ -322,7 +316,7 @@ fun TemperatureScreen(
                     }
 
                     MMPDatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
+                        onDismissRequest = { onShowDatePicker(false) },
                         initialDate = initialDate,
                         onDateSelected = { selectedDate ->
                             onDateSelected(selectedDate.toString())
@@ -333,7 +327,7 @@ fun TemperatureScreen(
         }
     }
 
-    if (showTimePicker) {
+    if (uiState.showTimePicker) {
         val initialTime = try {
             LocalTime.parse(uiState.time)
         } catch (e: Exception) {
@@ -341,27 +335,27 @@ fun TemperatureScreen(
         }
 
         MMPTimePickerDialog(
-            onDismissRequest = { showTimePicker = false },
+            onDismissRequest = { onShowTimePicker(false) },
             initialTime = initialTime,
             onTimeSelected = { h, m ->
                 onTimeSelected(h, m)
-                showTimePicker = false
+                onShowTimePicker(false)
             }
         )
     }
 
-    if (showDeleteConfirmation) {
+    if (uiState.showDeleteConfirmation) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
+            onDismissRequest = { onShowDeleteConfirmation(false) },
             title = { Text("Delete Temperature Record") },
             text = { Text("Are you sure you want to delete this temperature reading?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDelete()
-                        showDeleteConfirmation = false
+                        onShowDeleteConfirmation(false)
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) showSheet = false
+                            if (!sheetState.isVisible) onShowSheet(false)
                         }
                     }
                 ) {
@@ -369,7 +363,7 @@ fun TemperatureScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
+                TextButton(onClick = { onShowDeleteConfirmation(false) }) {
                     Text("Cancel")
                 }
             }

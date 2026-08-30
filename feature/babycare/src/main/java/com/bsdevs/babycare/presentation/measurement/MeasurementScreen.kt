@@ -114,6 +114,10 @@ fun MeasurementScreenRoute(
         onToggleMedicalOnly = viewModel::toggleMedicalOnly,
         onResetForm = viewModel::resetForm,
         onEditItem = viewModel::onEditMeasurement,
+        onShowSheet = viewModel::setShowSheet,
+        onShowTimePicker = viewModel::setShowTimePicker,
+        onShowDatePicker = viewModel::setShowDatePicker,
+        onShowDeleteConfirmation = viewModel::setShowDeleteConfirmation,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope
     )
@@ -139,15 +143,15 @@ internal fun MeasurementScreen(
     onToggleMedicalOnly: (Boolean) -> Unit,
     onResetForm: () -> Unit,
     onEditItem: (String) -> Unit,
+    onShowSheet: (Boolean) -> Unit,
+    onShowTimePicker: (Boolean) -> Unit,
+    onShowDatePicker: (Boolean) -> Unit,
+    onShowDeleteConfirmation: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showSheet by rememberSaveable { mutableStateOf(uiState.id != null) }
-    var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -156,26 +160,19 @@ internal fun MeasurementScreen(
                 is MeasurementEvent.SaveSuccess -> {
                     onShowSnackBar("Measurement saved", null)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) showSheet = false
+                        if (!sheetState.isVisible) onShowSheet(false)
                     }
                 }
                 is MeasurementEvent.DeleteSuccess -> {
                     onShowSnackBar("Measurement deleted", null)
                     scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) showSheet = false
+                        if (!sheetState.isVisible) onShowSheet(false)
                     }
                 }
                 is MeasurementEvent.SaveError -> {
                     onShowSnackBar("Error saving measurement: ${event.message}", null)
                 }
             }
-        }
-    }
-
-    // Re-open sheet if id is set (e.g. from navigation)
-    LaunchedEffect(uiState.id) {
-        if (uiState.id != null) {
-            showSheet = true
         }
     }
 
@@ -194,7 +191,6 @@ internal fun MeasurementScreen(
         floatingActionButton = {
             FloatingActionButton(onClick = { 
                 onResetForm()
-                showSheet = true 
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Measurement")
             }
@@ -272,7 +268,6 @@ internal fun MeasurementScreen(
                                 measurement = measurement,
                                 onClick = {
                                     onEditItem(measurement.id ?: "")
-                                    showSheet = true
                                 }
                             )
                         }
@@ -281,16 +276,16 @@ internal fun MeasurementScreen(
                     item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
 
-                if (uiState.isLoading && !showSheet) {
+                if (uiState.isLoading && !uiState.showSheet) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
 
-        if (showSheet) {
+        if (uiState.showSheet) {
             ModalBottomSheet(
                 onDismissRequest = { 
-                    showSheet = false 
+                    onShowSheet(false) 
                 },
                 sheetState = sheetState
             ) {
@@ -302,15 +297,15 @@ internal fun MeasurementScreen(
                     onToggleRecordHeight = onToggleRecordHeight,
                     onToggleRecordWeight = onToggleRecordWeight,
                     onCommentChanged = onCommentChanged,
-                    onDateSelected = { showDatePicker = true },
-                    onTimeSelected = { showTimePicker = true },
+                    onDateSelected = { onShowDatePicker(true) },
+                    onTimeSelected = { onShowTimePicker(true) },
                     onSave = {
                         onSave()
                     },
-                    onDelete = { showDeleteConfirmation = true }
+                    onDelete = { onShowDeleteConfirmation(true) }
                 )
 
-                if (showDatePicker) {
+                if (uiState.showDatePicker) {
                     val initialDate = try {
                         LocalDate.parse(uiState.date)
                     } catch (_: Exception) {
@@ -318,7 +313,7 @@ internal fun MeasurementScreen(
                     }
 
                     MMPDatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
+                        onDismissRequest = { onShowDatePicker(false) },
                         initialDate = initialDate,
                         onDateSelected = { selectedDate ->
                             onDateSelected(selectedDate.toString())
@@ -329,7 +324,7 @@ internal fun MeasurementScreen(
         }
     }
 
-    if (showTimePicker) {
+    if (uiState.showTimePicker) {
         val initialTime = try {
             LocalTime.parse(uiState.time)
         } catch (e: Exception) {
@@ -337,27 +332,27 @@ internal fun MeasurementScreen(
         }
 
         MMPTimePickerDialog(
-            onDismissRequest = { showTimePicker = false },
+            onDismissRequest = { onShowTimePicker(false) },
             initialTime = initialTime,
             onTimeSelected = { h, m ->
                 onTimeSelected(h, m)
-                showTimePicker = false
+                onShowTimePicker(false)
             }
         )
     }
 
-    if (showDeleteConfirmation) {
+    if (uiState.showDeleteConfirmation) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
+            onDismissRequest = { onShowDeleteConfirmation(false) },
             title = { Text("Delete Measurement") },
             text = { Text("Are you sure you want to delete this record?") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         onDelete()
-                        showDeleteConfirmation = false
+                        onShowDeleteConfirmation(false)
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) showSheet = false
+                            if (!sheetState.isVisible) onShowSheet(false)
                         }
                     }
                 ) {
@@ -365,7 +360,7 @@ internal fun MeasurementScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
+                TextButton(onClick = { onShowDeleteConfirmation(false) }) {
                     Text("Cancel")
                 }
             }

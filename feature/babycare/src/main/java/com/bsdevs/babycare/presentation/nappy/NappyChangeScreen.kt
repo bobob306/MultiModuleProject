@@ -33,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -98,6 +97,9 @@ fun NappyChangeScreenRoute(
             onCommentChanged = viewModel::onCommentChanged,
             onSave = { viewModel.submitNappyChange() },
             onDelete = { viewModel.deleteNappyChange() },
+            onShowTimePicker = { viewModel.setShowTimePicker(it) },
+            onShowDeleteConfirmation = { viewModel.setShowDeleteConfirmation(it) },
+            onSetIsPlayingTurdAnimation = { viewModel.setIsPlayingTurdAnimation(it) },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope
         )
@@ -123,16 +125,15 @@ internal fun NappyChangeScreen(
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
+    onShowTimePicker: (Boolean) -> Unit,
+    onShowDeleteConfirmation: (Boolean) -> Unit,
+    onSetIsPlayingTurdAnimation: (Boolean) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    var showTimePicker by rememberSaveable { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-
     // 🔄 Detect device screen orientation
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var isPlayingTurdAnimation by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         with(sharedTransitionScope) {
@@ -180,7 +181,7 @@ internal fun NappyChangeScreen(
                     MMPClickableTextField(
                         value = uiState.time,
                         label = "Time",
-                        onClick = { showTimePicker = true },
+                        onClick = { onShowTimePicker(true) },
                         enabled = !uiState.isLoading,
                         trailingIcon = Icons.Default.DateRange,
                         contentDescription = "Select Time"
@@ -223,10 +224,10 @@ internal fun NappyChangeScreen(
                     Button(
                         onClick = {
                             // Trigger the poop animation burst overlay instead of navigating away instantly
-                            isPlayingTurdAnimation = true
+                            onSetIsPlayingTurdAnimation(true)
                         },
                         modifier = Modifier.fillMaxWidth(0.8f),
-                        enabled = !uiState.isLoading && !isPlayingTurdAnimation
+                        enabled = !uiState.isLoading && !uiState.isPlayingTurdAnimation
                     ) {
                         Text("Save Nappy Change")
                     }
@@ -234,7 +235,7 @@ internal fun NappyChangeScreen(
                     if (uiState.id != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         TextButton(
-                            onClick = { showDeleteConfirmation = true },
+                            onClick = { onShowDeleteConfirmation(true) },
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             enabled = !uiState.isLoading
                         ) {
@@ -272,7 +273,7 @@ internal fun NappyChangeScreen(
                 MMPClickableTextField(
                     value = uiState.time,
                     label = "Time",
-                    onClick = { showTimePicker = true },
+                    onClick = { onShowTimePicker(true) },
                     enabled = !uiState.isLoading,
                     trailingIcon = Icons.Default.DateRange,
                     contentDescription = "Select Time"
@@ -314,10 +315,10 @@ internal fun NappyChangeScreen(
                 Button(
                     onClick = {
                         // Trigger the poop animation burst overlay instead of navigating away instantly
-                        isPlayingTurdAnimation = true
+                        onSetIsPlayingTurdAnimation(true)
                     },
                     modifier = Modifier.fillMaxWidth(0.8f),
-                    enabled = !uiState.isLoading && !isPlayingTurdAnimation
+                    enabled = !uiState.isLoading && !uiState.isPlayingTurdAnimation
                 ) {
                     Text("Save Nappy Change")
                 }
@@ -325,7 +326,7 @@ internal fun NappyChangeScreen(
                 if (uiState.id != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(
-                        onClick = { showDeleteConfirmation = true },
+                        onClick = { onShowDeleteConfirmation(true) },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                         enabled = !uiState.isLoading
                     ) {
@@ -336,7 +337,7 @@ internal fun NappyChangeScreen(
         }
 
         // ⏰ Material 3 Smart Orientation-Aware Time Picker Dialog Box Control
-        if (showTimePicker) {
+        if (uiState.showTimePicker) {
             val initialTime = try {
                 LocalTime.parse(uiState.time)
             } catch (e: Exception) {
@@ -344,39 +345,39 @@ internal fun NappyChangeScreen(
             }
 
             MMPTimePickerDialog(
-                onDismissRequest = { showTimePicker = false },
+                onDismissRequest = { onShowTimePicker(false) },
                 initialTime = initialTime,
                 onTimeSelected = onTimeSelected
             )
         }
 
-        if (showDeleteConfirmation) {
+        if (uiState.showDeleteConfirmation) {
             AlertDialog(
-                onDismissRequest = { showDeleteConfirmation = false },
+                onDismissRequest = { onShowDeleteConfirmation(false) },
                 title = { Text("Delete Nappy Change") },
                 text = { Text("Are you sure you want to delete this record?") },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             onDelete()
-                            showDeleteConfirmation = false
+                            onShowDeleteConfirmation(false)
                         }
                     ) {
                         Text("Delete")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteConfirmation = false }) {
+                    TextButton(onClick = { onShowDeleteConfirmation(false) }) {
                         Text("Cancel")
                     }
                 }
             )
         }
 
-        if (isPlayingTurdAnimation) {
+        if (uiState.isPlayingTurdAnimation) {
             TurdSplodgeAnimation(
                 onAnimationEnd = {
-                    isPlayingTurdAnimation = false
+                    onSetIsPlayingTurdAnimation(false)
                     onSave() // Fire your Firestore update and navigate away
                 }
             )

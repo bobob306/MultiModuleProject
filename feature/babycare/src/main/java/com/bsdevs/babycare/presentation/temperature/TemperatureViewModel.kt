@@ -78,7 +78,7 @@ class TemperatureViewModel @Inject constructor(
     fun onEditTemperature(id: String) {
         val userId = accountService.currentUserId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, showSheet = true) }
             try {
                 val event = repository.getFeedingEventById(userId, id) // Repository uses unified lookup
 
@@ -125,12 +125,29 @@ class TemperatureViewModel @Inject constructor(
         _uiState.update { it.copy(time = formattedTime, error = null) }
     }
 
+    fun setShowSheet(show: Boolean) {
+        _uiState.update { it.copy(showSheet = show) }
+    }
+
+    fun setShowTimePicker(show: Boolean) {
+        _uiState.update { it.copy(showTimePicker = show) }
+    }
+
+    fun setShowDatePicker(show: Boolean) {
+        _uiState.update { it.copy(showDatePicker = show) }
+    }
+
+    fun setShowDeleteConfirmation(show: Boolean) {
+        _uiState.update { it.copy(showDeleteConfirmation = show) }
+    }
+
     fun resetForm() {
         _uiState.update { current ->
             TemperatureUiState(
                 dates = current.dates,
                 dailyReadings = current.dailyReadings,
-                isLoading = false
+                isLoading = false,
+                showSheet = true
             )
         }
     }

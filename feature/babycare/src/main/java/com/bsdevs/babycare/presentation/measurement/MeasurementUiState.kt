@@ -21,5 +21,9 @@ data class MeasurementUiState(
 
     // Form Toggles
     val recordHeight: Boolean = false,
-    val recordWeight: Boolean = false
+    val recordWeight: Boolean = false,
+    val showSheet: Boolean = false,
+    val showTimePicker: Boolean = false,
+    val showDatePicker: Boolean = false,
+    val showDeleteConfirmation: Boolean = false
 )

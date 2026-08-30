@@ -151,4 +151,18 @@ class NappyChangeViewModelTest {
         // Then
         assertNull(repository.getNappyEventById(userId, eventId))
     }
+
+    @Test
+    fun `setShowTimePicker updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setShowTimePicker(true)
+        assertTrue(viewModel.uiState.value.showTimePicker)
+    }
+
+    @Test
+    fun `setIsPlayingTurdAnimation updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setIsPlayingTurdAnimation(true)
+        assertTrue(viewModel.uiState.value.isPlayingTurdAnimation)
+    }
 }

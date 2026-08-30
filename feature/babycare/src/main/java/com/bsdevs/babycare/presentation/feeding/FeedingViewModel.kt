@@ -134,7 +134,31 @@ class FeedingViewModel @Inject constructor(
     }
 
     fun updateBottleAmount(amount: Int?) {
-        _uiState.update { it.copy(bottleAmountMl = amount) }
+        _uiState.update { it.copy(bottleAmountMl = amount, showBottleDialog = false) }
+    }
+
+    fun setShowBottleDialog(show: Boolean) {
+        _uiState.update { it.copy(showBottleDialog = show) }
+    }
+
+    fun setShowTimePicker(show: Boolean) {
+        _uiState.update { it.copy(showTimePicker = show) }
+    }
+
+    fun setShowDurationDialog(side: String?) {
+        _uiState.update { it.copy(showDurationDialogForSide = side) }
+    }
+
+    fun setShowDeleteConfirmation(show: Boolean) {
+        _uiState.update { it.copy(showDeleteConfirmation = show) }
+    }
+
+    fun setShowCancelConfirmation(show: Boolean) {
+        _uiState.update { it.copy(showCancelConfirmation = show) }
+    }
+
+    fun setIsPlayingSplodge(isPlaying: Boolean) {
+        _uiState.update { it.copy(isPlayingSplodge = isPlaying) }
     }
 
     fun submitFeeding() {

@@ -62,6 +62,13 @@ class RegisterScreenViewModel @Inject constructor(
             is RegisterScreenIntent.UpdateBabyMiddleName -> handleUpdateBabyMiddleName(intent.babyMiddleName)
             is RegisterScreenIntent.UpdateBabyBirthDate -> handleUpdateBabyBirthDate(intent.babyBirthDate)
             is RegisterScreenIntent.SetBabyEntryMethod -> handleSetBabyEntryMethod(intent.method)
+            is RegisterScreenIntent.SetDatePickerVisibility -> {
+                _viewData.update { currentResult ->
+                    if (currentResult is Result.Success) {
+                        Result.Success(currentResult.data.copy(isDatePickerVisible = intent.isVisible))
+                    } else currentResult
+                }
+            }
             RegisterScreenIntent.Register -> onRegisterClick()
             RegisterScreenIntent.UpdatePasswordVisibility -> handleUpdatePasswordVisibility()
             RegisterScreenIntent.UpdatePasswordConfirmationVisibility -> handleUpdatePasswordConfirmationVisibility()
@@ -386,6 +393,7 @@ sealed class RegisterScreenIntent {
     data class UpdateBabyMiddleName(val babyMiddleName: String) : RegisterScreenIntent()
     data class UpdateBabyBirthDate(val babyBirthDate: String) : RegisterScreenIntent()
     data class SetBabyEntryMethod(val method: BabyEntryMethod) : RegisterScreenIntent()
+    data class SetDatePickerVisibility(val isVisible: Boolean) : RegisterScreenIntent()
     data object Register : RegisterScreenIntent()
     data object UpdatePasswordVisibility : RegisterScreenIntent()
     data object UpdatePasswordConfirmationVisibility : RegisterScreenIntent()
@@ -426,4 +434,5 @@ data class RegisterScreenViewData(
     val passwordError: String? = null,
     val babyError: String? = null,
     val generalError: String? = null,
+    val isDatePickerVisible: Boolean = false,
 )

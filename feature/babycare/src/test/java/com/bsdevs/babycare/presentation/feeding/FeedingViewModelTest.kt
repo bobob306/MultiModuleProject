@@ -221,4 +221,28 @@ class FeedingViewModelTest {
         assertFalse(viewModel.uiState.value.isLeftRunning)
         assertEquals(0L, viewModel.uiState.value.leftDuration)
     }
+
+    @Test
+    fun `setShowBottleDialog updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setShowBottleDialog(true)
+        assertTrue(viewModel.uiState.value.showBottleDialog)
+        
+        viewModel.setShowBottleDialog(false)
+        assertFalse(viewModel.uiState.value.showBottleDialog)
+    }
+
+    @Test
+    fun `setShowTimePicker updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setShowTimePicker(true)
+        assertTrue(viewModel.uiState.value.showTimePicker)
+    }
+
+    @Test
+    fun `setIsPlayingSplodge updates uiState`() = runTest {
+        createViewModel()
+        viewModel.setIsPlayingSplodge(true)
+        assertTrue(viewModel.uiState.value.isPlayingSplodge)
+    }
 }

@@ -26,6 +26,9 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: CoffeeRepository
 ) : ViewModel() {
+    private val _navigationEvent = Channel<NavigationEvent>()
+    val navigationEvent = _navigationEvent.receiveAsFlow()
+
     private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
     val viewData: StateFlow<Result<CoffeeHomeScreenViewData>> = _viewData.asStateFlow()
@@ -66,9 +69,6 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         )
         _viewData.value = Result.Success(data = vd)
     }
-
-    private val _navigationEvent = Channel<NavigationEvent>()
-    val navigationEvent = _navigationEvent.receiveAsFlow()
 
     private fun loadData() {
         _viewData.value = Result.Success(

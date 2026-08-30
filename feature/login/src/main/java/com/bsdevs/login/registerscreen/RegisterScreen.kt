@@ -47,9 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -169,9 +167,7 @@ fun RegisterScreenContent(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
-
-    if (showDatePicker) {
+    if (viewData.isDatePickerVisible) {
         val initialDate = try {
             java.time.LocalDate.parse(viewData.babyBirthDate)
         } catch (_: Exception) {
@@ -179,10 +175,11 @@ fun RegisterScreenContent(
         }
 
         MMPDatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = { onIntent(RegisterScreenIntent.SetDatePickerVisibility(false)) },
             initialDate = initialDate,
             onDateSelected = { selectedDate ->
                 onIntent(RegisterScreenIntent.UpdateBabyBirthDate(selectedDate.toString()))
+                onIntent(RegisterScreenIntent.SetDatePickerVisibility(false))
             }
         )
     }
@@ -390,7 +387,7 @@ fun RegisterScreenContent(
                                 readOnly = true,
                                 singleLine = true,
                                 leadingIcon = {
-                                    IconButton(onClick = { showDatePicker = true }) {
+                                    IconButton(onClick = { onIntent(RegisterScreenIntent.SetDatePickerVisibility(true)) }) {
                                         Icon(
                                             Icons.Default.DateRange,
                                             contentDescription = "Select Date"

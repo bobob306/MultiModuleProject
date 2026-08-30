@@ -166,6 +166,20 @@ class CoffeeInputScreenViewModel @Inject constructor(
             CoffeeInputScreenIntent.SubmitCoffee -> onEnterPress()
             is CoffeeInputScreenIntent.ToggleDropdownSelection -> handleToggleDropdownSelection(intent.inputType, intent.selection)
             is CoffeeInputScreenIntent.UpdateSearchText -> handleUpdateSearchText(intent.inputType, intent.searchText)
+            is CoffeeInputScreenIntent.SetDatePickerVisibility -> {
+                _viewData.update { currentResult ->
+                    if (currentResult is Success) {
+                        Success(data = currentResult.data.copy(isDatePickerVisible = intent.isVisible))
+                    } else currentResult
+                }
+            }
+            is CoffeeInputScreenIntent.ToggleDropdown -> {
+                _viewData.update { currentResult ->
+                    if (currentResult is Success) {
+                        Success(data = currentResult.data.copy(expandedInputType = intent.inputType))
+                    } else currentResult
+                }
+            }
             CoffeeInputScreenIntent.NavigateHome -> {
                 viewModelScope.launch {
                     _navigationEvent.send(NavigationEvent.NavigateToHome)
@@ -304,6 +318,8 @@ sealed class CoffeeInputScreenIntent {
     object SubmitCoffee : CoffeeInputScreenIntent()
     data class ToggleDropdownSelection(val inputType: InputType, val selection: String) : CoffeeInputScreenIntent()
     data class UpdateSearchText(val inputType: InputType, val searchText: String) : CoffeeInputScreenIntent()
+    data class SetDatePickerVisibility(val isVisible: Boolean) : CoffeeInputScreenIntent()
+    data class ToggleDropdown(val inputType: InputType?) : CoffeeInputScreenIntent()
     object NavigateHome : CoffeeInputScreenIntent()
 }
 

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -136,5 +137,19 @@ class TemperatureViewModelTest {
             coVerify { repository.deleteActivityEvent(userId, any(), eventId) }
             assertEquals(TemperatureUiEffect.DeleteSuccess, awaitItem())
         }
+    }
+
+    @Test
+    fun `setShowSheet updates uiState`() = runTest {
+        viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
+        viewModel.setShowSheet(true)
+        assertTrue(viewModel.uiState.value.showSheet)
+    }
+
+    @Test
+    fun `setShowDatePicker updates uiState`() = runTest {
+        viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
+        viewModel.setShowDatePicker(true)
+        assertTrue(viewModel.uiState.value.showDatePicker)
     }
 }
