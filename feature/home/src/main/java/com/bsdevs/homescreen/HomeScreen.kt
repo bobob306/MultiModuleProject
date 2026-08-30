@@ -1,6 +1,7 @@
 package com.bsdevs.homescreen
 
 import android.content.res.Configuration
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,21 +46,24 @@ fun HomeScreenRoute(
     viewModel: HomeScreenViewModel = hiltViewModel(),
 ) {
     val viewData = viewModel.viewData.collectAsStateWithLifecycle()
-    when (viewData.value) {
-        is Result.Success -> {
-            HomeScreen(
-                onShowSnackBar = onShowSnackBar,
-                onLoadData = viewModel::getScreen,
-                viewData = (viewData.value as Result.Success<List<NetworkScreenData>>).data,
-                onClick = viewModel::click,
-                onNavigationClick = {},
-                onNavigateToCoffee = onNavigateToCoffee,
-                onNavigateToBabyCare = onNavigateToBabyCare,
-            )
-        }
+    val viewDataState = viewData.value
+    Crossfade(targetState = viewDataState, label = "home_loading_to_content") { state ->
+        when (state) {
+            is Result.Success -> {
+                HomeScreen(
+                    onShowSnackBar = onShowSnackBar,
+                    onLoadData = viewModel::getScreen,
+                    viewData = state.data,
+                    onClick = viewModel::click,
+                    onNavigationClick = {},
+                    onNavigateToCoffee = onNavigateToCoffee,
+                    onNavigateToBabyCare = onNavigateToBabyCare,
+                )
+            }
 
-        is Result.Error -> ErrorScreen()
-        is Result.Loading -> HomeLoadingScreen()
+            is Result.Error -> ErrorScreen()
+            is Result.Loading -> HomeLoadingScreen()
+        }
     }
 }
 

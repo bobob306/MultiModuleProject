@@ -2,6 +2,7 @@ package com.bsdevs.coffeescreen.screens.homescreen
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -68,16 +69,18 @@ fun CoffeeHomeScreenRoute(
             .fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        when (viewData.value) {
+    Crossfade(targetState = viewData.value, label = "coffee_loading_to_content") { state ->
+        when (state) {
             is Result.Loading -> CoffeeHomeLoadingScreen()
             is Result.Error -> ErrorScreen()
             is Result.Success -> CoffeeHomeScreenContent(
-                viewData = (viewData.value as Result.Success<CoffeeHomeScreenViewData>).data,
+                viewData = state.data,
                 onIntent = viewModel::processIntent,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope
             )
         }
+    }
     }
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->

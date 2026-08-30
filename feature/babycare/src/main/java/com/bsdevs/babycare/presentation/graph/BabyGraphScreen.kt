@@ -6,7 +6,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +32,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,19 +42,25 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.uicomponents.MMPScaffold
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BabyGraphRoute(
-    onShowSnackBar: suspend (String, String) -> Unit,
     onNavigateBack: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -101,8 +110,7 @@ fun BabyFeedingGraphScreen(
                             start = horizontalPadding,
                             end = horizontalPadding,
                             bottom = 16.dp
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                        )
                 ) {
                     item {
                         Column(
@@ -136,24 +144,20 @@ fun BabyFeedingGraphScreen(
                                 }
                             } else {
                                 // --- CHART 1: HOURLY FREQUENCY ---
-                                Row(
+                                FeedingHourCanvas(
+                                    hourlyCounts = uiState.hourlyCounts,
+                                    barColor = MaterialTheme.colorScheme.primary,
+                                    labelColor = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(260.dp)
-                                        .horizontalScroll(rememberScrollState())
                                         .background(
                                             MaterialTheme.colorScheme.surfaceVariant.copy(
                                                 alpha = 0.3f
                                             )
                                         )
                                         .padding(horizontal = 16.dp)
-                                ) {
-                                    FeedingHourCanvas(
-                                        hourlyCounts = uiState.hourlyCounts,
-                                        barColor = MaterialTheme.colorScheme.primary,
-                                        labelColor = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                                )
 
                                 // --- CHART 2: DAILY AVERAGE GAP (NEW) ---
                                 Text(
@@ -170,24 +174,20 @@ fun BabyFeedingGraphScreen(
                                         modifier = Modifier.padding(vertical = 16.dp)
                                     )
                                 } else {
-                                    Row(
+                                    DailyAverageGapCanvas(
+                                        dailyGaps = uiState.dailyAverageGaps,
+                                        lineColor = MaterialTheme.colorScheme.tertiary,
+                                        labelColor = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(260.dp)
-                                            .horizontalScroll(rememberScrollState())
                                             .background(
                                                 MaterialTheme.colorScheme.surfaceVariant.copy(
                                                     alpha = 0.3f
                                                 )
                                             )
                                             .padding(horizontal = 16.dp)
-                                    ) {
-                                        DailyAverageGapCanvas(
-                                            dailyGaps = uiState.dailyAverageGaps,
-                                            lineColor = MaterialTheme.colorScheme.tertiary,
-                                            labelColor = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
+                                    )
                                 }
                             }
 
@@ -209,22 +209,43 @@ fun DailyAverageGapCanvas(
     labelColor: Color,
     modifier: Modifier = Modifier
 ) {
+    if (dailyGaps.isEmpty()) return
+
+    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
+    val sortedGaps = remember(dailyGaps) {
+        dailyGaps.mapNotNull { gap ->
+            try {
+                gap to LocalDate.parse(gap.dateString, formatter)
+            } catch (e: Exception) {
+                null
+            }
+        }.sortedBy { it.second }
+    }
+
+    if (sortedGaps.isEmpty()) return
+
+    val minDate = sortedGaps.first().second
+    val maxDate = sortedGaps.last().second
+    val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
+
     // 1. Establish trackable scaling variables
-    var scaleFactor by remember { mutableFloatStateOf(1.0f) }
+    var scaleFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
-    // 🌟 THE FIX: Lower minScale to 0.2f to allow zooming out much further
-    val minScale = 0.2f
-    val maxScale = 3.0f
+    val minScale = 0.01f
+    val maxScale = 30.0f
 
-    val transformState = rememberTransformableState { _, zoom, _, _ ->
-        scaleFactor = (scaleFactor * zoom).coerceIn(minScale, maxScale)
+    val transformModifier = Modifier.pointerInput(Unit) {
+        detectTransformGestures { _, _, zoom, _ ->
+            scaleFactor = (scaleFactor * zoom).coerceIn(minScale, maxScale)
+        }
     }
 
     // 2. Base layout static metrics
-    val baseStepWidth = 72.dp
+    val baseWidthPerDay = 48.dp
     val bottomLabelSpace = 32.dp
     val topPaddingSpace = 24.dp
-    val leftAxisLabelSpace = 44.dp
+    val leftAxisLabelSpace = 50.dp
 
     val rawValues = dailyGaps.flatMap {
         listOfNotNull(it.averageGapMinutes, it.rolling14DayAverageMinutes)
@@ -236,169 +257,235 @@ fun DailyAverageGapCanvas(
     val yAxisMax = rawMax + 10
     val yAxisRange = (yAxisMax - yAxisMin).coerceAtLeast(1)
 
-    // 3. Wrap everything inside a Transformable Box container layout
-    Box(
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val hPadding = 32.dp
+    val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
+    val chartTotalWidth = maxOf(screenWidth - leftAxisLabelSpace, contentWidth + hPadding * 2)
+
+    Row(
         modifier = modifier
             .fillMaxHeight()
-            .transformable(state = transformState) // Captures multi-touch gestures safely
+            .then(transformModifier)
     ) {
+        // 1. Fixed Y-Axis Labels
         Canvas(
             modifier = Modifier
                 .fillMaxHeight()
-                // 🌟 THE FIX: Multiply stepWidth by scaleFactor to widen/shrink graph lines dynamically
-                .width(
-                    leftAxisLabelSpace + ((baseStepWidth * scaleFactor) * dailyGaps.size.coerceAtLeast(
-                        1
-                    ))
-                )
+                .width(leftAxisLabelSpace)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
-            val canvasHeight = size.height
-            val canvasWidth = size.width
-            val chartHeight = canvasHeight - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
-            val startX = leftAxisLabelSpace.toPx()
-
-            val textPaint = android.graphics.Paint().apply {
-                color = labelColor.toArgb()
-                textSize = 10.sp.toPx()
-                textAlign = android.graphics.Paint.Align.CENTER
-                isAntiAlias = true
-            }
-
+            val chartHeight = size.height - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
             val axisTextPaint = android.graphics.Paint().apply {
-                color = labelColor.copy(alpha = 0.6f).toArgb()
-                textSize = 9.sp.toPx()
-                textAlign = android.graphics.Paint.Align.RIGHT
-                isAntiAlias = true
+                this.color = labelColor.copy(alpha = 0.6f).toArgb()
+                this.textSize = 9.sp.toPx()
+                this.textAlign = android.graphics.Paint.Align.RIGHT
+                this.isAntiAlias = true
             }
 
-            // Draw Y-Axis Line & Labels
-            drawLine(
-                color = lineColor.copy(alpha = 0.3f),
-                start = Offset(startX, topPaddingSpace.toPx()),
-                end = Offset(startX, topPaddingSpace.toPx() + chartHeight),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            val yLabels = listOf(yAxisMin, yAxisMin + (yAxisRange / 2), yAxisMax)
-            yLabels.forEach { value ->
-                val ratio = (value - yAxisMin).toFloat() / yAxisRange
-                val labelY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * ratio))
+            val numYMarkers = 5
+            for (i in 0 until numYMarkers) {
+                val ratio = i.toFloat() / (numYMarkers - 1)
+                val value = yAxisMin + (ratio * yAxisRange)
+                val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * ratio))
 
                 drawContext.canvas.nativeCanvas.drawText(
                     "${value}m",
-                    startX - 6.dp.toPx(),
-                    labelY + 3.dp.toPx(),
+                    size.width - 6.dp.toPx(),
+                    y + 3.dp.toPx(),
                     axisTextPaint
                 )
-
-                drawLine(
-                    color = lineColor.copy(alpha = 0.08f),
-                    start = Offset(startX, labelY),
-                    end = Offset(canvasWidth, labelY),
-                    strokeWidth = 1.dp.toPx()
-                )
             }
+        }
 
-            // Plot Graph lines and nodes
-            val dailyPoints = mutableListOf<Offset>()
-            val rollingPoints = mutableListOf<Offset>()
+        // 2. Scrollable Chart Area
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(1f)
+                .horizontalScroll(rememberScrollState())
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(chartTotalWidth)
+                    .pointerInput(sortedGaps, scaleFactor) {
+                        detectTapGestures { tapOffset ->
+                            val startX = hPadding.toPx()
+                            val chartHeight = size.height - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
+                            val availableWidth = size.width - hPadding.toPx() * 2
+                            
+                            var bestIndex: Int? = null
+                            var minDistance = 32.dp.toPx()
+                            
+                            sortedGaps.forEachIndexed { index, (item, date) ->
+                                val daysOffset = ChronoUnit.DAYS.between(minDate, date)
+                                val xRatio = daysOffset.toFloat() / totalDaysSpan.toFloat()
+                                val x = startX + (xRatio * availableWidth)
+                                
+                                val dailyRatio = (item.averageGapMinutes - yAxisMin).toFloat() / yAxisRange
+                                val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * dailyRatio))
+                                
+                                val dist = (tapOffset - Offset(x, dailyY)).getDistance()
+                                if (dist < minDistance) {
+                                    minDistance = dist
+                                    bestIndex = index
+                                }
+                            }
+                            selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
+                        }
+                    }
+            ) {
+                val canvasHeight = size.height
+                val canvasWidth = size.width
+                val chartHeight = canvasHeight - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
+                val startX = hPadding.toPx()
+                val availableWidth = canvasWidth - hPadding.toPx() * 2
 
-            dailyGaps.forEachIndexed { index, item ->
-                // Calculate the scaled layout track offsets dynamically
-                val scaledStepWidth = baseStepWidth.toPx() * scaleFactor
-                val x = startX + (index * scaledStepWidth) + (scaledStepWidth / 2f)
-
-                val dailyRatio = (item.averageGapMinutes - yAxisMin).toFloat() / yAxisRange
-                val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * dailyRatio))
-                dailyPoints.add(Offset(x, dailyY))
-
-                item.rolling14DayAverageMinutes?.let { rollingAvg ->
-                    val rollingRatio = (rollingAvg - yAxisMin).toFloat() / yAxisRange
-                    val rollingY =
-                        topPaddingSpace.toPx() + (chartHeight - (chartHeight * rollingRatio))
-                    rollingPoints.add(Offset(x, rollingY))
+                val textPaint = android.graphics.Paint().apply {
+                    this.color = labelColor.toArgb()
+                    this.textSize = 10.sp.toPx()
+                    this.textAlign = android.graphics.Paint.Align.CENTER
+                    this.isAntiAlias = true
                 }
 
-                // --- 🌟 CONDITIONAL TEXT LOGIC STARTS HERE ---
-                if (scaleFactor > 0.5f) {
-                    // 1. Zoomed In: Show complete detailed labels normally
-                    val displayDate = try {
-                        val parts = item.dateString.split("-")
-                        if (parts.size >= 3) {
-                            "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
-                        } else item.dateString
-                    } catch (e: Exception) {
-                        item.dateString
+                // Draw horizontal grid lines
+                val gridColor = lineColor.copy(alpha = 0.2f)
+                val numYMarkers = 5
+                for (i in 0 until numYMarkers) {
+                    val ratio = i.toFloat() / (numYMarkers - 1)
+                    val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * ratio))
+
+                    drawLine(
+                        color = gridColor.copy(alpha = 0.08f),
+                        start = Offset(0f, y),
+                        end = Offset(canvasWidth, y),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+
+                // Plot Graph lines and nodes
+                val dailyPoints = mutableListOf<Offset>()
+                val rollingPoints = mutableListOf<Offset>()
+
+                sortedGaps.forEachIndexed { index, (item, date) ->
+                    val daysOffset = ChronoUnit.DAYS.between(minDate, date)
+                    val xRatio = daysOffset.toFloat() / totalDaysSpan.toFloat()
+                    val x = startX + (xRatio * availableWidth)
+
+                    val dailyRatio = (item.averageGapMinutes - yAxisMin).toFloat() / yAxisRange
+                    val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * dailyRatio))
+                    dailyPoints.add(Offset(x, dailyY))
+
+                    item.rolling14DayAverageMinutes?.let { rollingAvg ->
+                        val rollingRatio = (rollingAvg - yAxisMin).toFloat() / yAxisRange
+                        val rollingY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * rollingRatio))
+                        rollingPoints.add(Offset(x, rollingY))
                     }
 
-                    // Draw standard date text along the x-axis
-                    drawContext.canvas.nativeCanvas.drawText(
-                        displayDate,
-                        x,
-                        canvasHeight - 8.dp.toPx(),
-                        textPaint
-                    )
-
-                    // Draw the exact minute reading above each node dot
-                    drawContext.canvas.nativeCanvas.drawText(
-                        "${item.averageGapMinutes}m",
-                        x,
-                        dailyY - 8.dp.toPx(),
-                        textPaint
-                    )
-                } else {
-                    // 2. Zoomed Out: De-clutter layout by hiding text and showing clean day indices
-                    val minimalDateMarker = try {
+                    // Date labels
+                    val dateStr = try {
                         val parts = item.dateString.split("-")
-                        parts.getOrNull(2) ?: "" // Show just the day number (e.g., "16")
-                    } catch (e: Exception) {
-                        ""
-                    }
-
-                    // Only draw every second or third day number text label to prevent horizontal collisions
-                    if (index % 3 == 0) {
+                        if (parts.size >= 3) "${parts[2]}/${parts[1]}" else item.dateString
+                    } catch (e: Exception) { "" }
+                    
+                    val shouldShowLabel = if (index == 0 || index == sortedGaps.size - 1) true
+                    else if (sortedGaps.size < 15) index % 2 == 0
+                    else scaleFactor > 1.5f && index % 2 == 0
+                    
+                    if (shouldShowLabel) {
                         drawContext.canvas.nativeCanvas.drawText(
-                            minimalDateMarker,
+                            dateStr,
                             x,
                             canvasHeight - 8.dp.toPx(),
                             textPaint
                         )
                     }
-
-                    // (Note: The raw "${item.averageGapMinutes}m" text is omitted here to completely un-clutter the canvas background)
                 }
-            }
 
-            // Draw Paths
-            if (dailyPoints.size > 1) {
-                for (i in 0 until dailyPoints.size - 1) {
-                    drawLine(
-                        color = lineColor,
-                        start = dailyPoints[i],
-                        end = dailyPoints[i + 1],
-                        strokeWidth = 3.dp.toPx()
-                    )
-                }
-            }
-
-            if (rollingPoints.size > 1) {
-                for (i in 0 until rollingPoints.size - 1) {
-                    drawLine(
-                        color = lineColor.copy(alpha = 0.6f),
-                        start = rollingPoints[i],
-                        end = rollingPoints[i + 1],
-                        strokeWidth = 2.dp.toPx(),
-                        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                            intervals = floatArrayOf(10f, 10f),
-                            phase = 0f
+                // Draw Paths
+                if (dailyPoints.size > 1) {
+                    for (i in 0 until dailyPoints.size - 1) {
+                        drawLine(
+                            color = lineColor,
+                            start = dailyPoints[i],
+                            end = dailyPoints[i + 1],
+                            strokeWidth = 3.dp.toPx()
                         )
-                    )
+                    }
                 }
-            }
 
-            dailyPoints.forEach { offset ->
-                drawCircle(color = lineColor, radius = 4.dp.toPx(), center = offset)
-                drawCircle(color = Color.White, radius = 1.5.dp.toPx(), center = offset)
+                if (rollingPoints.size > 1) {
+                    for (i in 0 until rollingPoints.size - 1) {
+                        drawLine(
+                            color = lineColor.copy(alpha = 0.6f),
+                            start = rollingPoints[i],
+                            end = rollingPoints[i + 1],
+                            strokeWidth = 2.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                    }
+                }
+
+                dailyPoints.forEach { offset ->
+                    drawCircle(color = lineColor, radius = 5.dp.toPx(), center = offset)
+                    drawCircle(color = Color.White, radius = 2.dp.toPx(), center = offset)
+                }
+
+                // Draw Tooltip
+                selectedIndex?.let { index ->
+                    if (index < dailyPoints.size) {
+                        val offset = dailyPoints[index]
+                        val item = sortedGaps[index].first
+                        val text = "${item.averageGapMinutes}m (${item.dateString})"
+                        
+                        val tooltipPaint = android.graphics.Paint().apply {
+                            this.color = android.graphics.Color.BLACK
+                            this.alpha = (255 * 0.8f).toInt()
+                            this.style = android.graphics.Paint.Style.FILL
+                            this.isAntiAlias = true
+                        }
+                        
+                        val textPaintTooltip = android.graphics.Paint().apply {
+                            this.color = android.graphics.Color.WHITE
+                            this.textSize = 12.sp.toPx()
+                            this.textAlign = android.graphics.Paint.Align.CENTER
+                            this.isFakeBoldText = true
+                        }
+                        
+                        val textBounds = android.graphics.Rect()
+                        textPaintTooltip.getTextBounds(text, 0, text.length, textBounds)
+                        
+                        val padding = 8.dp.toPx()
+                        val tooltipWidth = textBounds.width() + padding * 2
+                        val tooltipHeight = textBounds.height() + padding * 2
+                        
+                        val tooltipRect = android.graphics.RectF(
+                            offset.x - tooltipWidth / 2,
+                            offset.y - tooltipHeight - 12.dp.toPx(),
+                            offset.x + tooltipWidth / 2,
+                            offset.y - 12.dp.toPx()
+                        )
+                        
+                        if (tooltipRect.left < 0) tooltipRect.offset(-tooltipRect.left, 0f)
+                        else if (tooltipRect.right > canvasWidth) tooltipRect.offset(canvasWidth - tooltipRect.right, 0f)
+
+                        drawContext.canvas.nativeCanvas.drawRoundRect(tooltipRect, 4.dp.toPx(), 4.dp.toPx(), tooltipPaint)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            text,
+                            tooltipRect.centerX(),
+                            tooltipRect.centerY() + textBounds.height() / 2f,
+                            textPaintTooltip
+                        )
+                        
+                        drawLine(
+                            color = labelColor.copy(alpha = 0.5f),
+                            start = Offset(offset.x, topPaddingSpace.toPx()),
+                            end = Offset(offset.x, canvasHeight - bottomLabelSpace.toPx()),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -416,15 +503,20 @@ fun FeedingHourCanvas(
     val barWidth = 44.dp
     val barSpacing = 16.dp
     val bottomLabelSpace = 32.dp
+    
+    val totalWidth = (barWidth + barSpacing) * hourlyCounts.size
 
     // Find highest count to scale graph peaks proportionally
     val maxFeedCount = hourlyCounts.maxOfOrNull { it.count }?.coerceAtLeast(1) ?: 1
 
-    Canvas(
-        modifier = modifier
-            .fillMaxHeight()
-            .width((barWidth + barSpacing) * hourlyCounts.size)
+    Box(
+        modifier = modifier.horizontalScroll(rememberScrollState())
     ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(totalWidth)
+        ) {
         val canvasHeight = size.height
         val chartHeight = canvasHeight - bottomLabelSpace.toPx()
 
@@ -471,6 +563,7 @@ fun FeedingHourCanvas(
             )
         }
     }
+}
 }
 
 @Composable

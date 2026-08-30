@@ -1,12 +1,12 @@
 package com.bsdevs.babycare.presentation.measurement
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
@@ -62,7 +61,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
@@ -82,8 +80,11 @@ import com.bsdevs.uicomponents.WheelInput
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
@@ -211,8 +212,7 @@ internal fun MeasurementScreen(
                 .padding(innerPadding)
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     item {
                         Row(
@@ -491,130 +491,260 @@ fun MeasurementLineChart(
     dotColorSelf: Color,
     isWeight: Boolean
 ) {
+    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm") }
+
     val sortedData = remember(measurements) {
-        measurements.filter { valueSelector(it) != null }.sortedBy { it.dateTime }
+        measurements.filter { valueSelector(it) != null }
+            .map {
+                val dt = try {
+                    LocalDateTime.parse(it.dateTime, formatter)
+                } catch (e: Exception) {
+                    LocalDateTime.now()
+                }
+                it to dt
+            }
+            .sortedBy { it.second }
     }
 
     if (sortedData.isEmpty()) return
 
-    var scaleFactor by remember { mutableFloatStateOf(1.0f) }
-    val baseStepWidth = 80.dp
+    var selectedIndex by remember { mutableStateOf<Int?>(null) }
+    val minTime = sortedData.first().second
+    val maxTime = sortedData.last().second
+    val totalSeconds = ChronoUnit.SECONDS.between(minTime, maxTime).coerceAtLeast(1L)
+    val totalDays = ChronoUnit.DAYS.between(minTime, maxTime).coerceAtLeast(1L)
+
+    var scaleFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
+    // Base width per day to make it scrollable if it covers many days
+    val baseWidthPerDay = 48.dp
     
     // Support Pinch Zoom + One Finger Pan (via horizontalScroll)
     val transformModifier = Modifier.pointerInput(Unit) {
         detectTransformGestures { _, _, zoom, _ ->
-            scaleFactor = (scaleFactor * zoom).coerceIn(0.1f, 10.0f)
+            scaleFactor = (scaleFactor * zoom).coerceIn(0.01f, 30.0f)
         }
     }
 
-    val values = sortedData.mapNotNull { valueSelector(it) }
+    val values = sortedData.mapNotNull { valueSelector(it.first) }
     val maxVal = values.maxOrNull() ?: 1.0
     val minVal = values.minOrNull() ?: 0.0
     val range = (maxVal - minVal).coerceAtLeast(0.1)
     
     val yPadding = 40.dp
-    val xLabelSpace = 40.dp
+    val xLabelSpace = 50.dp
+    
+    // Calculate total width based on time span
+    // Minimum width to ensure it's at least one screen width or readable
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val hPadding = 32.dp
+    val contentWidth = (baseWidthPerDay * totalDays.toFloat() * scaleFactor)
+    val chartWidth = maxOf(screenWidth - xLabelSpace, contentWidth + hPadding * 2)
 
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxSize()
             .then(transformModifier)
-            .horizontalScroll(rememberScrollState())
     ) {
+        // 1. Fixed Y-Axis Labels
         Canvas(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(xLabelSpace + (baseStepWidth * scaleFactor * (sortedData.size - 1).coerceAtLeast(1)))
+                .width(xLabelSpace)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             val chartHeight = size.height - yPadding.toPx() * 2
-            val startX = xLabelSpace.toPx()
-            val stepWidth = baseStepWidth.toPx() * scaleFactor
-
-            // Draw grid lines
-            val gridColor = Color.Gray.copy(alpha = 0.2f)
-            drawLine(
-                color = gridColor,
-                start = Offset(startX, yPadding.toPx()),
-                end = Offset(startX, size.height - yPadding.toPx()),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Y-Axis labels
             val textPaint = android.graphics.Paint().apply {
-                color = Color.Gray.toArgb()
-                textSize = 10.sp.toPx()
-                textAlign = android.graphics.Paint.Align.RIGHT
+                this.color = Color.Gray.toArgb()
+                this.textSize = 10.sp.toPx()
+                this.textAlign = android.graphics.Paint.Align.RIGHT
             }
-            
-            drawContext.canvas.nativeCanvas.drawText(
-                String.format(Locale.getDefault(), if (isWeight) "%.1f" else "%.0f", maxVal),
-                startX - 8.dp.toPx(),
-                yPadding.toPx() + 4.dp.toPx(),
-                textPaint
-            )
-            drawContext.canvas.nativeCanvas.drawText(
-                String.format(Locale.getDefault(), if (isWeight) "%.1f" else "%.0f", minVal),
-                startX - 8.dp.toPx(),
-                size.height - yPadding.toPx() + 4.dp.toPx(),
-                textPaint
-            )
 
-            val points = mutableListOf<Offset>()
-            sortedData.forEachIndexed { index, item ->
-                val value = valueSelector(item) ?: return@forEachIndexed
-                val x = startX + index * stepWidth
-                val ratio = ((value - minVal) / range).toFloat()
+            val numYMarkers = 5
+            for (i in 0 until numYMarkers) {
+                val ratio = i.toFloat() / (numYMarkers - 1)
+                val value = minVal + (ratio * range)
                 val y = size.height - yPadding.toPx() - (ratio * chartHeight)
-                points.add(Offset(x, y))
-            }
 
-            // Draw line
-            if (points.size > 1) {
-                for (i in 0 until points.size - 1) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    String.format(Locale.getDefault(), if (isWeight) "%.1f" else "%.0f", value),
+                    size.width - 8.dp.toPx(),
+                    y + 4.dp.toPx(),
+                    textPaint
+                )
+            }
+        }
+
+        // 2. Scrollable Chart Area
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .weight(1f)
+                .horizontalScroll(rememberScrollState())
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(chartWidth)
+                    .pointerInput(sortedData, scaleFactor) {
+                        detectTapGestures { tapOffset ->
+                            val startX = hPadding.toPx()
+                            val availableWidth = size.width - hPadding.toPx() * 2
+                            val chartHeight = size.height - yPadding.toPx() * 2
+                            
+                            var bestIndex: Int? = null
+                            var minDistance = 32.dp.toPx()
+                            
+                            sortedData.forEachIndexed { index, (item, dt) ->
+                                 val value = valueSelector(item) ?: return@forEachIndexed
+                                 val timeOffsetSeconds = ChronoUnit.SECONDS.between(minTime, dt)
+                                 val xRatio = if (totalSeconds > 0) timeOffsetSeconds.toFloat() / totalSeconds.toFloat() else 0f
+                                 val x = startX + (xRatio * availableWidth)
+                                 val yRatio = ((value - minVal) / range).toFloat()
+                                 val y = size.height - yPadding.toPx() - (yRatio * chartHeight)
+                                 
+                                 val dist = (tapOffset - Offset(x, y)).getDistance()
+                                 if (dist < minDistance) {
+                                     minDistance = dist
+                                     bestIndex = index
+                                 }
+                            }
+                            selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
+                        }
+                    }
+            ) {
+                val chartHeight = size.height - yPadding.toPx() * 2
+                val startX = hPadding.toPx()
+                val availableWidth = size.width - hPadding.toPx() * 2
+
+                // Draw horizontal grid lines
+                val gridColor = Color.Gray.copy(alpha = 0.2f)
+                val numYMarkers = 5
+                for (i in 0 until numYMarkers) {
+                    val ratio = i.toFloat() / (numYMarkers - 1)
+                    val y = size.height - yPadding.toPx() - (ratio * chartHeight)
+
                     drawLine(
-                        color = Color.Gray.copy(alpha = 0.5f),
-                        start = points[i],
-                        end = points[i + 1],
-                        strokeWidth = 2.dp.toPx()
+                        color = gridColor.copy(alpha = 0.08f),
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 0.5.dp.toPx()
                     )
                 }
-            }
 
-            // Draw dots
-            points.forEachIndexed { index, offset ->
-                val isMedical = sortedData[index].isMedical
-                val color = if (isMedical) dotColorMedical else dotColorSelf
-                
-                drawCircle(
-                    color = color,
-                    radius = 5.dp.toPx(),
-                    center = offset
-                )
-                drawCircle(
-                    color = Color.White,
-                    radius = 2.dp.toPx(),
-                    center = offset
-                )
-                
-                // Date labels if zoomed in enough
-                if (scaleFactor > 0.6f) {
+                val points = mutableListOf<Offset>()
+                sortedData.forEach { (item, dt) ->
+                    val value = valueSelector(item) ?: return@forEach
+                    
+                    val timeOffsetSeconds = ChronoUnit.SECONDS.between(minTime, dt)
+                    val xRatio = if (totalSeconds > 0) timeOffsetSeconds.toFloat() / totalSeconds.toFloat() else 0f
+                    val x = startX + (xRatio * availableWidth)
+                    
+                    val yRatio = ((value - minVal) / range).toFloat()
+                    val y = size.height - yPadding.toPx() - (yRatio * chartHeight)
+                    points.add(Offset(x, y))
+                }
+
+                // Draw line
+                if (points.size > 1) {
+                    for (i in 0 until points.size - 1) {
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.3f),
+                            start = points[i],
+                            end = points[i + 1],
+                            strokeWidth = 2.dp.toPx()
+                        )
+                    }
+                }
+
+                // Draw dots
+                points.forEachIndexed { index, offset ->
+                    val isMedical = sortedData[index].first.isMedical
+                    val color = if (isMedical) dotColorMedical else dotColorSelf
+                    
+                    drawCircle(color = color, radius = 5.dp.toPx(), center = offset)
+                    drawCircle(color = Color.White, radius = 2.dp.toPx(), center = offset)
+                    
+                    // Date labels
                     val dateStr = try {
-                        val date = sortedData[index].date ?: ""
+                        val date = sortedData[index].first.date ?: ""
                         val parts = date.split("-")
-                        if (parts.size >= 3) {
-                            "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
-                        } else date
+                        if (parts.size >= 3) "${parts[2]}/${parts[1]}" else date
                     } catch (e: Exception) { "" }
-                    drawContext.canvas.nativeCanvas.drawText(
-                        dateStr,
-                        offset.x,
-                        size.height - 8.dp.toPx(),
-                        android.graphics.Paint().apply {
-                            this.color = Color.Gray.toArgb()
-                            this.textSize = 9.sp.toPx()
-                            this.textAlign = android.graphics.Paint.Align.CENTER
+                    
+                    val shouldShowLabel = if (index == 0 || index == points.size - 1) true
+                    else if (points.size < 15) index % 2 == 0
+                    else scaleFactor > 1.5f && index % 2 == 0
+                    
+                    if (shouldShowLabel) {
+                        drawContext.canvas.nativeCanvas.drawText(
+                            dateStr,
+                            offset.x,
+                            size.height - 8.dp.toPx(),
+                            android.graphics.Paint().apply {
+                                this.color = Color.Gray.toArgb()
+                                this.textSize = 9.sp.toPx()
+                                this.textAlign = android.graphics.Paint.Align.CENTER
+                            }
+                        )
+                    }
+                }
+
+                // Draw Tooltip
+                selectedIndex?.let { index ->
+                    if (index < points.size) {
+                        val offset = points[index]
+                        val item = sortedData[index].first
+                        val value = valueSelector(item) ?: 0.0
+                        val dateStr = item.date ?: ""
+                        val text = "${String.format(Locale.getDefault(), if (isWeight) "%.2f kg" else "%.1f cm", value)} ($dateStr)"
+                        
+                        val tooltipPaint = android.graphics.Paint().apply {
+                            this.color = android.graphics.Color.BLACK
+                            this.alpha = (255 * 0.8f).toInt()
+                            this.style = android.graphics.Paint.Style.FILL
+                            this.isAntiAlias = true
                         }
-                    )
+                        
+                        val textPaintTooltip = android.graphics.Paint().apply {
+                            this.color = android.graphics.Color.WHITE
+                            this.textSize = 12.sp.toPx()
+                            this.textAlign = android.graphics.Paint.Align.CENTER
+                            this.isFakeBoldText = true
+                        }
+                        
+                        val textBounds = android.graphics.Rect()
+                        textPaintTooltip.getTextBounds(text, 0, text.length, textBounds)
+                        
+                        val padding = 8.dp.toPx()
+                        val tooltipWidth = textBounds.width() + padding * 2
+                        val tooltipHeight = textBounds.height() + padding * 2
+                        
+                        val tooltipRect = android.graphics.RectF(
+                            offset.x - tooltipWidth / 2,
+                            offset.y - tooltipHeight - 12.dp.toPx(),
+                            offset.x + tooltipWidth / 2,
+                            offset.y - 12.dp.toPx()
+                        )
+                        
+                        if (tooltipRect.left < 0) tooltipRect.offset(-tooltipRect.left, 0f)
+                        else if (tooltipRect.right > size.width) tooltipRect.offset(size.width - tooltipRect.right, 0f)
+
+                        drawContext.canvas.nativeCanvas.drawRoundRect(tooltipRect, 4.dp.toPx(), 4.dp.toPx(), tooltipPaint)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            text,
+                            tooltipRect.centerX(),
+                            tooltipRect.centerY() + textBounds.height() / 2f,
+                            textPaintTooltip
+                        )
+                        
+                        drawLine(
+                            color = Color.Gray.copy(alpha = 0.5f),
+                            start = Offset(offset.x, yPadding.toPx()),
+                            end = Offset(offset.x, size.height - yPadding.toPx()),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                    }
                 }
             }
         }

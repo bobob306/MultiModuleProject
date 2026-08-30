@@ -3,6 +3,7 @@ package com.bsdevs.coffeescreen.screens.homescreen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
+import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.ButtonDestination
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewData
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
@@ -15,29 +16,30 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class CoffeeHomeScreenViewModel @Inject constructor(
     private val accountService: AccountService,
-    private val apiService: com.bsdevs.coffeescreen.network.CoffeeApiService,
-    private val dispatchers: DispatcherProvider
+    private val repository: CoffeeRepository
 ) : ViewModel() {
     private lateinit var currentUser: String
     private val _viewData = MutableStateFlow<Result<CoffeeHomeScreenViewData>>(Result.Loading)
-    val viewData: StateFlow<Result<CoffeeHomeScreenViewData>> = _viewData.onStart {
+    val viewData: StateFlow<Result<CoffeeHomeScreenViewData>> = _viewData.asStateFlow()
+
+    init {
+        viewModelScope.launch {
             start()
-            loadDataFromNetwork()
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Result.Loading
-        )
+            repository.allCoffee.collect { coffeeListFromCache ->
+                if (coffeeListFromCache.isNotEmpty()) {
+                    updateDisplay(coffeeListFromCache)
+                }
+            }
+        }
+    }
 
     suspend fun start() {
         currentUser = try {
@@ -46,6 +48,23 @@ class CoffeeHomeScreenViewModel @Inject constructor(
             _navigationEvent.send(NavigationEvent.NavigateToLogin)
             ""
         }
+        if (currentUser.isNotEmpty()) {
+            loadDataFromNetwork()
+        }
+    }
+
+    private fun updateDisplay(coffeeList: List<com.bsdevs.coffeescreen.network.CoffeeDto>) {
+        val vd = loadedData.copy(
+            viewData = loadedData.viewData.map {
+                when (it) {
+                    is CoffeeHomeScreenViewDatas.CoffeeList -> {
+                        it.copy(coffeeList = coffeeList)
+                    }
+                    else -> it
+                }
+            }
+        )
+        _viewData.value = Result.Success(data = vd)
     }
 
     private val _navigationEvent = Channel<NavigationEvent>()
@@ -61,26 +80,11 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         if (currentUser.isEmpty()) return
         
         try {
-            val coffeeListFromNetwork = apiService.getAllCoffee(currentUser)
-
-            val vd = withContext(dispatchers.default) {
-                loadedData.copy(
-                    viewData = loadedData.viewData.map {
-                        when (it) {
-                            is CoffeeHomeScreenViewDatas.CoffeeList -> {
-                                it.copy(coffeeList = coffeeListFromNetwork)
-                            }
-
-                            else -> it
-                        }
-                    }
-                )
-            }
-            _viewData.value = Result.Success(
-                data = vd
-            )
+            repository.loadInitialData(currentUser)
         } catch (e: Exception) {
-             _viewData.value = Result.Error(e)
+             if (_viewData.value is Result.Loading) {
+                 _viewData.value = Result.Error(e)
+             }
         }
     }
 

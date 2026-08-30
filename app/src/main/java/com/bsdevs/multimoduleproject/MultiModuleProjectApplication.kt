@@ -3,6 +3,8 @@ package com.bsdevs.multimoduleproject
 import android.app.Application
 import androidx.appfunctions.AppFunctionConfiguration
 import androidx.appfunctions.AppFunctionManager
+import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -13,6 +15,11 @@ class MultiModuleProjectApplication : Application(), AppFunctionConfiguration.Pr
         get() = AppFunctionConfiguration.Builder().build()
 
     override fun onCreate() {
+        // Initialize Firebase explicitly to ensure it's ready before other components need it
+        FirebaseApp.initializeApp(this)
+        // Trigger FirebaseAuth initialization early
+        FirebaseAuth.getInstance()
+        
         super.onCreate()
         enableAppFunctions()
     }

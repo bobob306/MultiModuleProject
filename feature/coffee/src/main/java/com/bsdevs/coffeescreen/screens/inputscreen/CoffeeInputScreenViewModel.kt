@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.annotation.Keep
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.coffeescreen.network.CoffeeApiService
+import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
@@ -40,7 +40,7 @@ import javax.inject.Inject
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
     private val accountService: AccountService,
-    private val apiService: CoffeeApiService,
+    private val repository: CoffeeRepository,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private val _viewData = MutableStateFlow<Result<CoffeeScreenViewData>>(value = Result.Loading)
@@ -96,7 +96,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
 
     private suspend fun loadDataFromNetwork() {
         try {
-            val data = apiService.getCoffeeInputScreenData()
+            val data = repository.getCoffeeInputScreenData()
             val viewData = CoffeeScreenViewData()
             val updatedViewData = viewData.copy(
                 inputs = listOf(
@@ -205,7 +205,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
             val coffeeDto = withContext(dispatchers.default) {
                 mapToCoffeeDto(currentViewData.data)
             }
-            apiService.uploadCoffee(accountService.currentUserId, coffeeDto)
+            repository.uploadCoffee(accountService.currentUserId, coffeeDto)
             _navigationEvent.send(NavigationEvent.NavigateToHome)
         }
     }

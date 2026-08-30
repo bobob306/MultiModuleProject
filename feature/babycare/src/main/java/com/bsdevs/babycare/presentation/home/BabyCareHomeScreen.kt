@@ -1,6 +1,7 @@
 package com.bsdevs.babycare.presentation.home
 
 import android.content.res.Configuration
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -112,32 +113,34 @@ fun BabyCareHomeScreenRoute(
         }
     }
 
-    when (val state = result) {
-        is Result.Success -> {
-            BabyCareHomeScreen(
-                viewData = state.data,
-                onRefresh = { viewModel.refreshData() },
-                onNavigateToEditNappyChange = onNavigateToEditNappyChange,
-                onNavigateToEditFeeding = onNavigateToEditFeeding,
-                onNavigateToEditTemperature = onNavigateToEditTemperature,
-                onNavigateToEditMeasurement = onNavigateToEditMeasurement,
-                onToggleFilter = viewModel::toggleActivityFilter,
-                onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
-                onLoadMore = viewModel::loadMore,
-                onDeleteActivity = viewModel::deleteActivity,
-                onDynamicClick = onDynamicClick,
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope
-            )
-        }
+    Crossfade(targetState = result, label = "loading_to_content") { state ->
+        when (state) {
+            is Result.Success -> {
+                BabyCareHomeScreen(
+                    viewData = state.data,
+                    onRefresh = { viewModel.refreshData() },
+                    onNavigateToEditNappyChange = onNavigateToEditNappyChange,
+                    onNavigateToEditFeeding = onNavigateToEditFeeding,
+                    onNavigateToEditTemperature = onNavigateToEditTemperature,
+                    onNavigateToEditMeasurement = onNavigateToEditMeasurement,
+                    onToggleFilter = viewModel::toggleActivityFilter,
+                    onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
+                    onLoadMore = viewModel::loadMore,
+                    onDeleteActivity = viewModel::deleteActivity,
+                    onDynamicClick = onDynamicClick,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+            }
 
-        is Result.Loading -> {
-            BabyCareHomeLoading()
-        }
+            is Result.Loading -> {
+                BabyCareHomeLoading()
+            }
 
-        is Result.Error -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(text = "Error loading baby care data")
+            is Result.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = "Error loading baby care data")
+                }
             }
         }
     }
