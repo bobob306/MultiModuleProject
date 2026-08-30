@@ -49,6 +49,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -168,7 +169,7 @@ fun RegisterScreenContent(
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val horizontalPadding = if (isLandscape) 8.dp else 16.dp
 
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     if (showDatePicker) {
         val initialDate = try {

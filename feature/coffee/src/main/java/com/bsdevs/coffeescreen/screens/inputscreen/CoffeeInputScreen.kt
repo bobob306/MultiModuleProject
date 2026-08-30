@@ -46,6 +46,8 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
@@ -157,7 +159,7 @@ private fun CoffeeInputScreenContent(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
-    var showSnackBar by remember { mutableStateOf(false) }
+    var showSnackBar by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(key1 = showSnackBar) {
         if (showSnackBar) {
             var inputsContent = viewData.inputs.joinToString {
@@ -280,10 +282,10 @@ private fun InputSection(
     onIntent: (CoffeeInputScreenIntent) -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
-    var isFocused by remember { mutableStateOf(false) }
+    var isFocused by rememberSaveable { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
     inputViewData.run {
-        var expanded by remember { mutableStateOf(false) }
+        var expanded by rememberSaveable { mutableStateOf(false) }
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded },
@@ -422,7 +424,7 @@ private fun RadioInputRow(
 
 @Composable
 private fun DatePickerSection(roastDate: LocalDate?, onUpdateRoastDate: (LocalDate) -> Unit) {
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MM yy") }
 
     MMPClickableTextField(
