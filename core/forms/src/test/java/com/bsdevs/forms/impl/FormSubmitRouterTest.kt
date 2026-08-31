@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
@@ -106,6 +106,7 @@ class FormSubmitRouterTest {
         assertTrue(result is Result.Success)
         assertEquals("NAPPY", eventSlot.captured.type)
         assertEquals("10:30", eventSlot.captured.time)
+        assertEquals("2026-08-31 10:30", eventSlot.captured.dateTimeString)
         assertEquals("Wet", eventSlot.captured.nappyType)
         assertEquals("All good", eventSlot.captured.comment)
     }
@@ -142,6 +143,7 @@ class FormSubmitRouterTest {
         assertTrue(result is Result.Success)
         assertEquals("FEEDING", eventSlot.captured.type)
         assertEquals("08:00", eventSlot.captured.time)
+        assertEquals("2026-08-31 08:00", eventSlot.captured.dateTimeString)
         assertEquals("Left", eventSlot.captured.mainFeedingSide)
         assertEquals(120, eventSlot.captured.bottleAmountMl)
     }

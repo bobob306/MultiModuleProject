@@ -31,3 +31,16 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
 }
+
+android {
+    testOptions {
+        unitTests {
+            all {
+                it.maxHeapSize = "1g"
+                it.forkEvery = 1 // Every test gets a fresh JVM to prevent MockK metadata buildup
+                // Add some diagnostics to see if workers are dying
+                it.testLogging.showStandardStreams = true
+            }
+        }
+    }
+}

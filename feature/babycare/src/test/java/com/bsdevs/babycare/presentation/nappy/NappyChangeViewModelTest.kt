@@ -1,12 +1,10 @@
 package com.bsdevs.babycare.presentation.nappy
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.toRoute
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
-import com.bsdevs.babycare.presentation.navigation.NappyChangeRoute
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import java.util.UUID
@@ -40,7 +38,6 @@ class NappyChangeViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        mockkStatic("androidx.navigation.SavedStateHandleKt")
         
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
@@ -62,9 +59,9 @@ class NappyChangeViewModelTest {
 
     private suspend fun createViewModel(activityId: String? = null) {
         val savedStateHandle = SavedStateHandle()
-        every { savedStateHandle.toRoute<NappyChangeRoute>() } returns NappyChangeRoute(activityId)
+        activityId?.let { savedStateHandle["activityId"] = it }
         
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 1)
         
         viewModel = NappyChangeViewModel(accountService, repository, dispatchers, savedStateHandle)
     }
@@ -105,7 +102,9 @@ class NappyChangeViewModelTest {
     fun `onTypeChanged updates uiState`() = runTest {
         createViewModel()
         viewModel.onTypeChanged("Dirty")
-        assertEquals("Dirty", viewModel.uiState.value.type)
+        viewModel.uiState.filter { it.type == "Dirty" }.test {
+            assertEquals("Dirty", awaitItem().type)
+        }
     }
 
     @Test
@@ -156,13 +155,17 @@ class NappyChangeViewModelTest {
     fun `setShowTimePicker updates uiState`() = runTest {
         createViewModel()
         viewModel.setShowTimePicker(true)
-        assertTrue(viewModel.uiState.value.showTimePicker)
+        viewModel.uiState.filter { it.showTimePicker }.test {
+            assertTrue(awaitItem().showTimePicker)
+        }
     }
 
     @Test
     fun `setIsPlayingTurdAnimation updates uiState`() = runTest {
         createViewModel()
         viewModel.setIsPlayingTurdAnimation(true)
-        assertTrue(viewModel.uiState.value.isPlayingTurdAnimation)
+        viewModel.uiState.filter { it.isPlayingTurdAnimation }.test {
+            assertTrue(awaitItem().isPlayingTurdAnimation)
+        }
     }
 }

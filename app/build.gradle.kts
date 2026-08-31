@@ -57,6 +57,7 @@ ksp {
 dependencies {
     implementation(project(":core:navigation"))
     implementation(project(":core:network"))
+    implementation(project(":core:forms"))
     implementation(project(":core:common"))
     implementation(project(":feature:home"))
     implementation(project(":feature:babycare"))

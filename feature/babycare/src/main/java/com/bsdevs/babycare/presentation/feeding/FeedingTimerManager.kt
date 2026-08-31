@@ -14,13 +14,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.milliseconds
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.Instant
+import java.time.ZoneId
 
 data class FeedingTimerState(
     val activityId: String? = null,
     val leftDuration: Long = 0,
     val rightDuration: Long = 0,
     val isLeftRunning: Boolean = false,
-    val isRightRunning: Boolean = false
+    val isRightRunning: Boolean = false,
+    val startTime: String? = null,
+    val date: String? = null
 )
 
 @Singleton
@@ -48,6 +54,10 @@ class FeedingTimerManager @Inject constructor(
         }
     }
 
+    fun setSessionMetadata(startTime: String, date: String) {
+        _timerState.update { it.copy(startTime = startTime, date = date) }
+    }
+
     fun startTimer(side: FeedingSide, activityId: String? = null) {
         if (timerJobs[side]?.isActive == true) return
 
@@ -55,16 +65,27 @@ class FeedingTimerManager @Inject constructor(
         val previousAccumulatedDuration = baseDurations.getValue(side)
 
         _timerState.update { state ->
-            val newState = when (side) {
+            var newState = when (side) {
                 FeedingSide.LEFT -> state.copy(isLeftRunning = true)
                 FeedingSide.RIGHT -> state.copy(isRightRunning = true)
             }
             // Update activityId if provided and not already set
             if (activityId != null && newState.activityId == null) {
-                newState.copy(activityId = activityId)
-            } else {
-                newState
+                newState = newState.copy(activityId = activityId)
             }
+
+            // 🌟 PERSISTENT START TIME: If not already set, lock in the current time/date
+            if (newState.startTime == null) {
+                val now = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(timeProvider.currentTimeMillis()),
+                    ZoneId.systemDefault()
+                )
+                newState = newState.copy(
+                    startTime = now.format(DateTimeFormatter.ofPattern("HH:mm")),
+                    date = now.toLocalDate().toString()
+                )
+            }
+            newState
         }
 
         timerJobs[side] = scope.launch {

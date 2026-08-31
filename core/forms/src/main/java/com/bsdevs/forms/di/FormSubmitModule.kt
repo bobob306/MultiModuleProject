@@ -1,7 +1,10 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.di
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
+import com.bsdevs.forms.impl.FormDeleterImpl
+import com.bsdevs.forms.impl.FormPrefillerImpl
+import com.bsdevs.forms.impl.FormSubmitRouter
 import com.bsdevs.network.repository.FormDeleter
 import com.bsdevs.network.repository.FormPrefiller
 import com.bsdevs.network.repository.FormSubmitter

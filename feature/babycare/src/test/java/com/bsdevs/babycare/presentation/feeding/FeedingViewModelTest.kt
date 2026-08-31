@@ -1,19 +1,18 @@
 package com.bsdevs.babycare.presentation.feeding
 
-import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.toRoute
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
-import com.bsdevs.babycare.presentation.navigation.FeedingRoute
+import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import io.mockk.*
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
@@ -31,10 +30,9 @@ class FeedingViewModelTest {
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
-    private lateinit var timeProvider: com.bsdevs.babycare.presentation.common.TimeProvider
+    private lateinit var timerManager: FeedingTimerManager
     private lateinit var viewModel: FeedingViewModel
     private lateinit var dispatchers: DispatcherProvider
-    private lateinit var timerManager: FeedingTimerManager
     private val context = mockk<android.content.Context>(relaxed = true)
 
     private val userId = "testUser"
@@ -42,9 +40,6 @@ class FeedingViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        
-        mockkStatic(SystemClock::class)
-        mockkStatic("androidx.navigation.SavedStateHandleKt")
         
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
@@ -56,13 +51,15 @@ class FeedingViewModelTest {
         val userRepository = mockk<UserRepository>(relaxed = true)
         repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
         accountService = FakeAccountService(userId)
-        timeProvider = mockk()
-        every { timeProvider.elapsedRealtime() } returns 0L
-        timerManager = FeedingTimerManager(timeProvider, dispatchers)
+        
+        // 🚀 INSTANT TESTS: Mock the manager so we don't run real timer loops in VM tests
+        timerManager = mockk(relaxed = true)
+        every { timerManager.timerState } returns MutableStateFlow(FeedingTimerState())
     }
 
     @After
     fun tearDown() {
+        timerManager.reset() // Kill any active jobs
         Dispatchers.resetMain()
         unmockkAll()
     }
@@ -72,12 +69,13 @@ class FeedingViewModelTest {
         startSide: String? = null
     ) {
         val savedStateHandle = SavedStateHandle()
-        every { savedStateHandle.toRoute<FeedingRoute>() } returns FeedingRoute(activityId, startSide)
+        activityId?.let { savedStateHandle["activityId"] = it }
+        startSide?.let { savedStateHandle["startSide"] = it }
         
         // Populate cache to ensure repository updates work
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 1)
         
-        viewModel = FeedingViewModel(accountService, repository, dispatchers, timerManager, context, savedStateHandle)
+        viewModel = FeedingViewModel(accountService, repository, timerManager, context, savedStateHandle)
     }
 
     @Test
@@ -103,8 +101,7 @@ class FeedingViewModelTest {
         createViewModel(activityId = eventId)
 
         // Then
-        viewModel.uiState.test {
-            // Unconfined handles the emission immediately
+        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
             val finalState = awaitItem()
             assertEquals(eventId, finalState.id)
             assertEquals(120, finalState.bottleAmountMl)
@@ -113,24 +110,12 @@ class FeedingViewModelTest {
     }
 
     @Test
-    fun `toggleTimer starts and pauses timers correctly`() = runTest {
+    fun `toggleTimer calls timerManager correctly`() = runTest {
         createViewModel()
         
-        // Start LEFT
-        every { timeProvider.elapsedRealtime() } returns 1000L
         viewModel.toggleTimer(FeedingSide.LEFT)
-        assertTrue(viewModel.uiState.value.isLeftRunning)
-
-        // Advance 10s
-        every { timeProvider.elapsedRealtime() } returns 11000L
-        // Delay inside launch will trigger with advanceTimeBy
-        advanceTimeBy(10001.milliseconds)
         
-        assertEquals(10L, viewModel.uiState.value.leftDuration)
-
-        // Pause LEFT
-        viewModel.toggleTimer(FeedingSide.LEFT)
-        assertFalse(viewModel.uiState.value.isLeftRunning)
+        verify { timerManager.toggleTimer(FeedingSide.LEFT, any()) }
     }
 
     @Test
@@ -139,18 +124,25 @@ class FeedingViewModelTest {
         viewModel.onStartTimeSelected(14, 30)
         viewModel.updateBottleAmount(150)
         viewModel.onCommentChanged("New bottle feed")
+        
+        // ⏳ WAIT for state to reflect ALL inputs to avoid race conditions
+        viewModel.uiState.filter { it.bottleAmountMl == 150 && it.startTime == "14:30" && it.comment == "New bottle feed" }.test {
+            awaitItem()
+        }
 
         viewModel.events.test {
             viewModel.submitFeeding()
             assertEquals(FeedingEvent.SaveSuccess, awaitItem())
         }
 
-        val savedMonth = fakeService.fetchMonthDocument(userId, "2026-08")
-        assertNotNull(savedMonth)
-        val days = savedMonth!!["days"] as Map<*, *>
         val today = viewModel.uiState.value.date
-        val dayEvents = days[today] as List<*>
-        assertTrue(dayEvents.any { (it as Map<*, *>)["bottleAmountMl"].toString().startsWith("150") })
+        val monthId = today.substring(0, 7)
+        val savedMonth = fakeService.fetchMonthDocument(userId, monthId)
+        assertNotNull("Month document not found for $monthId", savedMonth)
+        val days = savedMonth!!["days"] as Map<*, *>
+        val dayEvents = days[today] as? List<*> ?: emptyList<Any>()
+        assertTrue("Event with bottle amount 150 not found in $dayEvents for date $today", 
+            dayEvents.any { (it as Map<*, *>)["bottleAmountMl"].toString() == "150" })
     }
 
     @Test
@@ -209,40 +201,119 @@ class FeedingViewModelTest {
     fun `cancelFeeding resets timer and triggers success`() = runTest {
         createViewModel()
         
-        // Start a timer
-        viewModel.toggleTimer(FeedingSide.LEFT)
-        assertTrue(viewModel.uiState.value.isLeftRunning)
-
+        // Start a timer (mocked)
+        every { timerManager.isAnyTimerRunning() } returns true
+        
         viewModel.events.test {
             viewModel.cancelFeeding()
             assertEquals(FeedingEvent.CancelSuccess, awaitItem())
         }
 
-        assertFalse(viewModel.uiState.value.isLeftRunning)
-        assertEquals(0L, viewModel.uiState.value.leftDuration)
+        verify { timerManager.reset() }
     }
 
     @Test
     fun `setShowBottleDialog updates uiState`() = runTest {
         createViewModel()
         viewModel.setShowBottleDialog(true)
-        assertTrue(viewModel.uiState.value.showBottleDialog)
+        viewModel.uiState.filter { it.showBottleDialog }.test {
+            assertTrue(awaitItem().showBottleDialog)
+        }
         
         viewModel.setShowBottleDialog(false)
-        assertFalse(viewModel.uiState.value.showBottleDialog)
+        viewModel.uiState.filter { !it.showBottleDialog }.test {
+            assertFalse(awaitItem().showBottleDialog)
+        }
     }
 
     @Test
     fun `setShowTimePicker updates uiState`() = runTest {
         createViewModel()
         viewModel.setShowTimePicker(true)
-        assertTrue(viewModel.uiState.value.showTimePicker)
+        viewModel.uiState.filter { it.showTimePicker }.test {
+            assertTrue(awaitItem().showTimePicker)
+        }
     }
+
+    @Test
+    fun `re-entering screen with running timer restores startTime and date`() = runTest {
+        // Given: A timer is already running with a specific locked-in start time
+        val lockedStartTime = "09:45"
+        val lockedDate = "2026-08-31"
+        
+        val runningState = FeedingTimerState(
+            startTime = lockedStartTime,
+            date = lockedDate,
+            isLeftRunning = true
+        )
+        every { timerManager.timerState } returns MutableStateFlow(runningState)
+
+        // When: A new ViewModel is created (simulating re-entry from notification)
+        createViewModel()
+
+        // Then: The UI state should reflect the timer manager's locked-in metadata
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertEquals(lockedStartTime, state.startTime)
+            assertEquals(lockedDate, state.date)
+        }
+    }
+
+    @Test
+    fun `manual start time change while timer running updates manager`() = runTest {
+        createViewModel()
+        
+        // Start timer
+        every { timerManager.isAnyTimerRunning() } returns true
+        viewModel.toggleTimer(FeedingSide.LEFT)
+        
+        // Manually change start time
+        viewModel.onStartTimeSelected(11, 45)
+        
+        // Manager should now reflect the manual override
+        verify { timerManager.setSessionMetadata("11:45", any()) }
+    }
+
+    @Test
+    fun `loading existing feed updates manager metadata`() = runTest {
+        // Given: An existing feed with a specific start time
+        val eventId = "existing-id"
+        val historicalTime = "07:15"
+        val historicalDate = "2026-08-01"
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(historicalDate to listOf(
+            mapOf("id" to eventId, "type" to "FEEDING", "time" to historicalTime, "dateTimeString" to "$historicalDate $historicalTime")
+        ))))
+
+        // When: Loading that feed
+        createViewModel(activityId = eventId)
+        
+        // Then: Manager should be synced with historical metadata
+        // We use a reactive wait and then verify the interaction
+        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
+            awaitItem()
+            verify(timeout = 2000) { timerManager.setSessionMetadata(historicalTime, historicalDate) }
+        }
+    }
+
+    @Test
+    fun `reset clears session metadata`() = runTest {
+        createViewModel()
+        
+        // When: Cancelling (which calls reset)
+        viewModel.cancelFeeding()
+        
+        // Then: Manager reset should be called
+        verify { timerManager.reset() }
+    }
+
+
 
     @Test
     fun `setIsPlayingSplodge updates uiState`() = runTest {
         createViewModel()
         viewModel.setIsPlayingSplodge(true)
-        assertTrue(viewModel.uiState.value.isPlayingSplodge)
+        viewModel.uiState.filter { it.isPlayingSplodge }.test {
+            assertTrue(awaitItem().isPlayingSplodge)
+        }
     }
 }

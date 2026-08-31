@@ -13,9 +13,11 @@ import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -31,10 +33,10 @@ class TemperatureViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val route = savedStateHandle.toRoute<TemperatureRoute>()
+    private val activityIdArg: String? = savedStateHandle["activityId"]
 
-    private val _uiState = MutableStateFlow(TemperatureUiState())
-    val uiState: StateFlow<TemperatureUiState> = _uiState.asStateFlow()
+    private val _localState = MutableStateFlow(TemperatureUiState())
+    val uiState: StateFlow<TemperatureUiState> = _localState.asStateFlow()
 
     private val _events = Channel<TemperatureUiEffect>()
     val events = _events.receiveAsFlow()
@@ -46,7 +48,7 @@ class TemperatureViewModel @Inject constructor(
             }
         }
 
-        route.activityId?.let { id ->
+        activityIdArg?.let { id ->
             onEditTemperature(id)
         }
     }
@@ -69,7 +71,7 @@ class TemperatureViewModel @Inject constructor(
         val grouped = allReadings.groupBy { it.date }
         val sortedDates = grouped.keys.sortedDescending()
 
-        _uiState.update { it.copy(
+        _localState.update { it.copy(
             dates = sortedDates,
             dailyReadings = grouped
         ) }
@@ -78,15 +80,15 @@ class TemperatureViewModel @Inject constructor(
     fun onEditTemperature(id: String) {
         val userId = accountService.currentUserId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, showSheet = true) }
+            _localState.update { it.copy(isLoading = true, showSheet = true) }
             try {
                 val event = repository.getFeedingEventById(userId, id) // Repository uses unified lookup
 
                 if (event != null && event.type == "TEMPERATURE") {
-                    val extractedDate = event.dateTimeString.split(" ").firstOrNull() ?: _uiState.value.date
+                    val extractedDate = event.dateTimeString.split(" ").firstOrNull() ?: _localState.value.date
                     val temp = event.temperature ?: 37.0
                     val tempInt = (temp * 10).toInt()
-                    _uiState.update {
+                    _localState.update {
                         it.copy(
                             id = event.id,
                             date = extractedDate,
@@ -99,50 +101,50 @@ class TemperatureViewModel @Inject constructor(
                         )
                     }
                 } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _localState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
 
     fun onTemperatureValueSelected(value: Int) {
         val tempDouble = value.toDouble() / 10.0
-        _uiState.update { it.copy(temperatureValue = value, temperature = tempDouble.toString(), error = null) }
+        _localState.update { it.copy(temperatureValue = value, temperature = tempDouble.toString(), error = null) }
     }
 
     fun onCommentChanged(newComment: String) {
-        _uiState.update { it.copy(comment = newComment) }
+        _localState.update { it.copy(comment = newComment) }
     }
 
     fun onDateSelected(newDate: String) {
-        _uiState.update { it.copy(date = newDate) }
+        _localState.update { it.copy(date = newDate) }
     }
 
     fun onTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
-        _uiState.update { it.copy(time = formattedTime, error = null) }
+        _localState.update { it.copy(time = formattedTime, error = null) }
     }
 
     fun setShowSheet(show: Boolean) {
-        _uiState.update { it.copy(showSheet = show) }
+        _localState.update { it.copy(showSheet = show) }
     }
 
     fun setShowTimePicker(show: Boolean) {
-        _uiState.update { it.copy(showTimePicker = show) }
+        _localState.update { it.copy(showTimePicker = show) }
     }
 
     fun setShowDatePicker(show: Boolean) {
-        _uiState.update { it.copy(showDatePicker = show) }
+        _localState.update { it.copy(showDatePicker = show) }
     }
 
     fun setShowDeleteConfirmation(show: Boolean) {
-        _uiState.update { it.copy(showDeleteConfirmation = show) }
+        _localState.update { it.copy(showDeleteConfirmation = show) }
     }
 
     fun resetForm() {
-        _uiState.update { current ->
+        _localState.update { current ->
             TemperatureUiState(
                 dates = current.dates,
                 dailyReadings = current.dailyReadings,
@@ -153,7 +155,7 @@ class TemperatureViewModel @Inject constructor(
     }
 
     fun submitTemperature() {
-        val currentState = _uiState.value
+        val currentState = _localState.value
         val userId = accountService.currentUserId
 
         val tempValue = currentState.temperatureValue.toDouble() / 10.0
@@ -171,7 +173,7 @@ class TemperatureViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _localState.update { it.copy(isLoading = true, error = null) }
             try {
                 if (isEditing) {
                     val originalDate = currentState.originalDate
@@ -197,29 +199,29 @@ class TemperatureViewModel @Inject constructor(
                         event = unifiedEvent
                     )
                 }
-                _uiState.update { it.copy(isLoading = false) }
+                _localState.update { it.copy(isLoading = false) }
                 _events.send(TemperatureUiEffect.SaveSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
                 _events.send(TemperatureUiEffect.SaveError(e.message ?: "Failed to save temperature"))
             }
         }
     }
 
     fun deleteTemperature() {
-        val currentState = _uiState.value
+        val currentState = _localState.value
         val userId = accountService.currentUserId
         val eventId = currentState.id ?: return
         val date = currentState.date
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _localState.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.deleteActivityEvent(userId, date, eventId)
-                _uiState.update { it.copy(isLoading = false) }
+                _localState.update { it.copy(isLoading = false) }
                 _events.send(TemperatureUiEffect.DeleteSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
