@@ -69,18 +69,19 @@ fun NavGraphBuilder.babyCareSection(
     navController: NavController,
     onShowSnackBar: suspend (String, String?) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
+    navigateToForm: (formId: String, entityId: String?) -> Unit,
 ) {
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
             BabyCareHomeScreenRoute(
-                onNavigateToNappyChange = { navController.navigateToNappyChange() },
+                onNavigateToNappyChange = { navigateToForm("nappyLog", null) },
                 onNavigateToFeeding = { navController.navigateToFeeding() },
                 onNavigateToTemperature = { navController.navigateToTemperature() },
                 onNavigateToMeasurement = { navController.navigateToMeasurement() },
-                onNavigateToEditNappyChange = { id -> navController.navigateToNappyChange(id) },
+                onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
-                onNavigateToEditTemperature = { id -> navController.navigateToTemperature(id) },
-                onNavigateToEditMeasurement = { id -> navController.navigateToMeasurement(id) },
+                onNavigateToEditTemperature = { id -> navigateToForm("temperatureLog", id) },
+                onNavigateToEditMeasurement = { id -> navigateToForm("measurementLog", id) },
                 onNavigateToGraph = { navController.navigateToGraph() },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
@@ -129,6 +130,7 @@ fun NavGraphBuilder.babyCareSection(
             TemperatureScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() },
+                onAddNew = { navigateToForm("temperatureLog", null) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
             )
@@ -141,6 +143,7 @@ fun NavGraphBuilder.babyCareSection(
             MeasurementScreenRoute(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() },
+                onAddNew = { navigateToForm("measurementLog", null) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
             )

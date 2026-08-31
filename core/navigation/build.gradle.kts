@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":feature:login"))
     implementation(project(":feature:splashscreen"))
     implementation(project(":feature:babycare"))
+    implementation(project(":feature:forms"))
     implementation(project(":core:common:uicomponents"))
 
     implementation(libs.androidx.navigation.compose)

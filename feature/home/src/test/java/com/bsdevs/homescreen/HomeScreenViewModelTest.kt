@@ -22,6 +22,7 @@ class HomeScreenViewModelTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var repository: FakeScreenRepository
+    private lateinit var formRepository: FakeFormRepository
     private lateinit var mapper: ScreenDataMapperImpl
     private lateinit var viewModel: HomeScreenViewModel
     private lateinit var dispatchers: DispatcherProvider
@@ -37,8 +38,9 @@ class HomeScreenViewModelTest {
         }
 
         repository = FakeScreenRepository()
+        formRepository = FakeFormRepository()
         mapper = ScreenDataMapperImpl()
-        viewModel = HomeScreenViewModel(repository, mapper, dispatchers)
+        viewModel = HomeScreenViewModel(repository, formRepository, mapper, dispatchers)
     }
 
     @After

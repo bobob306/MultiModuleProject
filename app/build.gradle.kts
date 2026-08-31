@@ -56,12 +56,15 @@ ksp {
 
 dependencies {
     implementation(project(":core:navigation"))
+    implementation(project(":core:network"))
+    implementation(project(":core:common"))
     implementation(project(":feature:home"))
     implementation(project(":feature:babycare"))
     implementation(project(":core:authentication"))
     implementation(project(":feature:coffee"))
     implementation(project(":feature:splashscreen"))
     implementation(project(":feature:login"))
+    implementation(project(":feature:forms"))
 
     ksp(libs.hilt.compiler)
     
@@ -76,4 +79,8 @@ dependencies {
     baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
 }

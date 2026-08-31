@@ -13,9 +13,10 @@ import com.bsdevs.babycare.presentation.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeDetail
 import com.bsdevs.coffeescreen.navigation.navigateToCoffeeHome
-import com.bsdevs.coffeescreen.navigation.navigateToCoffeeInput
 import com.bsdevs.firstscreen.navigation.SplashScreenBaseRoute
 import com.bsdevs.firstscreen.navigation.splashScreenSection
+import com.bsdevs.forms.navigation.formSection
+import com.bsdevs.forms.navigation.navigateToForm
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.homeScreenSection
 import com.bsdevs.homescreen.navigation.settingsSection
@@ -31,6 +32,7 @@ fun MMPNavHost(
     onShowSnackBar: suspend (String, String?) -> Unit,
     modifier: Modifier,
     rootPadding: PaddingValues,
+    onNavigateToForm: (String) -> Unit = { formId -> navController.navigateToForm(formId) },
 ) {
     SharedTransitionLayout {
         NavHost(
@@ -69,7 +71,7 @@ fun MMPNavHost(
             )
             coffeeScreenSection(
                 onShowSnackBar,
-                navigateToCoffeeInput = navController::navigateToCoffeeInput,
+                navigateToForm = navController::navigateToForm,
                 navigateToCoffeeHome = navController::navigateToCoffeeHome,
                 navigateToLogin = navController::navigateToLoginScreen,
                 navigateToCoffeeDetail = navController::navigateToCoffeeDetail,
@@ -101,7 +103,19 @@ fun MMPNavHost(
             babyCareSection(
                 navController = navController,
                 onShowSnackBar = onShowSnackBar,
-                sharedTransitionScope = this@SharedTransitionLayout
+                sharedTransitionScope = this@SharedTransitionLayout,
+                navigateToForm = { formId, entityId -> navController.navigateToForm(formId, entityId) },
+            )
+            formSection(
+                onNavigate = { destination ->
+                    when (destination) {
+                        "home" -> navController.navigate(HomeScreenBaseRoute)
+                        "coffee_home" -> navController.navigateToCoffeeHome()
+                        "baby_home" -> navController.navigateToBabyCareHome()
+                        else -> navController.navigate(HomeScreenBaseRoute)
+                    }
+                },
+                onNavigateBack = { navController.popBackStack() },
             )
         }
     }
