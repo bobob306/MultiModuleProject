@@ -5,7 +5,10 @@ import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -21,6 +24,7 @@ class FormPrefillerImplTest {
 
     @Before
     fun setUp() {
+        every { coffeeRepository.allCoffee } returns MutableStateFlow(emptyList<CoffeeDto>()).asStateFlow()
         prefiller = FormPrefillerImpl(coffeeRepository, babyCareRepository)
     }
 

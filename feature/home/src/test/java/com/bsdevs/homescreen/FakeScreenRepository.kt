@@ -31,6 +31,10 @@ class FakeScreenRepository : ScreenRepository {
         return screenFlows.getOrPut(screen) { MutableStateFlow(Result.Loading) }
     }
 
+    override suspend fun updateScreen(screen: String, dtos: List<ScreenDto>) {
+        throw UnsupportedOperationException("Not used in ViewModel tests")
+    }
+
     override fun clearCache() {
         screenFlows.clear()
     }

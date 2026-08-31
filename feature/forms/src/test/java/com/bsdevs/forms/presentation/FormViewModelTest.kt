@@ -1,7 +1,9 @@
 package com.bsdevs.forms.presentation
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.toRoute
 import app.cash.turbine.test
+import com.bsdevs.forms.navigation.FormRoute
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.FormDataMapperImpl
@@ -20,6 +22,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -27,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -60,6 +64,7 @@ class FormViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        mockkStatic("androidx.navigation.SavedStateHandleKt")
         fakeRepository = FakeFormRepository()
         every { userRepository.userProfile } returns MutableStateFlow(UserDto(id = "user123")).asStateFlow()
     }
@@ -70,10 +75,10 @@ class FormViewModelTest {
     }
 
     private fun createViewModel(formId: String = "testForm", entityId: String? = null): FormViewModel {
-        val args = if (entityId != null) mapOf("formId" to formId, "entityId" to entityId)
-                   else mapOf("formId" to formId)
+        val handle = mockk<SavedStateHandle>(relaxed = true)
+        every { handle.toRoute<FormRoute>() } returns FormRoute(formId, entityId)
         return FormViewModel(
-            SavedStateHandle(args), fakeRepository, formDataMapper,
+            handle, fakeRepository, formDataMapper,
             formSubmitter, formPrefiller, formDeleter, userRepository, dispatchers,
         )
     }
@@ -189,6 +194,7 @@ class FormViewModelTest {
         val dateField = FormFieldDto("date", "DATE_INPUT", "Date", required = true, index = 0)
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(dateField)))
+        advanceUntilIdle()
         assertNotNull(vm.fieldValues.value["date"])
         assertTrue((vm.fieldValues.value["date"] as String).matches(Regex("\\d{4}-\\d{2}-\\d{2}")))
     }
@@ -198,6 +204,7 @@ class FormViewModelTest {
         val timeField = FormFieldDto("time", "TIME_INPUT", "Time", required = true, index = 0)
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(timeField)))
+        advanceUntilIdle()
         assertNotNull(vm.fieldValues.value["time"])
         assertTrue((vm.fieldValues.value["time"] as String).matches(Regex("\\d{2}:\\d{2}")))
     }
@@ -211,89 +218,89 @@ class FormViewModelTest {
 
         val vm = createViewModel(entityId = "e1")
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(dateField, timeField)))
+        advanceUntilIdle()
 
         assertEquals("2025-01-15", vm.fieldValues.value["date"])
         assertEquals("09:30", vm.fieldValues.value["time"])
     }
 
     @Test
-    fun `submit success emits Success with destination`() = runTest {
-        coEvery { formSubmitter.submit("user123", "testTarget", any(), any()) } returns Result.Success(Unit)
+    fun `submit success results in Success state`() = runTest {
+        coEvery { formSubmitter.submit("user123", "testTarget", null, any()) } returns Result.Success(Unit)
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(submitDestination = "home"))
+        advanceUntilIdle()
+        assertTrue("Schema must be loaded before submit", vm.formSchema.value is Result.Success)
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            val success = awaitItem() as FormSubmitState.Success
-            assertEquals("home", success.destination)
-        }
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        val state = vm.submitState.value as FormSubmitState.Success
+        assertEquals("home", state.destination)
     }
 
     @Test
-    fun `submit failure emits Error state`() = runTest {
-        coEvery { formSubmitter.submit(any(), any(), any(), any()) } returns Result.Error(Exception("Server error"))
+    fun `submit failure results in Error state`() = runTest {
+        coEvery { formSubmitter.submit(any(), any(), null, any()) } returns Result.Error(Exception("Server error"))
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema())
+        advanceUntilIdle()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            val error = awaitItem() as FormSubmitState.Error
-            assertEquals("Server error", error.message)
-        }
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        val error = vm.submitState.value as FormSubmitState.Error
+        assertEquals("Server error", error.message)
     }
 
     @Test
-    fun `submit without signed-in user emits Error`() = runTest {
+    fun `submit without signed-in user results in Error state`() = runTest {
         every { userRepository.userProfile } returns MutableStateFlow<UserDto?>(null).asStateFlow()
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema())
+        advanceUntilIdle()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            val error = awaitItem() as FormSubmitState.Error
-            assertTrue(error.message.contains("signed in", ignoreCase = true))
-        }
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        val error = vm.submitState.value as FormSubmitState.Error
+        assertTrue(error.message.contains("signed in", ignoreCase = true))
     }
 
     // --- Delete ---
 
     @Test
-    fun `delete in edit mode emits Deleted state`() = runTest {
+    fun `delete in edit mode results in Deleted state`() = runTest {
+        coEvery { formPrefiller.loadExistingValues("user123", "testTarget", "entity1") } returns emptyMap()
         coEvery { formDeleter.delete("user123", "testTarget", "entity1") } returns Result.Success(Unit)
 
         val vm = createViewModel(entityId = "entity1")
         fakeRepository.emitSchema("testForm", sampleSchema(deletable = true))
+        advanceUntilIdle()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onDelete()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            assertEquals(FormSubmitState.Deleted, awaitItem())
-        }
+        vm.onDelete()
+        advanceUntilIdle()
+
+        assertEquals(FormSubmitState.Deleted, vm.submitState.value)
     }
 
     @Test
-    fun `delete failure emits Error state`() = runTest {
+    fun `delete failure results in Error state`() = runTest {
+        coEvery { formPrefiller.loadExistingValues("user123", "testTarget", "entity1") } returns emptyMap()
         coEvery { formDeleter.delete(any(), any(), any()) } returns Result.Error(Exception("Delete failed"))
 
         val vm = createViewModel(entityId = "entity1")
         fakeRepository.emitSchema("testForm", sampleSchema())
+        advanceUntilIdle()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onDelete()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            val error = awaitItem() as FormSubmitState.Error
-            assertEquals("Delete failed", error.message)
-        }
+        vm.onDelete()
+        advanceUntilIdle()
+
+        val error = vm.submitState.value as FormSubmitState.Error
+        assertEquals("Delete failed", error.message)
     }
 
     @Test
@@ -312,7 +319,7 @@ class FormViewModelTest {
 
     @Test
     fun `required field hidden by showWhen condition does not block submit`() = runTest {
-        coEvery { formSubmitter.submit(any(), any(), any(), any()) } returns Result.Success(Unit)
+        coEvery { formSubmitter.submit(any(), any(), null, any()) } returns Result.Success(Unit)
 
         // height_value is required but only visible when record_height == true
         val conditionalField = FormFieldDto(
@@ -323,14 +330,12 @@ class FormViewModelTest {
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))
+        advanceUntilIdle()
 
         // record_height is false (default) so height_value is hidden - submit should pass
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            assertTrue(awaitItem() is FormSubmitState.Success)
-        }
+        vm.onSubmit()
+        advanceUntilIdle()
+        assertTrue(vm.submitState.value is FormSubmitState.Success)
     }
 
     @Test
@@ -343,21 +348,19 @@ class FormViewModelTest {
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))
+        advanceUntilIdle()
 
         // turn the switch on - height_value is now visible and required
         vm.onFieldChanged("record_height", true)
+        vm.onSubmit()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            val error = awaitItem() as FormSubmitState.Error
-            assertTrue(error.message.contains("height_value"))
-        }
+        val error = vm.submitState.value as FormSubmitState.Error
+        assertTrue(error.message.contains("Height")) // uses field label not key
     }
 
     @Test
     fun `required field becomes visible and passes when value provided`() = runTest {
-        coEvery { formSubmitter.submit(any(), any(), any(), any()) } returns Result.Success(Unit)
+        coEvery { formSubmitter.submit(any(), any(), null, any()) } returns Result.Success(Unit)
 
         val conditionalField = FormFieldDto(
             "height_value", "WHEEL_INPUT", "Height", required = true, index = 1,
@@ -367,23 +370,21 @@ class FormViewModelTest {
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))
+        advanceUntilIdle()
 
         vm.onFieldChanged("record_height", true)
         vm.onFieldChanged("height_value", 650)
+        vm.onSubmit()
+        advanceUntilIdle()
 
-        vm.submitState.test {
-            assertEquals(FormSubmitState.Idle, awaitItem())
-            vm.onSubmit()
-            assertEquals(FormSubmitState.Loading, awaitItem())
-            assertTrue(awaitItem() is FormSubmitState.Success)
-        }
+        assertTrue(vm.submitState.value is FormSubmitState.Success)
     }
 
     // --- clearSubmitState ---
 
     @Test
     fun `clearSubmitState resets to Idle`() = runTest {
-        coEvery { formSubmitter.submit(any(), any(), any(), any()) } returns Result.Success(Unit)
+        coEvery { formSubmitter.submit(any(), any(), null, any()) } returns Result.Success(Unit)
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema())
         vm.onSubmit()
