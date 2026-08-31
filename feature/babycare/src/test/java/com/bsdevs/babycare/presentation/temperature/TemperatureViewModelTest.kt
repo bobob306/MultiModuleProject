@@ -1,18 +1,18 @@
 package com.bsdevs.babycare.presentation.temperature
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.toRoute
 import app.cash.turbine.test
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.presentation.home.FakeAccountService
-import com.bsdevs.babycare.presentation.navigation.TemperatureRoute
 import com.bsdevs.common.DispatcherProvider
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -36,7 +36,6 @@ class TemperatureViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        mockkStatic("androidx.navigation.SavedStateHandleKt")
 
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
@@ -48,8 +47,7 @@ class TemperatureViewModelTest {
         repository = mockk(relaxed = true)
         every { repository.cachedDays } returns MutableStateFlow(emptyList())
         
-        savedStateHandle = mockk(relaxed = true)
-        every { savedStateHandle.toRoute<TemperatureRoute>() } returns TemperatureRoute(null)
+        savedStateHandle = SavedStateHandle()
     }
 
     @After
@@ -89,8 +87,9 @@ class TemperatureViewModelTest {
             dateTimeString = "2026-08-27 11:30"
         )
         coEvery { repository.getFeedingEventById(userId, eventId) } returns event
-        every { savedStateHandle.toRoute<TemperatureRoute>() } returns TemperatureRoute(eventId)
-
+        
+        val savedStateHandle = SavedStateHandle()
+        savedStateHandle["activityId"] = eventId
         viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
 
         viewModel.uiState.test {
@@ -127,9 +126,13 @@ class TemperatureViewModelTest {
         val eventId = "t1"
         val event = UnifiedEventDto(id = eventId, type = "TEMPERATURE", time = "10:00", dateTimeString = "2026-08-27 10:00")
         coEvery { repository.getFeedingEventById(userId, eventId) } returns event
-        every { savedStateHandle.toRoute<TemperatureRoute>() } returns TemperatureRoute(eventId)
         
-        viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
+        val editSavedStateHandle = SavedStateHandle()
+        editSavedStateHandle["activityId"] = eventId
+        viewModel = TemperatureViewModel(accountService, repository, dispatchers, editSavedStateHandle)
+        
+        // ⏳ WAIT for initial edit load
+        viewModel.uiState.filter { !it.isLoading }.first()
         
         viewModel.events.test {
             viewModel.deleteTemperature()
@@ -143,13 +146,17 @@ class TemperatureViewModelTest {
     fun `setShowSheet updates uiState`() = runTest {
         viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
         viewModel.setShowSheet(true)
-        assertTrue(viewModel.uiState.value.showSheet)
+        viewModel.uiState.filter { it.showSheet }.test {
+            assertTrue(awaitItem().showSheet)
+        }
     }
 
     @Test
     fun `setShowDatePicker updates uiState`() = runTest {
         viewModel = TemperatureViewModel(accountService, repository, dispatchers, savedStateHandle)
         viewModel.setShowDatePicker(true)
-        assertTrue(viewModel.uiState.value.showDatePicker)
+        viewModel.uiState.filter { it.showDatePicker }.test {
+            assertTrue(awaitItem().showDatePicker)
+        }
     }
 }

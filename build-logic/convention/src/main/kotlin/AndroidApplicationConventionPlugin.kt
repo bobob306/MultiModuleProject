@@ -26,7 +26,14 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
                 }
 
                 testOptions {
-                    unitTests.isReturnDefaultValues = true
+                    unitTests {
+                        isReturnDefaultValues = true
+                        all {
+                            it.maxHeapSize = "2g"
+                            it.forkEvery = 10
+                            it.maxParallelForks = 1
+                        }
+                    }
                 }
 
                 compileOptions {

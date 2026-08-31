@@ -3,7 +3,6 @@ package com.bsdevs.babycare.presentation.feeding
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
@@ -22,72 +21,77 @@ import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
-    private val dispatchers: DispatcherProvider,
     private val timerManager: FeedingTimerManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val route = savedStateHandle.toRoute<FeedingRoute>()
+    private val activityIdArg: String? = savedStateHandle["activityId"]
+    private val startSide: String? = savedStateHandle["startSide"]
 
-    private val _uiState = MutableStateFlow(FeedingUiState())
-    val uiState: StateFlow<FeedingUiState> = _uiState.asStateFlow()
+    private val _localState = MutableStateFlow(FeedingUiState())
+    
+    val uiState: StateFlow<FeedingUiState> = combine(
+        _localState,
+        timerManager.timerState
+    ) { local, timer ->
+        local.copy(
+            id = local.id ?: timer.activityId,
+            leftDuration = timer.leftDuration,
+            rightDuration = timer.rightDuration,
+            isLeftRunning = timer.isLeftRunning,
+            isRightRunning = timer.isRightRunning,
+            startTime = timer.startTime ?: local.startTime,
+            date = timer.date ?: local.date
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = FeedingUiState()
+    )
 
     private val _events = Channel<FeedingEvent>()
     val events = _events.receiveAsFlow()
 
     init {
-        route.activityId?.let { id ->
-            if (_uiState.value.id == null && !_uiState.value.isLoading) {
-                loadFeeding(id)
-            }
+        activityIdArg?.let { id ->
+            loadFeeding(id)
         }
         
-        route.startSide?.let { sideStr ->
+        startSide?.let { sideStr ->
             val side = when (sideStr.lowercase()) {
                 "left" -> FeedingSide.LEFT
                 "right" -> FeedingSide.RIGHT
                 else -> null
             }
             side?.let { 
-                timerManager.startTimer(it, route.activityId)
+                timerManager.startTimer(it, activityIdArg)
                 FeedingTimerService.start(context)
             }
         }
-
-        observeTimer()
     }
 
-    private fun observeTimer() {
-        viewModelScope.launch {
-            timerManager.timerState.collect { timerState ->
-                _uiState.update { it.copy(
-                    id = it.id ?: timerState.activityId,
-                    leftDuration = timerState.leftDuration,
-                    rightDuration = timerState.rightDuration,
-                    isLeftRunning = timerState.isLeftRunning,
-                    isRightRunning = timerState.isRightRunning
-                )}
-            }
-        }
-    }
+
 
     private fun loadFeeding(id: String) {
         val userId = accountService.currentUserId
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _localState.update { it.copy(isLoading = true) }
             try {
                 val feedingEvent = repository.getFeedingEventById(userId, id)
 
                 if (feedingEvent != null) {
-                    val extractedDate = feedingEvent.dateTimeString.split(" ").firstOrNull() ?: _uiState.value.date
+                    val extractedDate = feedingEvent.dateTimeString.split(" ").firstOrNull() ?: _localState.value.date
 
-                    _uiState.update {
+                    _localState.update {
                         it.copy(
                             id = feedingEvent.id,
                             date = extractedDate,
@@ -101,69 +105,86 @@ class FeedingViewModel @Inject constructor(
                     }
                     timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration, feedingEvent.id)
                     timerManager.setDuration(FeedingSide.RIGHT, feedingEvent.rightDuration, feedingEvent.id)
+                    
+                    // 🌟 SYNC METADATA: When editing an existing feed, update the manager so notifications 
+                    // and process restarts keep the correct historical start time.
+                    timerManager.setSessionMetadata(feedingEvent.time, extractedDate)
                 } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    _localState.update { it.copy(isLoading = false) }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
 
     fun onCommentChanged(newComment: String) {
-        _uiState.update { it.copy(comment = newComment) }
+        _localState.update { it.copy(comment = newComment) }
     }
 
     fun toggleTimer(side: FeedingSide) {
-        timerManager.toggleTimer(side, _uiState.value.id)
+        val currentUi = uiState.value
+        // 🌟 LOCK IN START TIME: Before starting the timer, push the current UI start time 
+        // to the singleton manager if it hasn't been locked in yet.
+        if (timerManager.timerState.value.startTime == null) {
+            timerManager.setSessionMetadata(currentUi.startTime, currentUi.date)
+        }
+
+        timerManager.toggleTimer(side, currentUi.id)
         if (timerManager.isAnyTimerRunning()) {
             FeedingTimerService.start(context)
         }
     }
 
     fun onLeftDurationChanged(duration: Long) {
-        timerManager.setDuration(FeedingSide.LEFT, duration, _uiState.value.id)
+        timerManager.setDuration(FeedingSide.LEFT, duration, uiState.value.id)
     }
 
     fun onRightDurationChanged(duration: Long) {
-        timerManager.setDuration(FeedingSide.RIGHT, duration, _uiState.value.id)
+        timerManager.setDuration(FeedingSide.RIGHT, duration, uiState.value.id)
     }
 
     fun onStartTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
-        _uiState.update { it.copy(startTime = formattedTime) }
+        _localState.update { it.copy(startTime = formattedTime) }
+        
+        // 🌟 UPDATE PERSISTENT TIMER STATE: If a timer is already running, ensure manual time 
+        // changes are also locked into the singleton manager for persistence.
+        if (timerManager.isAnyTimerRunning()) {
+            timerManager.setSessionMetadata(formattedTime, uiState.value.date)
+        }
     }
 
     fun updateBottleAmount(amount: Int?) {
-        _uiState.update { it.copy(bottleAmountMl = amount, showBottleDialog = false) }
+        _localState.update { it.copy(bottleAmountMl = amount, showBottleDialog = false) }
     }
 
     fun setShowBottleDialog(show: Boolean) {
-        _uiState.update { it.copy(showBottleDialog = show) }
+        _localState.update { it.copy(showBottleDialog = show) }
     }
 
     fun setShowTimePicker(show: Boolean) {
-        _uiState.update { it.copy(showTimePicker = show) }
+        _localState.update { it.copy(showTimePicker = show) }
     }
 
     fun setShowDurationDialog(side: String?) {
-        _uiState.update { it.copy(showDurationDialogForSide = side) }
+        _localState.update { it.copy(showDurationDialogForSide = side) }
     }
 
     fun setShowDeleteConfirmation(show: Boolean) {
-        _uiState.update { it.copy(showDeleteConfirmation = show) }
+        _localState.update { it.copy(showDeleteConfirmation = show) }
     }
 
     fun setShowCancelConfirmation(show: Boolean) {
-        _uiState.update { it.copy(showCancelConfirmation = show) }
+        _localState.update { it.copy(showCancelConfirmation = show) }
     }
 
     fun setIsPlayingSplodge(isPlaying: Boolean) {
-        _uiState.update { it.copy(isPlayingSplodge = isPlaying) }
+        _localState.update { it.copy(isPlayingSplodge = isPlaying) }
     }
 
     fun submitFeeding() {
-        val currentState = _uiState.value
+        val currentState = uiState.value
         val userId = accountService.currentUserId
 
         val mainFeedingSide = when {
@@ -200,7 +221,7 @@ class FeedingViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _localState.update { it.copy(isLoading = true, error = null) }
             try {
                 // Check if an entry ID already existed inside your state layer
                 val isEditingExistingItem = !currentState.id.isNullOrEmpty()
@@ -225,25 +246,25 @@ class FeedingViewModel @Inject constructor(
                 timerManager.reset()
                 _events.send(FeedingEvent.SaveSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }
 
     fun deleteFeeding() {
-        val currentState = _uiState.value
+        val currentState = uiState.value
         val userId = accountService.currentUserId
         val eventId = currentState.id ?: return
         val date = currentState.date
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _localState.update { it.copy(isLoading = true, error = null) }
             try {
                 repository.deleteActivityEvent(userId, date, eventId)
                 timerManager.reset()
                 _events.send(FeedingEvent.DeleteSuccess)
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+                _localState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
     }

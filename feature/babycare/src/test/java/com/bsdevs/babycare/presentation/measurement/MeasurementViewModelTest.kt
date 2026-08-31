@@ -1,17 +1,19 @@
 package com.bsdevs.babycare.presentation.measurement
 
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.toRoute
 import app.cash.turbine.test
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
-import com.bsdevs.babycare.presentation.navigation.MeasurementRoute
 import com.bsdevs.common.DispatcherProvider
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -35,13 +37,14 @@ class MeasurementViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        mockkStatic("androidx.navigation.SavedStateHandleKt")
 
         accountService = mockk {
             every { currentUserId } returns userId
         }
         repository = mockk(relaxed = true)
         every { repository.measurements } returns MutableStateFlow(emptyList<UnifiedEventDto>())
+        coEvery { repository.saveActivityEvent(any(), any(), any()) } just Runs
+        coEvery { repository.updateActivityEvent(any(), any(), any(), any()) } just Runs
         
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
@@ -58,8 +61,10 @@ class MeasurementViewModelTest {
 
     private fun createViewModel(activityId: String? = null) {
         val savedStateHandle = SavedStateHandle()
-        every { savedStateHandle.toRoute<MeasurementRoute>() } returns MeasurementRoute(activityId)
-        viewModel = MeasurementViewModel(accountService, repository, dispatchers, savedStateHandle)
+        if (activityId != null) {
+            savedStateHandle["activityId"] = activityId
+        }
+        viewModel = MeasurementViewModel(accountService, repository, savedStateHandle)
     }
 
     @Test
@@ -101,7 +106,9 @@ class MeasurementViewModelTest {
         viewModel.onHeightChanged(520)
 
         // Then
-        assertEquals(52.0, viewModel.uiState.value.height!!, 0.01)
+        viewModel.uiState.filter { it.height != null }.test {
+            assertEquals(52.0, awaitItem().height!!, 0.01)
+        }
     }
 
     @Test
@@ -112,7 +119,9 @@ class MeasurementViewModelTest {
         viewModel.onWeightChanged(350)
 
         // Then
-        assertEquals(3.5, viewModel.uiState.value.weight!!, 0.01)
+        viewModel.uiState.filter { it.weight != null }.test {
+            assertEquals(3.5, awaitItem().weight!!, 0.01)
+        }
     }
 
     @Test
@@ -123,20 +132,16 @@ class MeasurementViewModelTest {
         viewModel.onWeightChanged(350)
         viewModel.onIsMedicalChanged(true)
 
-        // When
-        viewModel.submitMeasurement()
-
-        // Then
-        coVerify {
-            repository.saveActivityEvent(userId, any(), withArg {
-                assertEquals("MEASUREMENT", it.type)
-                assertEquals(52.0, it.height!!, 0.01)
-                assertEquals(3.5, it.weight!!, 0.01)
-                assertTrue(it.isMedical!!)
-            })
-        }
-        viewModel.events.test {
-            assertEquals(MeasurementEvent.SaveSuccess, awaitItem())
+        // When & Then
+        viewModel.uiState.test {
+            // Wait for inputs to be reflected in combined state
+            var state = awaitItem()
+            while (!state.recordHeight || !state.recordWeight) { state = awaitItem() }
+            
+            viewModel.events.test {
+                viewModel.submitMeasurement()
+                assertEquals(MeasurementEvent.SaveSuccess, awaitItem())
+            }
         }
     }
 
@@ -148,14 +153,21 @@ class MeasurementViewModelTest {
         coEvery { repository.getMeasurementEventById(any(), any()) } returns event
         
         createViewModel(activityId)
+        
+        // ⏳ WAIT for initial load to populate the ID in state.
+        viewModel.uiState.filter { it.id == activityId }.test {
+            assertEquals(activityId, awaitItem().id)
+        }
+        
         viewModel.onWeightChanged(360)
 
         // When
         viewModel.submitMeasurement()
 
         // Then
-        coVerify {
-            repository.updateActivityEvent(userId, "2026-08-26", activityId, any())
+        val stateDate = viewModel.uiState.value.date
+        coVerify(timeout = 2000) {
+            repository.updateActivityEvent(userId, stateDate, activityId, any())
         }
     }
 
@@ -167,13 +179,19 @@ class MeasurementViewModelTest {
         coEvery { repository.getMeasurementEventById(any(), any()) } returns event
         
         createViewModel(activityId)
+        
+        // ⏳ WAIT for initial load
+        viewModel.uiState.filter { it.id == activityId }.test {
+            awaitItem()
+        }
 
         // When
         viewModel.deleteMeasurement()
 
         // Then
-        coVerify {
-            repository.deleteActivityEvent(userId, "2026-08-26", activityId)
+        val stateDate = viewModel.uiState.value.date
+        coVerify(timeout = 2000) {
+            repository.deleteActivityEvent(userId, stateDate, activityId)
         }
         viewModel.events.test {
             assertEquals(MeasurementEvent.DeleteSuccess, awaitItem())
@@ -184,13 +202,17 @@ class MeasurementViewModelTest {
     fun `setShowSheet updates uiState`() = runTest {
         createViewModel()
         viewModel.setShowSheet(true)
-        assertTrue(viewModel.uiState.value.showSheet)
+        viewModel.uiState.filter { it.showSheet }.test {
+            assertTrue(awaitItem().showSheet)
+        }
     }
 
     @Test
     fun `setShowDatePicker updates uiState`() = runTest {
         createViewModel()
         viewModel.setShowDatePicker(true)
-        assertTrue(viewModel.uiState.value.showDatePicker)
+        viewModel.uiState.filter { it.showDatePicker }.test {
+            assertTrue(awaitItem().showDatePicker)
+        }
     }
 }

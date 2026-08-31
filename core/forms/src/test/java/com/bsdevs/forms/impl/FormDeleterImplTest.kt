@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
@@ -25,7 +25,7 @@ class FormDeleterImplTest {
     fun `nappyLog deletes with date extracted from dateTimeString`() = runTest {
         coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns UnifiedEventDto(
             id = "n1", type = "NAPPY", time = "10:30",
-            dateTimeString = "2026-08-31T10:30",
+            dateTimeString = "2026-08-31 10:30",
         )
 
         val result = deleter.delete("u", "nappyLog", "n1")
@@ -38,7 +38,7 @@ class FormDeleterImplTest {
     fun `feedingLog deletes with date extracted from dateTimeString`() = runTest {
         coEvery { babyCareRepository.getFeedingEventById("u", "f1") } returns UnifiedEventDto(
             id = "f1", type = "FEEDING", time = "08:00",
-            dateTimeString = "2026-09-01T08:00",
+            dateTimeString = "2026-09-01 08:00",
         )
 
         val result = deleter.delete("u", "feedingLog", "f1")

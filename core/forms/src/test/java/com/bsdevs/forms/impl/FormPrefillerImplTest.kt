@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
@@ -66,7 +66,7 @@ class FormPrefillerImplTest {
         coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns UnifiedEventDto(
             type = "NAPPY",
             time = "10:30",
-            dateTimeString = "2026-08-31T10:30",
+            dateTimeString = "2026-08-31 10:30",
             nappyType = "Wet",
             comment = "Normal",
         )

@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
@@ -44,9 +44,7 @@ class FormPrefillerImpl @Inject constructor(
             put("time", event.time)
             event.nappyType?.let { put("nappy_type", it) }
             event.comment?.let { put("comment", it) }
-            if (event.dateTimeString.contains("T")) {
-                put("date", event.dateTimeString.substringBefore("T"))
-            }
+            put("date", event.dateTimeString.substringBefore(" "))
         }
     }
 
@@ -87,9 +85,7 @@ class FormPrefillerImpl @Inject constructor(
             event.mainFeedingSide?.let { put("feeding_side", it) }
             event.bottleAmountMl?.let { put("bottle_amount_ml", it.toString()) }
             event.comment?.let { put("comment", it) }
-            if (event.dateTimeString.contains("T")) {
-                put("date", event.dateTimeString.substringBefore("T"))
-            }
+            put("date", event.dateTimeString.substringBefore(" "))
         }
     }
 }

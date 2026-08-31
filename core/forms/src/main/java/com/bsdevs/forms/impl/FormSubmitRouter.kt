@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
@@ -56,7 +56,7 @@ class FormSubmitRouter @Inject constructor(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "NAPPY",
             time = values["time"] as? String ?: "",
-            dateTimeString = "${date}T${values["time"] ?: "00:00"}",
+            dateTimeString = "$date ${values["time"] ?: "00:00"}",
             nappyType = values["nappy_type"] as? String,
             comment = values["comment"] as? String,
         )
@@ -128,7 +128,7 @@ class FormSubmitRouter @Inject constructor(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "FEEDING",
             time = values["start_time"] as? String ?: "",
-            dateTimeString = "${date}T${values["start_time"] ?: "00:00"}",
+            dateTimeString = "$date ${values["start_time"] ?: "00:00"}",
             mainFeedingSide = values["feeding_side"] as? String,
             bottleAmountMl = (values["bottle_amount_ml"] as? String)?.toIntOrNull(),
             comment = values["comment"] as? String,

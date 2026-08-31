@@ -1,4 +1,4 @@
-package com.bsdevs.multimoduleproject.forms
+package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.common.result.Result
@@ -20,7 +20,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteNappy(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getNappyEventById(userId, entityId)
             ?: return Result.Error(Exception("Nappy record not found"))
-        val date = event.dateTimeString.substringBefore("T")
+        val date = event.dateTimeString.substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
@@ -50,7 +50,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteFeeding(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getFeedingEventById(userId, entityId)
             ?: return Result.Error(Exception("Feeding record not found"))
-        val date = event.dateTimeString.substringBefore("T")
+        val date = event.dateTimeString.substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {

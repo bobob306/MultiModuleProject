@@ -42,7 +42,7 @@ class BabyCareRepositoryImplTest {
 
     @Test
     fun `loadInitialData handles no data case`() = runTest {
-        val result = repository.loadInitialData(userId, 20)
+        val result = repository.loadInitialData(userId, 2)
 
         assertNull(result.nextAnchorMonth)
         assertFalse(result.hasMoreData)
@@ -58,7 +58,7 @@ class BabyCareRepositoryImplTest {
         fakeService.injectMonth(userId, monthAug, mapOf("days" to emptyMap<String, Any>()))
         fakeService.injectMonth(userId, monthMay, mapOf("days" to emptyMap<String, Any>()))
 
-        val result = repository.loadInitialData(userId, 20)
+        val result = repository.loadInitialData(userId, 2)
 
         assertEquals(YearMonth.of(2026, 5), result.nextAnchorMonth)
         assertTrue(result.hasMoreData)
@@ -75,9 +75,9 @@ class BabyCareRepositoryImplTest {
         fakeService.injectMonth(userId, monthMay, mapOf("days" to emptyMap<String, Any>()))
         fakeService.injectMonth(userId, monthJan, mapOf("days" to emptyMap<String, Any>()))
 
-        repository.loadInitialData(userId, 20) // Current month is Aug, next is May
+        repository.loadInitialData(userId, 2) // Current month is Aug, next is May
 
-        val result = repository.loadMoreData(userId, 20) // Loads May, next is Jan
+        val result = repository.loadMoreData(userId, 2) // Loads May, next is Jan
 
         assertEquals(YearMonth.of(2026, 1), result.nextAnchorMonth)
         assertTrue(result.hasMoreData)
@@ -88,8 +88,8 @@ class BabyCareRepositoryImplTest {
         val monthAug = "2026-08"
         fakeService.injectMonth(userId, monthAug, mapOf("days" to emptyMap<String, Any>()))
 
-        repository.loadInitialData(userId, 20)
-        val result = repository.loadMoreData(userId, 20)
+        repository.loadInitialData(userId, 2)
+        val result = repository.loadMoreData(userId, 2)
 
         assertNull(result.nextAnchorMonth)
         assertFalse(result.hasMoreData)
@@ -100,14 +100,14 @@ class BabyCareRepositoryImplTest {
         val monthAug = "2026-08"
         fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
         
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 2)
         assertEquals(1, repository.cachedDays.value.size)
 
         // Add more data and refresh
         val monthJuly = "2026-07"
         fakeService.injectMonth(userId, monthJuly, mapOf("days" to mapOf("2026-07-01" to emptyList<Any>())))
         
-        val result = repository.refreshData(userId, 20)
+        val result = repository.refreshData(userId, 2)
         
         assertNotNull(result)
         // Verify cache was reset to only the new initial month (since refresh starts from scratch)
@@ -241,7 +241,7 @@ class BabyCareRepositoryImplTest {
         )))
         fakeService.injectMonth(userId, monthId, rawData)
 
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 2)
 
         val cachedEvents = repository.cachedDays.value.first().events
         assertEquals(37.5, cachedEvents.first { it.id == "temp1" }.temperature!!, 0.01)
@@ -289,7 +289,7 @@ class BabyCareRepositoryImplTest {
         val measurement = mapOf("id" to "m1", "type" to "MEASUREMENT", "weight" to 3.5, "dateTimeString" to "$date 11:00")
         fakeService.saveMeasurement(userId, "m1", measurement)
 
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 2)
 
         repository.cachedDays.test {
             val cached = awaitItem()
@@ -305,7 +305,7 @@ class BabyCareRepositoryImplTest {
         val monthId = "2026-08"
         fakeService.injectMonth(userId, monthId, emptyMap()) // Document exists but is empty
 
-        repository.loadInitialData(userId, 20)
+        repository.loadInitialData(userId, 2)
 
         repository.cachedDays.test {
             assertEquals(emptyList<DailyLogDto>(), awaitItem())
@@ -321,6 +321,6 @@ class BabyCareRepositoryImplTest {
         val repo = BabyCareRepositoryImpl(crashingService, userRepository, dispatchers)
 
         // When/Then
-        repo.loadInitialData(userId, 20)
+        repo.loadInitialData(userId, 2)
     }
 }

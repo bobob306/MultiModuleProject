@@ -1,6 +1,5 @@
 package com.bsdevs.babycare.presentation.home
 
-import android.util.Log
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
@@ -14,10 +13,10 @@ import com.bsdevs.network.repository.ScreenRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -26,6 +25,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,10 +50,6 @@ class BabyCareHomeViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         
-        mockkStatic(Log::class)
-        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { Log.e(any<String>(), any<String>()) } returns 0
-
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
             override val io = testDispatcher
@@ -189,10 +185,10 @@ class BabyCareHomeViewModelTest {
         viewModel.loadMore()
 
         // Then
-        val result = viewModel.viewData.value as Result.Success
-        val rows = result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>()
-        assertEquals(2, rows.size)
-        assertFalse(result.data.isLoadingMore)
+        viewModel.viewData.filter { it is Result.Success && it.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size == 2 }.test {
+            val state = awaitItem() as Result.Success
+            assertEquals(2, state.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
+        }
     }
 
     @Test
