@@ -79,6 +79,7 @@ import java.time.ZoneId
 fun TemperatureScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    onAddNew: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: TemperatureViewModel = hiltViewModel()
@@ -104,6 +105,7 @@ fun TemperatureScreenRoute(
     TemperatureScreen(
         uiState = uiState,
         onNavigateBack = onNavigateBack,
+        onAddNew = onAddNew,
         onTemperatureValueSelected = viewModel::onTemperatureValueSelected,
         onCommentChanged = viewModel::onCommentChanged,
         onDateSelected = viewModel::onDateSelected,
@@ -126,6 +128,7 @@ fun TemperatureScreenRoute(
 fun TemperatureScreen(
     uiState: TemperatureUiState,
     onNavigateBack: () -> Unit,
+    onAddNew: () -> Unit = {},
     onTemperatureValueSelected: (Int) -> Unit,
     onCommentChanged: (String) -> Unit,
     onDateSelected: (String) -> Unit,
@@ -154,9 +157,7 @@ fun TemperatureScreen(
         onBackClick = onNavigateBack,
         scrollBehavior = scrollBehavior,
         floatingActionButton = {
-            FloatingActionButton(onClick = { 
-                onResetForm()
-            }) {
+            FloatingActionButton(onClick = onAddNew) {
                 Icon(Icons.Default.Add, contentDescription = "Add Temperature")
             }
         }

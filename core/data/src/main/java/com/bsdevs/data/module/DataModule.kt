@@ -1,5 +1,7 @@
 package com.bsdevs.data.module
 
+import com.bsdevs.data.FormDataMapper
+import com.bsdevs.data.FormDataMapperImpl
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.ScreenDataMapperImpl
 import dagger.Module
@@ -12,7 +14,8 @@ import dagger.hilt.components.SingletonComponent
 object DataModule {
 
     @Provides
-    fun provideScreenDataMapper(): ScreenDataMapper {
-        return ScreenDataMapperImpl()
-    }
+    fun provideScreenDataMapper(): ScreenDataMapper = ScreenDataMapperImpl()
+
+    @Provides
+    fun provideFormDataMapper(): FormDataMapper = FormDataMapperImpl()
 }

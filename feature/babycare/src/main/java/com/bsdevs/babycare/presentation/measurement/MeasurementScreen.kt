@@ -90,6 +90,7 @@ import java.util.Locale
 fun MeasurementScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    onAddNew: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: MeasurementViewModel = hiltViewModel()
@@ -101,6 +102,7 @@ fun MeasurementScreenRoute(
         events = viewModel.events,
         onShowSnackBar = onShowSnackBar,
         onNavigateBack = onNavigateBack,
+        onAddNew = onAddNew,
         onDateSelected = viewModel::onDateSelected,
         onTimeSelected = viewModel::onTimeSelected,
         onHeightChanged = viewModel::onHeightChanged,
@@ -130,6 +132,7 @@ internal fun MeasurementScreen(
     events: kotlinx.coroutines.flow.Flow<MeasurementEvent>,
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
+    onAddNew: () -> Unit = {},
     onDateSelected: (String) -> Unit,
     onTimeSelected: (Int, Int) -> Unit,
     onHeightChanged: (Int) -> Unit,
@@ -189,9 +192,7 @@ internal fun MeasurementScreen(
         onBackClick = onNavigateBack,
         scrollBehavior = scrollBehavior,
         floatingActionButton = {
-            FloatingActionButton(onClick = { 
-                onResetForm()
-            }) {
+            FloatingActionButton(onClick = onAddNew) {
                 Icon(Icons.Default.Add, contentDescription = "Add Measurement")
             }
         }

@@ -1,5 +1,7 @@
 package com.bsdevs.network
 
+import com.bsdevs.network.repository.FormRepository
+import com.bsdevs.network.repository.FormRepositoryImpl
 import com.bsdevs.network.repository.ScreenRepository
 import com.bsdevs.network.repository.ScreenRepositoryImpl
 import com.bsdevs.network.repository.UserRepository
@@ -48,4 +50,15 @@ object FirebaseApiModule {
     ): UserRepository {
         return UserRepositoryImpl(firestoreHolder, dispatchers)
     }
+
+    @Provides
+    fun provideFormDtoMapper(): FormDtoMapper = FormDtoMapperImpl()
+
+    @Provides
+    @Singleton
+    fun provideFormRepository(
+        firestoreHolder: FirestoreHolder,
+        mapper: FormDtoMapper,
+        dispatchers: DispatcherProvider,
+    ): FormRepository = FormRepositoryImpl(firestoreHolder, mapper, dispatchers)
 }

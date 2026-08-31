@@ -56,7 +56,7 @@ import com.bsdevs.uicomponents.MMPScaffold
 @Composable
 fun CoffeeHomeScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
-    navigateToCoffeeInput: () -> Unit,
+    navigateToForm: (String) -> Unit,
     navigateToLogin: (navOptions: NavOptions?) -> Unit,
     onNavigateToDetail: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
@@ -85,7 +85,7 @@ fun CoffeeHomeScreenRoute(
     LaunchedEffect(key1 = Unit) {
         viewModel.navigationEvent.collect { event ->
             when (event) {
-                NavigationEvent.NavigateToInput -> navigateToCoffeeInput()
+                NavigationEvent.NavigateToInput -> navigateToForm("coffeeLog")
                 NavigationEvent.NavigateToHome -> {}
                 NavigationEvent.NavigateToLogin -> {
                     onShowSnackBar.invoke("Logged out", "")

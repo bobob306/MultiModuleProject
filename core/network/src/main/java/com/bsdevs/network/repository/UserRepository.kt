@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,6 +41,7 @@ class UserRepositoryImpl @Inject constructor(
     private val _userProfile = MutableStateFlow<UserDto?>(null)
     override val userProfile: StateFlow<UserDto?> = _userProfile.asStateFlow()
 
+    private val babyCache = ConcurrentHashMap<String, BabyDto>()
     private val clearables = mutableListOf<Clearable>()
 
     override suspend fun saveUser(user: UserDto): Unit = withContext(dispatchers.io) {
@@ -54,6 +56,7 @@ class UserRepositoryImpl @Inject constructor(
         baby.id?.let { id ->
             Log.d("FIREBASE_CALL", "Write Baby: $id")
             firestore.collection("babies").document(id).set(baby).await()
+            babyCache[id] = baby
         }
     }
 
@@ -82,11 +85,14 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getBaby(babyId: String, forceRefresh: Boolean): BabyDto? = withContext(dispatchers.io) {
+        if (!forceRefresh) babyCache[babyId]?.let { return@withContext it }
         try {
             Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
             val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-            firestore.collection("babies").document(babyId).get(source).await()
+            val baby = firestore.collection("babies").document(babyId).get(source).await()
                 .toObject(BabyDto::class.java)
+            baby?.let { babyCache[babyId] = it }
+            baby
         } catch (e: Exception) {
             null
         }
@@ -149,6 +155,7 @@ class UserRepositoryImpl @Inject constructor(
             Log.e("UserRepository", "Failed to clear cache", e)
         } finally {
             _userProfile.value = null
+            babyCache.clear()
         }
     }
 
