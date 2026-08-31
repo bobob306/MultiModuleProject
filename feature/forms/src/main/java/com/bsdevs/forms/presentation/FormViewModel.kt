@@ -69,14 +69,15 @@ class FormViewModel @Inject constructor(
                 when (result) {
                     is Result.Success -> {
                         val schema = formDataMapper.mapToData(formId, result.data)
-                        val defaults = buildMap<String, Any> {
-                            schema.fields.forEach { field ->
-                                when (field) {
-                                    is FormFieldData.SwitchFieldData -> put(field.fieldKey, field.default)
-                                    is FormFieldData.DateInputData -> put(field.fieldKey, LocalDate.now().toString())
-                                    is FormFieldData.TimeInputData -> put(field.fieldKey, LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")))
-                                    else -> {}
-                                }
+                        val today = LocalDate.now().toString()
+                        val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                        val defaults = mutableMapOf<String, Any>()
+                        schema.fields.forEach { field ->
+                            when (field) {
+                                is FormFieldData.SwitchFieldData -> defaults[field.fieldKey] = field.default
+                                is FormFieldData.DateInputData -> defaults[field.fieldKey] = today
+                                is FormFieldData.TimeInputData -> defaults[field.fieldKey] = currentTime
+                                else -> {}
                             }
                         }
 

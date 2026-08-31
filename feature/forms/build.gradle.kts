@@ -5,6 +5,9 @@ plugins {
 
 android {
     namespace = "com.bsdevs.forms"
+    defaultConfig {
+        consumerProguardFiles("proguard-rules.pro")
+    }
 }
 
 dependencies {
