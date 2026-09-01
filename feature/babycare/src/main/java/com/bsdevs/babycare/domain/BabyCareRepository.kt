@@ -3,6 +3,7 @@ package com.bsdevs.babycare.domain
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import kotlinx.coroutines.flow.StateFlow
+import java.time.LocalDate
 import java.time.YearMonth
 
 data class RepositoryFetchResult(
@@ -23,5 +24,6 @@ interface BabyCareRepository {
     suspend fun getMeasurementEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto)
     suspend fun deleteActivityEvent(userId: String, date: String, eventId: String)
+    fun getCurrentDate(): LocalDate
     fun clearCache()
 }

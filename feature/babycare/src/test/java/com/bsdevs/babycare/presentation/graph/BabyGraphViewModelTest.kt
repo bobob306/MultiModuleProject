@@ -3,10 +3,12 @@ package com.bsdevs.babycare.presentation.graph
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
+import com.bsdevs.babycare.presentation.common.TimeProvider
+import java.time.LocalDate
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -42,7 +44,9 @@ class BabyGraphViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepository = mockk<UserRepository>(relaxed = true)
-        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
+        val timeProvider = mockk<TimeProvider>(relaxed = true)
+        every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
+        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
         viewModel = BabyGraphViewModel(repository, dispatchers)
     }
 

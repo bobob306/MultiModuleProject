@@ -32,7 +32,12 @@ class NappyChangeViewModel @Inject constructor(
 
     private val activityIdArg: String? = savedStateHandle["activityId"]
 
-    private val _localState = MutableStateFlow(NappyChangeUiState())
+    private val _localState = MutableStateFlow(
+        NappyChangeUiState(
+            date = repository.getCurrentDate().toString(),
+            time = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        )
+    )
     val uiState: StateFlow<NappyChangeUiState> = _localState.asStateFlow()
 
     private val _events = Channel<NappyChangeEvent>()
