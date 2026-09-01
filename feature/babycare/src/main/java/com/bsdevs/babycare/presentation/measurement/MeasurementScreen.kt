@@ -4,8 +4,10 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
@@ -29,6 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,11 +46,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,17 +65,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsdevs.common.result.Result
+import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.renderer.RenderUI
 import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPDatePickerDialog
@@ -91,35 +103,20 @@ fun MeasurementScreenRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onNavigateBack: () -> Unit,
     onAddNew: () -> Unit = {},
+    onEditItem: (String) -> Unit = {},
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    viewModel: MeasurementViewModel = hiltViewModel()
+    viewModel: MeasurementSduiViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     MeasurementScreen(
         uiState = uiState,
-        events = viewModel.events,
-        onShowSnackBar = onShowSnackBar,
         onNavigateBack = onNavigateBack,
         onAddNew = onAddNew,
-        onDateSelected = viewModel::onDateSelected,
-        onTimeSelected = viewModel::onTimeSelected,
-        onHeightChanged = viewModel::onHeightChanged,
-        onWeightChanged = viewModel::onWeightChanged,
-        onIsMedicalChanged = viewModel::onIsMedicalChanged,
-        onToggleRecordHeight = viewModel::toggleRecordHeight,
-        onToggleRecordWeight = viewModel::toggleRecordWeight,
-        onCommentChanged = viewModel::onCommentChanged,
-        onSave = viewModel::submitMeasurement,
-        onDelete = viewModel::deleteMeasurement,
         onToggleMedicalOnly = viewModel::toggleMedicalOnly,
-        onResetForm = viewModel::resetForm,
-        onEditItem = viewModel::onEditMeasurement,
-        onShowSheet = viewModel::setShowSheet,
-        onShowTimePicker = viewModel::setShowTimePicker,
-        onShowDatePicker = viewModel::setShowDatePicker,
-        onShowDeleteConfirmation = viewModel::setShowDeleteConfirmation,
+        onEditItem = onEditItem,
+        onDeleteMeasurement = viewModel::deleteMeasurement,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope
     )
@@ -128,55 +125,41 @@ fun MeasurementScreenRoute(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun MeasurementScreen(
-    uiState: MeasurementUiState,
-    events: kotlinx.coroutines.flow.Flow<MeasurementEvent>,
-    onShowSnackBar: suspend (String, String?) -> Unit,
+    uiState: MeasurementSduiUiState,
     onNavigateBack: () -> Unit,
     onAddNew: () -> Unit = {},
-    onDateSelected: (String) -> Unit,
-    onTimeSelected: (Int, Int) -> Unit,
-    onHeightChanged: (Int) -> Unit,
-    onWeightChanged: (Int) -> Unit,
-    onIsMedicalChanged: (Boolean) -> Unit,
-    onToggleRecordHeight: (Boolean) -> Unit,
-    onToggleRecordWeight: (Boolean) -> Unit,
-    onCommentChanged: (String) -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit,
     onToggleMedicalOnly: (Boolean) -> Unit,
-    onResetForm: () -> Unit,
     onEditItem: (String) -> Unit,
-    onShowSheet: (Boolean) -> Unit,
-    onShowTimePicker: (Boolean) -> Unit,
-    onShowDatePicker: (Boolean) -> Unit,
-    onShowDeleteConfirmation: (Boolean) -> Unit,
+    onDeleteMeasurement: (com.bsdevs.babycare.network.MeasurementDto) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
-        events.collect { event ->
-            when (event) {
-                is MeasurementEvent.SaveSuccess -> {
-                    onShowSnackBar("Measurement saved", null)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) onShowSheet(false)
+    var measurementToDelete by remember { mutableStateOf<com.bsdevs.babycare.network.MeasurementDto?>(null) }
+
+    if (measurementToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { measurementToDelete = null },
+            title = { Text("Delete Measurement") },
+            text = { Text("Are you sure you want to delete this measurement? This cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        measurementToDelete?.let { onDeleteMeasurement(it) }
+                        measurementToDelete = null
                     }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
-                is MeasurementEvent.DeleteSuccess -> {
-                    onShowSnackBar("Measurement deleted", null)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion {
-                        if (!sheetState.isVisible) onShowSheet(false)
-                    }
-                }
-                is MeasurementEvent.SaveError -> {
-                    onShowSnackBar("Error saving measurement: ${event.message}", null)
+            },
+            dismissButton = {
+                TextButton(onClick = { measurementToDelete = null }) {
+                    Text("Cancel")
                 }
             }
-        }
+        )
     }
 
     val filteredMeasurements = remember(uiState.allMeasurements, uiState.showMedicalOnly) {
@@ -197,224 +180,233 @@ internal fun MeasurementScreen(
             }
         }
     ) { innerPadding ->
-        with(sharedTransitionScope) {
-            Box(modifier = Modifier
-                .fillMaxSize()
-                .sharedElement(
-                    sharedContentState = rememberSharedContentState(key = "tile_measurement_tile"),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-                .padding(innerPadding)
-            ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+        when (val layout = uiState.screenLayout) {
+            is Result.Loading -> Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            is Result.Error -> Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
+                Text("Error: ${layout.exception.message}")
+            }
+            is Result.Success -> {
+                with(sharedTransitionScope) {
+                    Box(modifier = Modifier
+                        .fillMaxSize()
+                        .sharedElement(
+                            sharedContentState = rememberSharedContentState(key = "tile_measurement_tile"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                        .padding(innerPadding)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            Text("Medical Only", style = MaterialTheme.typography.bodyLarge)
-                            Switch(
-                                checked = uiState.showMedicalOnly,
-                                onCheckedChange = onToggleMedicalOnly
-                            )
-                        }
-                    }
-
-                    if (filteredMeasurements.isEmpty()) {
-                        item {
-                            Box(modifier = Modifier.height(200.dp), contentAlignment = Alignment.Center) {
-                                Text("No measurements to display.")
-                            }
-                        }
-                    } else {
-                        item {
-                            GrowthChartSection(
-                                title = "Weight Trend (kg)",
-                                data = filteredMeasurements,
-                                valueSelector = { it.weight },
-                                dotColorMedical = MaterialTheme.colorScheme.primary,
-                                dotColorSelf = MaterialTheme.colorScheme.secondary,
-                                isWeight = true
-                            )
-                        }
-
-                        item {
-                            GrowthChartSection(
-                                title = "Height Trend (cm)",
-                                data = filteredMeasurements,
-                                valueSelector = { it.height },
-                                dotColorMedical = MaterialTheme.colorScheme.tertiary,
-                                dotColorSelf = MaterialTheme.colorScheme.outline,
-                                isWeight = false
-                            )
-                        }
-                        
-                        item {
-                            Text(
-                                text = "History",
-                                style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                            )
-                        }
-
-                        items(filteredMeasurements) { measurement ->
-                            MeasurementHistoryItem(
-                                measurement = measurement,
-                                onClick = {
-                                    onEditItem(measurement.id ?: "")
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Medical Only", style = MaterialTheme.typography.bodyLarge)
+                                    Switch(
+                                        checked = uiState.showMedicalOnly,
+                                        onCheckedChange = onToggleMedicalOnly
+                                    )
                                 }
-                            )
+                            }
+
+                            layout.data.sortedBy { it.index }.forEach { component ->
+                                item(key = "dynamic_${component.index}") {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        RenderUI(
+                                            item = component,
+                                            context = context,
+                                            onClick = { _, _ -> },
+                                            onChipClick = {},
+                                            onSwitchClick = {},
+                                            featureContent = { featureComponent ->
+                                                when (featureComponent) {
+                                                    is NetworkScreenData.GrowthChartDataNetwork -> {
+                                                        GrowthChartSection(
+                                                            title = featureComponent.title,
+                                                            data = filteredMeasurements,
+                                                            valueSelector = {
+                                                                when (featureComponent.dataType) {
+                                                                    "WEIGHT" -> it.weight
+                                                                    "HEIGHT" -> it.height
+                                                                    "HEAD" -> it.headCircumference
+                                                                    else -> null
+                                                                }
+                                                            },
+                                                            dotColorMedical = when (featureComponent.dataType) {
+                                                                "WEIGHT" -> MaterialTheme.colorScheme.primary
+                                                                "HEIGHT" -> MaterialTheme.colorScheme.tertiary
+                                                                "HEAD" -> MaterialTheme.colorScheme.secondary
+                                                                else -> MaterialTheme.colorScheme.primary
+                                                            },
+                                                            dotColorSelf = MaterialTheme.colorScheme.outline,
+                                                            isWeight = featureComponent.dataType == "WEIGHT"
+                                                        )
+                                                    }
+                                                    is NetworkScreenData.MeasurementHistoryDataNetwork -> {
+                                                        Column {
+                                                            Text(
+                                                                text = "History",
+                                                                style = MaterialTheme.typography.titleLarge,
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .padding(16.dp)
+                                                            )
+                                                            if (filteredMeasurements.isEmpty()) {
+                                                                Box(modifier = Modifier.height(100.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                                                    Text("No measurements to display.")
+                                                                }
+                                                            } else {
+                                                                filteredMeasurements.forEach { measurement ->
+                                                                    MeasurementHistoryItem(
+                                                                        measurement = measurement,
+                                                                        onEdit = {
+                                                                            // Note: Ideally onEditItem(id) should be used, but since we are in SDUI
+                                                                            // generic form handling might be needed. For now we use the passed callback.
+                                                                            onEditItem(measurement.id ?: "")
+                                                                        },
+                                                                        onDelete = {
+                                                                            measurementToDelete = measurement
+                                                                        }
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    else -> {}
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            item { Spacer(modifier = Modifier.height(80.dp)) }
                         }
                     }
-                    
-                    item { Spacer(modifier = Modifier.height(80.dp)) }
-                }
-
-                if (uiState.isLoading && !uiState.showSheet) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             }
         }
-
-        if (uiState.showSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { 
-                    onShowSheet(false) 
-                },
-                sheetState = sheetState
-            ) {
-                MeasurementForm(
-                    uiState = uiState,
-                    onHeightChanged = onHeightChanged,
-                    onWeightChanged = onWeightChanged,
-                    onIsMedicalChanged = onIsMedicalChanged,
-                    onToggleRecordHeight = onToggleRecordHeight,
-                    onToggleRecordWeight = onToggleRecordWeight,
-                    onCommentChanged = onCommentChanged,
-                    onDateSelected = { onShowDatePicker(true) },
-                    onTimeSelected = { onShowTimePicker(true) },
-                    onSave = {
-                        onSave()
-                    },
-                    onDelete = { onShowDeleteConfirmation(true) }
-                )
-
-                if (uiState.showDatePicker) {
-                    val initialDate = try {
-                        LocalDate.parse(uiState.date)
-                    } catch (_: Exception) {
-                        LocalDate.now()
-                    }
-
-                    MMPDatePickerDialog(
-                        onDismissRequest = { onShowDatePicker(false) },
-                        initialDate = initialDate,
-                        onDateSelected = { selectedDate ->
-                            onDateSelected(selectedDate.toString())
-                        }
-                    )
-                }
-            }
-        }
-    }
-
-    if (uiState.showTimePicker) {
-        val initialTime = try {
-            LocalTime.parse(uiState.time)
-        } catch (e: Exception) {
-            LocalTime.now()
-        }
-
-        MMPTimePickerDialog(
-            onDismissRequest = { onShowTimePicker(false) },
-            initialTime = initialTime,
-            onTimeSelected = { h, m ->
-                onTimeSelected(h, m)
-                onShowTimePicker(false)
-            }
-        )
-    }
-
-    if (uiState.showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { onShowDeleteConfirmation(false) },
-            title = { Text("Delete Measurement") },
-            text = { Text("Are you sure you want to delete this record?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onDelete()
-                        onShowDeleteConfirmation(false)
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) onShowSheet(false)
-                        }
-                    }
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onShowDeleteConfirmation(false) }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MeasurementHistoryItem(
     measurement: com.bsdevs.babycare.network.MeasurementDto,
-    onClick: () -> Unit
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.MonitorWeight,
-                contentDescription = null,
-                tint = if (measurement.isMedical) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                val weightStr = measurement.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
-                val heightStr = measurement.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
-                Text(
-                    text = "$weightStr $heightStr".trim(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = if (measurement.isMedical) "Medical check-up" else "Self measurement",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+    val dismissState = rememberSwipeToDismissBoxState()
+
+    LaunchedEffect(dismissState.currentValue) {
+        when (dismissState.currentValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                onDelete()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
-            Column(horizontalAlignment = Alignment.End) {
-                val displayDate = try {
-                    val date = measurement.date ?: ""
-                    val parts = date.split("-")
-                    if (parts.size >= 3) {
-                        "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
-                    } else date
-                } catch (e: Exception) { measurement.date ?: "" }
-                Text(text = displayDate, style = MaterialTheme.typography.bodyMedium)
-                Text(text = measurement.time ?: "", style = MaterialTheme.typography.bodySmall)
+            SwipeToDismissBoxValue.EndToStart -> {
+                onEdit()
+                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+            }
+            SwipeToDismissBoxValue.Settled -> {}
+        }
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val bgColor = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                else -> Color.Transparent
+            }
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }
+            val swipeIcon = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Delete
+                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Edit
+                else -> null
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CardDefaults.shape)
+                    .background(bgColor)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = alignment
+            ) {
+                swipeIcon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = if (direction == SwipeToDismissBoxValue.StartToEnd)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { /* Long press to edit preferred to avoid accidental taps */ },
+                    onLongClick = onEdit
+                ),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MonitorWeight,
+                    contentDescription = null,
+                    tint = if (measurement.isMedical) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    val weightStr = measurement.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
+                    val heightStr = measurement.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    val headStr = measurement.headCircumference?.let { String.format(Locale.getDefault(), "%.1fcm HC", it) } ?: ""
+                    Text(
+                        text = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(" "),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (measurement.isMedical) "Medical check-up" else "Self measurement",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    val displayDate = try {
+                        val date = measurement.date ?: ""
+                        val parts = date.split("-")
+                        if (parts.size >= 3) {
+                            "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
+                        } else date
+                    } catch (e: Exception) { measurement.date ?: "" }
+                    Text(text = displayDate, style = MaterialTheme.typography.bodyMedium)
+                    Text(text = measurement.time ?: "", style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }

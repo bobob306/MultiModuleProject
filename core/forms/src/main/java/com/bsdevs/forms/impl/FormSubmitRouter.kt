@@ -98,8 +98,9 @@ class FormSubmitRouter @Inject constructor(
             ?: return Result.Error(IllegalArgumentException("measurementLog requires 'date' field"))
         val heightInt = (values["height_value"] as? Number)?.toInt()
         val weightInt = (values["weight_value"] as? Number)?.toInt()
-        if (heightInt == null && weightInt == null) {
-            return Result.Error(IllegalArgumentException("Please record at least height or weight"))
+        val headInt = (values["head_circumference_value"] as? Number)?.toInt()
+        if (heightInt == null && weightInt == null && headInt == null) {
+            return Result.Error(IllegalArgumentException("Please record at least height, weight or head circumference"))
         }
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
@@ -108,6 +109,7 @@ class FormSubmitRouter @Inject constructor(
             dateTimeString = "$date ${values["time"] ?: "00:00"}",
             height = heightInt?.toDouble()?.div(10.0),
             weight = weightInt?.toDouble()?.div(100.0),
+            headCircumference = headInt?.toDouble()?.div(10.0),
             isMedical = values["is_medical"] as? Boolean ?: false,
             comment = values["comment"] as? String,
         )

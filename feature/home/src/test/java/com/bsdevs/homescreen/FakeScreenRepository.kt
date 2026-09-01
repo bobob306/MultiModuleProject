@@ -32,7 +32,7 @@ class FakeScreenRepository : ScreenRepository {
     }
 
     override suspend fun updateScreen(screen: String, dtos: List<ScreenDto>) {
-        throw UnsupportedOperationException("Not used in ViewModel tests")
+        emitScreenData(screen, dtos)
     }
 
     override fun clearCache() {

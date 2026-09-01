@@ -86,6 +86,16 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         )
                     }
                 )
+                is ScreenDto.GrowthChartDto -> mapOf(
+                    "type" to "GROWTH_CHART",
+                    "index" to dto.index,
+                    "title" to dto.title,
+                    "dataType" to dto.dataType
+                )
+                is ScreenDto.MeasurementHistoryDto -> mapOf(
+                    "type" to "MEASUREMENT_HISTORY",
+                    "index" to dto.index
+                )
                 else -> emptyMap<String, Any?>()
             }
         }
@@ -190,6 +200,20 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         ScreenDto.TileRowDto(
                             index = item["index"].toString().toInt(),
                             tiles = tiles
+                        )
+                    }
+
+                    "GROWTH_CHART" -> {
+                        ScreenDto.GrowthChartDto(
+                            index = item["index"].toString().toInt(),
+                            title = item["title"] as String,
+                            dataType = item["dataType"] as String
+                        )
+                    }
+
+                    "MEASUREMENT_HISTORY" -> {
+                        ScreenDto.MeasurementHistoryDto(
+                            index = item["index"].toString().toInt()
                         )
                     }
 

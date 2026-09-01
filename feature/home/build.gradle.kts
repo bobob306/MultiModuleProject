@@ -7,6 +7,10 @@ plugins {
 android {
     namespace = "com.bsdevs.home"
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

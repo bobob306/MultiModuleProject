@@ -6,7 +6,6 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
-import com.bsdevs.network.repository.FormRepository
 import com.bsdevs.network.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,30 +21,12 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     private val repository: ScreenRepository,
-    private val formRepository: FormRepository,
     private val mapper: ScreenDataMapper,
-    private val dispatchers: DispatcherProvider
+    private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     init {
         android.util.Log.d("HomeScreenViewModel", "ViewModel Initialized: $this")
-        seedForms()
-    }
-
-    // To add a new SDUI form:
-    // 1. Add the seed data to FormSeeds.kt
-    // 2. Call seedFormIfAbsent here with the new formId
-    // 3. Add a matching branch to FormSubmitRouter, FormPrefillerImpl, FormDeleterImpl
-    // 4. To update an existing form after it has been seeded, delete the Firestore
-    //    document manually (Firebase console) - it will be re-seeded on next launch.
-    //    See FormSeedsTest for field type reference and full documentation.
-    private fun seedForms() {
-        viewModelScope.launch(dispatchers.io) {
-            formRepository.seedFormIfAbsent("coffeeLog", FormSeeds.coffeeLog)
-            formRepository.seedFormIfAbsent("nappyLog", FormSeeds.nappyLog)
-            formRepository.seedFormIfAbsent("temperatureLog", FormSeeds.temperatureLog)
-            formRepository.seedFormIfAbsent("measurementLog", FormSeeds.measurementLog)
-        }
     }
 
     private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)

@@ -20,6 +20,7 @@ interface FormRepository {
     suspend fun submitForm(userId: String, formId: String, values: Map<String, Any>): Result<Unit>
     suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto?
     suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>)
+    suspend fun updateForm(formId: String, data: Map<String, Any>)
 }
 
 class FormRepositoryImpl @Inject constructor(
@@ -72,6 +73,14 @@ class FormRepositoryImpl @Inject constructor(
             schemaCache[formId] = mapper.mapToDto(doc.data as HashMap)
         }
         seededFormIds.add(formId)
+    }
+
+    override suspend fun updateForm(formId: String, data: Map<String, Any>) = withContext(dispatchers.io) {
+        Log.d("FIREBASE_CALL", "Updating Form: $formId")
+        forms.document(formId).set(data).await()
+        schemaCache[formId] = mapper.mapToDto(data as HashMap)
+        seededFormIds.add(formId)
+        Unit
     }
 
     override suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto? = withContext(dispatchers.io) {

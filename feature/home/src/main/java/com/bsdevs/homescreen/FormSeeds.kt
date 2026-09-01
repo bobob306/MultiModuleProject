@@ -114,7 +114,14 @@ internal object FormSeeds {
                 "startNumber" to 200, "endNumber" to 2000, "decimalPlaces" to 2, "defaultValue" to 350,
                 "showWhen" to mapOf("fieldKey" to "record_weight", "equals" to true),
             ),
-            mapOf("fieldKey" to "comment", "type" to "TEXT_INPUT", "label" to "Comment", "required" to false, "index" to 7),
+            mapOf("fieldKey" to "record_head_circumference", "type" to "SWITCH", "label" to "Record Head Circumference", "required" to false, "index" to 7, "defaultValue" to false),
+            mapOf(
+                "fieldKey" to "head_circumference_value", "type" to "WHEEL_INPUT", "label" to "Head Circumference (cm)",
+                "required" to false, "index" to 8,
+                "startNumber" to 300, "endNumber" to 600, "decimalPlaces" to 1, "defaultValue" to 400,
+                "showWhen" to mapOf("fieldKey" to "record_head_circumference", "equals" to true),
+            ),
+            mapOf("fieldKey" to "comment", "type" to "TEXT_INPUT", "label" to "Comment", "required" to false, "index" to 9),
         ),
     )
 
