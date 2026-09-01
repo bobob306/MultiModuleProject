@@ -560,8 +560,9 @@ fun ActivityFeedItem(
         is BabyActivity.Measurement -> {
             val weightStr = item.dto.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
             val heightStr = item.dto.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+            val headStr = item.dto.headCircumference?.let { String.format(Locale.getDefault(), "%.1fcm HC", it) } ?: ""
             val typeStr = if (item.dto.isMedical) " (Medical)" else " (Self)"
-            "Measurement: $weightStr $heightStr$typeStr"
+            "Measurement: ${listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(" ")}$typeStr"
         }
     }
 

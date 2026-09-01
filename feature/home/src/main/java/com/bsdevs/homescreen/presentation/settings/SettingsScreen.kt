@@ -26,15 +26,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsdevs.home.BuildConfig
 import com.bsdevs.uicomponents.MMPScaffold
 
 @Composable
 fun SettingsRoute(
     onShowSnackBar: suspend (String, String?) -> Unit,
     onLogout: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    developerMenuViewModel: DeveloperMenuViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val devUiState by developerMenuViewModel.uiState.collectAsStateWithLifecycle()
 
     if (uiState.accountDeleted) {
         LaunchedEffect(Unit) {
@@ -43,10 +46,24 @@ fun SettingsRoute(
         }
     }
 
+    LaunchedEffect(devUiState.seedSuccess) {
+        if (devUiState.seedSuccess) {
+            onShowSnackBar("SDUI Configs synchronized", null)
+        }
+    }
+
+    LaunchedEffect(devUiState.error) {
+        devUiState.error?.let {
+            onShowSnackBar("Error: $it", null)
+        }
+    }
+
     SettingsScreen(
         uiState = uiState,
+        devUiState = devUiState,
         onDeleteAccount = viewModel::deleteAccount,
-        onLogout = { viewModel.signOut(onLogout) }
+        onLogout = { viewModel.signOut(onLogout) },
+        onSyncSdui = developerMenuViewModel::syncSduiConfigs,
     )
 }
 
@@ -54,8 +71,10 @@ fun SettingsRoute(
 @Composable
 fun SettingsScreen(
     uiState: SettingsUiState,
+    devUiState: DeveloperMenuUiState,
     onDeleteAccount: () -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onSyncSdui: () -> Unit
 ) {
     var showFirstConfirmation by remember { mutableStateOf(false) }
     var showSecondConfirmation by remember { mutableStateOf(false) }
@@ -104,6 +123,13 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Delete Account & Wipe Data")
+                }
+
+                if (BuildConfig.DEBUG) {
+                    DeveloperMenuSection(
+                        isSeeding = devUiState.isSeeding,
+                        onSyncClick = onSyncSdui
+                    )
                 }
 
                 uiState.error?.let {
@@ -159,6 +185,51 @@ fun SettingsScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun DeveloperMenuSection(
+    isSeeding: Boolean,
+    onSyncClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "Developer Menu",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.secondary
+        )
+
+        Button(
+            onClick = onSyncClick,
+            enabled = !isSeeding,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        ) {
+            if (isSeeding) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(20.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            } else {
+                Text("Sync SDUI Configurations")
+            }
+        }
+        
+        Text(
+            text = "Force updates all Form and Screen schemas from local code seeds to Firestore.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline
         )
     }
 }

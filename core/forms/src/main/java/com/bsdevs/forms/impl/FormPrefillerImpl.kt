@@ -74,6 +74,10 @@ class FormPrefillerImpl @Inject constructor(
                 put("record_weight", true)
                 put("weight_value", (it * 100).toInt())
             }
+            event.headCircumference?.let {
+                put("record_head_circumference", true)
+                put("head_circumference_value", (it * 10).toInt())
+            }
             event.comment?.let { put("comment", it) }
         }
     }

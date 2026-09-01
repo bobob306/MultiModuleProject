@@ -201,7 +201,7 @@ class FormSubmitRouterTest {
     // --- measurementLog ---
 
     @Test
-    fun `measurementLog saves height and weight converted from wheel ints`() = runTest {
+    fun `measurementLog saves height and weight and head circumference converted from wheel ints`() = runTest {
         val eventSlot = slot<UnifiedEventDto>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
@@ -210,21 +210,24 @@ class FormSubmitRouterTest {
             "time" to "10:00",
             "height_value" to 650,
             "weight_value" to 750,
+            "head_circumference_value" to 425,
             "is_medical" to true,
         ))
 
         assertEquals("MEASUREMENT", eventSlot.captured.type)
         assertEquals(65.0, eventSlot.captured.height!!, 0.001)
         assertEquals(7.5, eventSlot.captured.weight!!, 0.001)
+        assertEquals(42.5, eventSlot.captured.headCircumference!!, 0.001)
         assertTrue(eventSlot.captured.isMedical == true)
     }
 
     @Test
-    fun `measurementLog saves with only height when weight absent`() = runTest {
+    fun `measurementLog saves with only head circumference when others absent`() = runTest {
         val eventSlot = slot<UnifiedEventDto>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
-        router.submit("u", "measurementLog", null, mapOf("date" to "2026-08-31", "height_value" to 700))
-        assertEquals(70.0, eventSlot.captured.height!!, 0.001)
+        router.submit("u", "measurementLog", null, mapOf("date" to "2026-08-31", "head_circumference_value" to 400))
+        assertEquals(40.0, eventSlot.captured.headCircumference!!, 0.001)
+        assertNull(eventSlot.captured.height)
         assertNull(eventSlot.captured.weight)
     }
 

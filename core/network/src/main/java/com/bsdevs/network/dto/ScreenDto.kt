@@ -114,6 +114,18 @@ sealed class ScreenDto(
         @SerialName("tiles") val tiles: List<TileDto> = emptyList(),
     ) : ScreenDto(index)
 
+    @SerialName("GROWTH_CHART")
+    data class GrowthChartDto(
+        @SerialName("index") override val index: Int,
+        @SerialName("title") val title: String,
+        @SerialName("dataType") val dataType: String,
+    ) : ScreenDto(index)
+
+    @SerialName("MEASUREMENT_HISTORY")
+    data class MeasurementHistoryDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
     @Serializable
     data class TileDto(
         @SerialName("index") val index: Int,

@@ -33,5 +33,6 @@ data class UnifiedEventDto(
     // Measurement-specific fields (nullable)
     val height: Double? = null,
     val weight: Double? = null,
+    val headCircumference: Double? = null,
     val isMedical: Boolean? = null
 )

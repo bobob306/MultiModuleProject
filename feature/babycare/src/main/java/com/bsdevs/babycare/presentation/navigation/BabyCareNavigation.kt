@@ -144,6 +144,7 @@ fun NavGraphBuilder.babyCareSection(
                 onShowSnackBar = onShowSnackBar,
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("measurementLog", null) },
+                onEditItem = { id -> navigateToForm("measurementLog", id) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
             )

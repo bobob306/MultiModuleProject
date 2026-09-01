@@ -10,6 +10,7 @@ data class MeasurementDto(
     val dateTime: String = "",
     val height: Double? = null,
     val weight: Double? = null,
+    val headCircumference: Double? = null,
     val isMedical: Boolean = false,
     val comment: String? = null
 )

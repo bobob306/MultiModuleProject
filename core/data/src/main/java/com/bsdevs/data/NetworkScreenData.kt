@@ -114,6 +114,16 @@ sealed class NetworkScreenData(
         val tiles: List<TileDataNetwork>,
     ) : NetworkScreenData(index)
 
+    data class GrowthChartDataNetwork(
+        override val index: Int,
+        val title: String,
+        val dataType: String, // "HEIGHT", "WEIGHT", "HEAD"
+    ) : NetworkScreenData(index)
+
+    data class MeasurementHistoryDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
     data class TileDataNetwork(
         val index: Int,
         val title: String,

@@ -93,6 +93,16 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                         )
                     }
                 )
+
+                is ScreenDto.GrowthChartDto -> NetworkScreenData.GrowthChartDataNetwork(
+                    index = item.index,
+                    title = item.title,
+                    dataType = item.dataType
+                )
+
+                is ScreenDto.MeasurementHistoryDto -> NetworkScreenData.MeasurementHistoryDataNetwork(
+                    index = item.index
+                )
             }
         }
         return listOfData

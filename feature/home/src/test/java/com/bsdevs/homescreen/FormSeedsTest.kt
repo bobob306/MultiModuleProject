@@ -182,6 +182,22 @@ class FormSeedsTest {
         assertEquals(2, field["decimalPlaces"])
     }
 
+    @Test
+    fun `measurementLog head wheel is conditional on record_head_circumference switch`() {
+        val field = formFields(FormSeeds.measurementLog).first { it["fieldKey"] == "head_circumference_value" }
+        val showWhen = field["showWhen"] as Map<*, *>
+        assertEquals("record_head_circumference", showWhen["fieldKey"])
+        assertEquals(true, showWhen["equals"])
+    }
+
+    @Test
+    fun `measurementLog head wheel covers 30·0 to 60·0 cm`() {
+        val field = formFields(FormSeeds.measurementLog).first { it["fieldKey"] == "head_circumference_value" }
+        assertEquals(300, field["startNumber"])
+        assertEquals(600, field["endNumber"])
+        assertEquals(1, field["decimalPlaces"])
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun formFields(seed: Map<String, Any>): List<Map<String, Any>> =
         seed["fields"] as List<Map<String, Any>>

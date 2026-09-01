@@ -150,6 +150,7 @@ class BabyCareRepositoryImpl @Inject constructor(
             temperature = (eventMap["temperature"] as? Number)?.toDouble(),
             height = (eventMap["height"] as? Number)?.toDouble(),
             weight = (eventMap["weight"] as? Number)?.toDouble(),
+            headCircumference = (eventMap["headCircumference"] as? Number)?.toDouble(),
             isMedical = eventMap["isMedical"] as? Boolean
         )
     }
@@ -272,7 +273,7 @@ class BabyCareRepositoryImpl @Inject constructor(
         "comment" to e.comment, "nappyType" to e.nappyType, "mainFeedingSide" to e.mainFeedingSide,
         "leftDuration" to e.leftDuration, "rightDuration" to e.rightDuration, "totalDuration" to e.totalDuration,
         "bottleAmountMl" to e.bottleAmountMl, "temperature" to e.temperature,
-        "height" to e.height, "weight" to e.weight, "isMedical" to e.isMedical
+        "height" to e.height, "weight" to e.weight, "headCircumference" to e.headCircumference, "isMedical" to e.isMedical
     )
 
     private fun updateLocalCacheWithNewEvent(date: String, userId: String, event: UnifiedEventDto) {

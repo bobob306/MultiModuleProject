@@ -81,6 +81,11 @@ fun ColumnScope.RenderUI(
             SwitchComponent(switchData = item, context, onSwitchClick = onSwitchClick)
         }
 
+        is NetworkScreenData.GrowthChartDataNetwork,
+        is NetworkScreenData.MeasurementHistoryDataNetwork -> {
+            featureContent(item)
+        }
+
         else -> {
             featureContent(item)
         }

@@ -334,6 +334,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     dateTime = event.dateTimeString,
                     height = event.height,
                     weight = event.weight,
+                    headCircumference = event.headCircumference,
                     isMedical = event.isMedical ?: false,
                     comment = event.comment
                 )
