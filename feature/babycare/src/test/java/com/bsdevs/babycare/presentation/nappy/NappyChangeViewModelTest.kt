@@ -5,12 +5,12 @@ import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import java.util.UUID
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +21,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class NappyChangeViewModelTest {
@@ -32,13 +33,14 @@ class NappyChangeViewModelTest {
     private lateinit var accountService: FakeAccountService
     private lateinit var viewModel: NappyChangeViewModel
     private lateinit var dispatchers: DispatcherProvider
+    private lateinit var timeProvider: TimeProvider
 
     private val userId = "testUser"
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
-        
+
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
             override val io = testDispatcher
@@ -47,7 +49,15 @@ class NappyChangeViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepo = mockk<UserRepository>(relaxed = true)
-        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers)
+        timeProvider = mockk {
+            every { currentLocalDate() } returns LocalDate.of(2026, 8, 26)
+        }
+        repository = BabyCareRepositoryImpl(
+            apiService = fakeService,
+            userRepository = userRepo,
+            dispatchers = dispatchers,
+            timeProvider = timeProvider
+        )
         accountService = FakeAccountService(userId)
     }
 

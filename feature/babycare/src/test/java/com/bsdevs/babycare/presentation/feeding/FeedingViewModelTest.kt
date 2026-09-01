@@ -8,6 +8,8 @@ import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.babycare.presentation.common.TimeProvider
+import java.time.LocalDate
 import io.mockk.*
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +51,9 @@ class FeedingViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepository = mockk<UserRepository>(relaxed = true)
-        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
+        val timeProvider = mockk<TimeProvider>(relaxed = true)
+        every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
+        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
         accountService = FakeAccountService(userId)
         
         // 🚀 INSTANT TESTS: Mock the manager so we don't run real timer loops in VM tests

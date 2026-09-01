@@ -6,6 +6,7 @@ import com.bsdevs.babycare.domain.RepositoryFetchResult
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.Clearable
 import com.bsdevs.network.repository.UserRepository
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import java.time.YearMonth
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +24,7 @@ class BabyCareRepositoryImpl @Inject constructor(
     private val apiService: BabyCareFirestoreService,
     private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider,
+    private val timeProvider: TimeProvider
 ) : BabyCareRepository, Clearable {
 
     init {
@@ -59,10 +62,48 @@ class BabyCareRepositoryImpl @Inject constructor(
                 return@withContext RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
             }
 
-            val monthlyDays = fetchMonthFromService(userId, latestMonthId, forceRefresh)
-            mergeAndSortCachedDays(monthlyDays, measurementList, userId)
+            val today = timeProvider.currentLocalDate()
+            val currentMonthId = formatYearMonth(YearMonth.from(today))
+            val monthsToFetch = mutableListOf(latestMonthId)
 
-            val nextMonthId = apiService.getMonthIdBefore(userId, latestMonthId)
+            // 🚀 Special Case: In the first 8 days of a month, if we have data for the current month,
+            // also pull the previous month to avoid an empty-looking screen.
+            if (today.dayOfMonth <= 8 && latestMonthId == currentMonthId) {
+                apiService.getMonthIdBefore(userId, latestMonthId)?.let { prevMonthId ->
+                    monthsToFetch.add(prevMonthId)
+                }
+            }
+
+            val allMonthlyDays = monthsToFetch.flatMap { mId ->
+                fetchMonthFromService(userId, mId, forceRefresh)
+            }
+
+            // Check if we have enough "Primary" activity (Feeds/Nappies) to fill a screen
+            val primaryEventCount = allMonthlyDays.sumOf { day ->
+                day.events.count {
+                    it.type == "FEEDING" || it.type == "NAPPY" || it.type == "Both" || it.type == "Wet" || it.type == "Dirty"
+                }
+            }
+
+            var finalMonthlyDays = allMonthlyDays
+            var lastFetchedId = monthsToFetch.last()
+
+            // 🚀 Special Case: In the first 8 days of a month, OR if the current month is very sparse,
+            // also pull the previous month to avoid an empty-looking screen.
+            if ((today.dayOfMonth <= 8 || primaryEventCount < 5) && 
+                latestMonthId == currentMonthId && 
+                monthsToFetch.size == 1
+            ) {
+                apiService.getMonthIdBefore(userId, latestMonthId)?.let { prevMonthId ->
+                    val prevMonthDays = fetchMonthFromService(userId, prevMonthId, forceRefresh)
+                    finalMonthlyDays = allMonthlyDays + prevMonthDays
+                    lastFetchedId = prevMonthId
+                }
+            }
+
+            mergeAndSortCachedDays(finalMonthlyDays, measurementList, userId)
+            
+            val nextMonthId = apiService.getMonthIdBefore(userId, lastFetchedId)
             currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
 
             RepositoryFetchResult(
@@ -183,6 +224,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
         updateLocalCacheWithDeletedEvent(date, eventId)
     }
+
+    override fun getCurrentDate(): LocalDate = timeProvider.currentLocalDate()
 
     override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? = withContext(dispatchers.io) {
         val cached = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == activityId }

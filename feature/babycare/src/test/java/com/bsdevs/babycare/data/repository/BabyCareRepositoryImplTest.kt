@@ -3,13 +3,16 @@ package com.bsdevs.babycare.data.repository
 import app.cash.turbine.test
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.network.repository.UserRepository
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.time.YearMonth
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.common.DispatcherProvider
@@ -22,6 +25,8 @@ class BabyCareRepositoryImplTest {
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var userRepository: UserRepository
     private lateinit var dispatchers: DispatcherProvider
+    private lateinit var timeProvider: TimeProvider
+    private var testDate = LocalDate.of(2026, 8, 26)
 
     private val userId = "testUser"
 
@@ -35,7 +40,15 @@ class BabyCareRepositoryImplTest {
         }
         fakeService = FakeBabyCareFirestoreService()
         userRepository = mockk(relaxed = true)
-        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers)
+        timeProvider = mockk {
+            every { currentLocalDate() } answers { testDate }
+        }
+        repository = BabyCareRepositoryImpl(
+            apiService = fakeService,
+            userRepository = userRepository,
+            dispatchers = dispatchers,
+            timeProvider = timeProvider
+        )
     }
 
     // --- INITIAL LOAD TESTS ---
@@ -60,8 +73,104 @@ class BabyCareRepositoryImplTest {
 
         val result = repository.loadInitialData(userId, 2)
 
-        assertEquals(YearMonth.of(2026, 5), result.nextAnchorMonth)
+        // Aug is sparse, so it pulls May. Next anchor is null because nothing is before May.
+        assertNull(result.nextAnchorMonth)
+        assertFalse(result.hasMoreData)
+    }
+
+    @Test
+    fun `loadInitialData fetches two months when day is 8th or less and current month has data`() = runTest {
+        // Setup: Date is Sep 5th
+        testDate = LocalDate.of(2026, 9, 5)
+
+        // Inject data for Sep and Aug
+        val monthSep = "2026-09"
+        val monthAug = "2026-08"
+        val monthJuly = "2026-07"
+        fakeService.injectMonth(userId, monthSep, mapOf("days" to mapOf("2026-09-01" to listOf(
+            mapOf("id" to "f1", "type" to "FEEDING", "dateTimeString" to "2026-09-01 10:00")
+        ))))
+        fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
+        fakeService.injectMonth(userId, monthJuly, mapOf("days" to mapOf("2026-07-01" to emptyList<Any>())))
+
+        val result = repository.loadInitialData(userId, 20)
+
+        // Verify: Both Sep and Aug should be in cache
+        val cached = repository.cachedDays.value
+        assertTrue("Should contain Sep data", cached.any { it.date == "2026-09-01" })
+        assertTrue("Should contain Aug data", cached.any { it.date == "2026-08-01" })
+
+        // Anchor should be July
+        assertEquals(YearMonth.of(2026, 7), result.nextAnchorMonth)
         assertTrue(result.hasMoreData)
+    }
+
+    @Test
+    fun `loadInitialData fetches two months when data is sparse even after 8th day`() = runTest {
+        // Setup: Date is Sep 15th (after 8th)
+        testDate = LocalDate.of(2026, 9, 15)
+
+        val monthSep = "2026-09"
+        val monthAug = "2026-08"
+        // Only 2 feeds in Sep (sparse)
+        fakeService.injectMonth(userId, monthSep, mapOf("days" to mapOf("2026-09-01" to listOf(
+            mapOf("id" to "f1", "type" to "FEEDING", "dateTimeString" to "2026-09-01 10:00"),
+            mapOf("id" to "f2", "type" to "FEEDING", "dateTimeString" to "2026-09-01 11:00")
+        ))))
+        fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-31" to listOf(
+            mapOf("id" to "f3", "type" to "FEEDING", "dateTimeString" to "2026-08-31 10:00")
+        ))))
+
+        val result = repository.loadInitialData(userId, 20)
+
+        val cached = repository.cachedDays.value
+        assertTrue("Should contain Sep data", cached.any { it.date == "2026-09-01" })
+        assertTrue("Should proactively fetch Aug data due to sparsity", cached.any { it.date == "2026-08-31" })
+    }
+
+    @Test
+    fun `loadInitialData fetches only one month when day is after 8th and data is NOT sparse`() = runTest {
+        // Setup: Date is Sep 9th
+        testDate = LocalDate.of(2026, 9, 9)
+
+        val monthSep = "2026-09"
+        val monthAug = "2026-08"
+        // 6 feeds in Sep (NOT sparse)
+        val denseEvents = (1..6).map { 
+            mapOf("id" to "f$it", "type" to "FEEDING", "dateTimeString" to "2026-09-01 10:0$it")
+        }
+        fakeService.injectMonth(userId, monthSep, mapOf("days" to mapOf("2026-09-01" to denseEvents)))
+        fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
+
+        val result = repository.loadInitialData(userId, 20)
+
+        // Verify: Only Sep should be in cache
+        val cached = repository.cachedDays.value
+        assertTrue("Should contain Sep data", cached.any { it.date == "2026-09-01" })
+        assertFalse("Should NOT contain Aug data", cached.any { it.date == "2026-08-01" })
+
+        // Anchor should be Aug
+        assertEquals(YearMonth.of(2026, 8), result.nextAnchorMonth)
+    }
+
+    @Test
+    fun `loadInitialData fetches current and previous when current is empty but exists`() = runTest {
+        // Setup: Date is Sep 1st
+        testDate = LocalDate.of(2026, 9, 1)
+
+        val monthSep = "2026-09"
+        val monthAug = "2026-08"
+        // Sep exists but has no days
+        fakeService.injectMonth(userId, monthSep, mapOf("days" to emptyMap<String, Any>()))
+        fakeService.injectMonth(userId, monthAug, mapOf("days" to mapOf("2026-08-31" to emptyList<Any>())))
+
+        val result = repository.loadInitialData(userId, 20)
+
+        val cached = repository.cachedDays.value
+        assertTrue("Should contain Aug data", cached.any { it.date == "2026-08-31" })
+
+        // Anchor should be month before Aug if it exists, but here it doesn't
+        assertNull(result.nextAnchorMonth)
     }
 
     // --- PAGINATION TESTS ---
@@ -71,15 +180,17 @@ class BabyCareRepositoryImplTest {
         val monthAug = "2026-08"
         val monthMay = "2026-05"
         val monthJan = "2026-01"
+        val monthOctPrev = "2025-10"
         fakeService.injectMonth(userId, monthAug, mapOf("days" to emptyMap<String, Any>()))
         fakeService.injectMonth(userId, monthMay, mapOf("days" to emptyMap<String, Any>()))
         fakeService.injectMonth(userId, monthJan, mapOf("days" to emptyMap<String, Any>()))
+        fakeService.injectMonth(userId, monthOctPrev, mapOf("days" to emptyMap<String, Any>()))
 
-        repository.loadInitialData(userId, 2) // Current month is Aug, next is May
+        repository.loadInitialData(userId, 2) // Aug sparse, pulls May. Anchor is Jan.
 
-        val result = repository.loadMoreData(userId, 2) // Loads May, next is Jan
+        val result = repository.loadMoreData(userId, 2) // Loads Jan, next is Oct 2025
 
-        assertEquals(YearMonth.of(2026, 1), result.nextAnchorMonth)
+        assertEquals(YearMonth.of(2025, 10), result.nextAnchorMonth)
         assertTrue(result.hasMoreData)
     }
 
@@ -110,8 +221,9 @@ class BabyCareRepositoryImplTest {
         val result = repository.refreshData(userId, 2)
         
         assertNotNull(result)
-        // Verify cache was reset to only the new initial month (since refresh starts from scratch)
-        assertEquals(1, repository.cachedDays.value.size)
+        // Verify cache was reset. 
+        // Aug is sparse, so it also fetches July. Total 2 days.
+        assertEquals(2, repository.cachedDays.value.size)
         assertEquals("2026-08-01", repository.cachedDays.value.first().date)
     }
 
@@ -318,9 +430,97 @@ class BabyCareRepositoryImplTest {
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean) = throw RuntimeException("Firestore Down")
         }
-        val repo = BabyCareRepositoryImpl(crashingService, userRepository, dispatchers)
+        val repo = BabyCareRepositoryImpl(crashingService, userRepository, dispatchers, timeProvider)
 
         // When/Then
         repo.loadInitialData(userId, 2)
+    }
+
+    // --- ADDITIONAL ROBUSTNESS TESTS ---
+
+    @Test
+    fun `clearCache resets all flows and anchor`() = runTest {
+        // Setup: Inject some data and load it
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
+        repository.loadInitialData(userId, 2)
+        
+        assertTrue(repository.cachedDays.value.isNotEmpty())
+        
+        // When
+        repository.clearCache()
+        
+        // Then
+        assertTrue(repository.cachedDays.value.isEmpty())
+        assertTrue(repository.measurements.value.isEmpty())
+        
+        // Verify anchor is reset by checking loadMoreData
+        val result = repository.loadMoreData(userId, 2)
+        assertNull(result.nextAnchorMonth)
+        assertFalse(result.hasMoreData)
+    }
+
+    @Test
+    fun `loadInitialData skips network when cache is populated and forceRefresh is false`() = runTest {
+        // Setup: Mock service to count calls if possible, or use a flag. 
+        // Since we have a Fake, we can just check if it was called.
+        val callCount = mutableMapOf<String, Int>()
+        val countingService = object : BabyCareFirestoreService by fakeService {
+            override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? {
+                callCount["getLatestMonthId"] = (callCount["getLatestMonthId"] ?: 0) + 1
+                return fakeService.getLatestMonthId(userId, forceRefresh)
+            }
+        }
+        val repo = BabyCareRepositoryImpl(countingService, userRepository, dispatchers, timeProvider)
+        
+        // First call - should hit network
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf("2026-08-01" to emptyList<Any>())))
+        repo.loadInitialData(userId, 2)
+        assertEquals(1, callCount["getLatestMonthId"])
+        
+        // Second call - should skip network
+        repo.loadInitialData(userId, 2, forceRefresh = false)
+        assertEquals(1, callCount["getLatestMonthId"])
+        
+        // Third call with forceRefresh - should hit network again
+        repo.loadInitialData(userId, 2, forceRefresh = true)
+        assertEquals(2, callCount["getLatestMonthId"])
+    }
+
+    @Test
+    fun `loadMoreData returns immediately when anchor is null`() = runTest {
+        // Setup: Load initial with no data so anchor is null
+        repository.loadInitialData(userId, 2)
+        
+        val result = repository.loadMoreData(userId, 2)
+        
+        assertNull(result.nextAnchorMonth)
+        assertFalse(result.hasMoreData)
+    }
+
+    @Test
+    fun `getFeedingEventById returns null on total cache and network miss`() = runTest {
+        val result = repository.getFeedingEventById(userId, "non_existent")
+        assertNull(result)
+    }
+
+    @Test
+    fun `saveActivityEvent does not update cache if network fails`() = runTest {
+        val crashingService = object : BabyCareFirestoreService by fakeService {
+            override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) {
+                throw RuntimeException("Network Error")
+            }
+        }
+        val repo = BabyCareRepositoryImpl(crashingService, userRepository, dispatchers, timeProvider)
+        val date = "2026-08-26"
+        val event = UnifiedEventDto(id = "e1", type = "FEEDING", time = "10:00", dateTimeString = "$date 10:00")
+
+        try {
+            repo.saveActivityEvent(userId, date, event)
+        } catch (e: Exception) {
+            // Expected
+        }
+
+        // Cache should still be empty
+        assertTrue(repo.cachedDays.value.isEmpty())
     }
 }

@@ -7,8 +7,8 @@ import java.time.format.DateTimeFormatter
 data class NappyChangeUiState(
     val id: String? = null,
     val originalDocId: String? = null,
-    val date: String = LocalDate.now().toString(),
-    val time: String = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm")),
+    val date: String = "",
+    val time: String = "",
     val type: String = "Wet",
     val isLoading: Boolean = false,
     val comment: String = "",

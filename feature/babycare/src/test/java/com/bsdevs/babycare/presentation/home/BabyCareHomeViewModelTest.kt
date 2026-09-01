@@ -3,6 +3,7 @@ package com.bsdevs.babycare.presentation.home
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
+import java.time.LocalDate
 
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.common.DispatcherProvider
@@ -10,10 +11,8 @@ import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
-import io.mockk.coEvery
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.unmockkAll
+import io.mockk.*
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filter
@@ -58,7 +57,9 @@ class BabyCareHomeViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepo = mockk<UserRepository>(relaxed = true)
-        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers)
+        val timeProvider = mockk<TimeProvider>(relaxed = true)
+        every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
+        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
         accountService = FakeAccountService(userId)
         
         screenRepository = mockk(relaxed = true)
@@ -306,7 +307,9 @@ class BabyCareHomeViewModelTest {
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean) = throw RuntimeException("Network Error")
         }
-        val errorRepo = BabyCareRepositoryImpl(crashingService, userRepo, dispatchers)
+        val timeProvider = mockk<TimeProvider>(relaxed = true)
+        every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
+        val errorRepo = BabyCareRepositoryImpl(crashingService, userRepo, dispatchers, timeProvider)
         
         // We need to wait for the viewModelScope to finish the initialLoad call
         val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper, dispatchers)
