@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bsdevs.babycare.presentation.animation.TurdSplodgeAnimation
+import com.bsdevs.uicomponents.animation.TurdSplodgeAnimation
 import com.bsdevs.uicomponents.LogCommentInput
 import com.bsdevs.uicomponents.MMPClickableTextField
 import com.bsdevs.uicomponents.MMPScaffold

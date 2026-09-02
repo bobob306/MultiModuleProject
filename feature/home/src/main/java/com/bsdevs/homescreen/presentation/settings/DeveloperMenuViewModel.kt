@@ -46,6 +46,8 @@ class DeveloperMenuViewModel @Inject constructor(
                 seedBabyHomeScreen()
                 seedMeasurementScreen()
                 seedVaccinationHistoryScreen()
+                seedTemperatureHistoryScreen()
+                seedAnalysisScreen()
 
                 _uiState.update { it.copy(isSeeding = false, seedSuccess = true) }
             } catch (e: Exception) {
@@ -105,6 +107,14 @@ class DeveloperMenuViewModel @Inject constructor(
                 destination = "babycare://vaccination",
                 subtitleType = "VACCINATION",
                 sharedElementKey = "tile_vaccination"
+            ),
+            ScreenDto.TileDto(
+                index = 5,
+                title = "Analysis",
+                iconName = "AutoGraph",
+                destination = "babycare://graph",
+                subtitleType = "ANALYSIS",
+                sharedElementKey = "tile_analysis"
             )
         )
 
@@ -120,5 +130,22 @@ class DeveloperMenuViewModel @Inject constructor(
             ScreenDto.VaccinationHistoryDto(index = 0)
         )
         screenRepository.updateScreen("vaccination_history", vaccinationHistoryScreen)
+    }
+
+    private suspend fun seedTemperatureHistoryScreen() {
+        val temperatureHistoryScreen = listOf(
+            ScreenDto.TemperatureChartDto(index = 0),
+            ScreenDto.TemperatureHistoryDto(index = 1)
+        )
+        screenRepository.updateScreen("temperature_screen", temperatureHistoryScreen)
+    }
+
+    private suspend fun seedAnalysisScreen() {
+        val analysisScreen = listOf(
+            ScreenDto.FeedingFrequencyChartDto(index = 0),
+            ScreenDto.FeedingGapChartDto(index = 1),
+            ScreenDto.FeedingInsightCardDto(index = 2)
+        )
+        screenRepository.updateScreen("analysis_screen", analysisScreen)
     }
 }

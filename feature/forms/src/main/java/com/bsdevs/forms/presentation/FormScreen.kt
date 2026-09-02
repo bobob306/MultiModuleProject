@@ -28,11 +28,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bsdevs.uicomponents.animation.TurdSplodgeAnimation
+import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import com.bsdevs.common.result.Result
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,12 +51,22 @@ fun FormScreen(
     val submitState by viewModel.submitState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val isEditMode = viewModel.entityId != null
+    
+    var isPlayingNappyAnimation by remember { mutableStateOf(false) }
+    var pendingDestination by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(submitState) {
         when (val state = submitState) {
             is FormSubmitState.Success -> {
-                viewModel.clearSubmitState()
-                onNavigate(state.destination)
+                val schema = (formSchema as? Result.Success)?.data
+                if (schema?.submitTarget == "nappyLog" && !isEditMode) {
+                    isPlayingNappyAnimation = true
+                    pendingDestination = state.destination
+                } else {
+                    viewModel.clearSubmitState()
+                    onNavigate(state.destination)
+                }
             }
             is FormSubmitState.Deleted -> {
                 viewModel.clearSubmitState()
@@ -131,7 +145,7 @@ fun FormScreen(
                     if (isEditMode && schema.data.deletable) {
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
-                            onClick = viewModel::onDelete,
+                            onClick = { showDeleteConfirmation = true },
                             enabled = !isLoading,
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error,
@@ -145,6 +159,28 @@ fun FormScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
             }
+        }
+
+        if (isPlayingNappyAnimation) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                TurdSplodgeAnimation(
+                    onAnimationEnd = {
+                        isPlayingNappyAnimation = false
+                        viewModel.clearSubmitState()
+                        pendingDestination?.let { onNavigate(it) }
+                    }
+                )
+            }
+        }
+
+        if (showDeleteConfirmation) {
+            DeleteConfirmationDialog(
+                onConfirm = { 
+                    viewModel.onDelete()
+                    showDeleteConfirmation = false
+                },
+                onDismiss = { showDeleteConfirmation = false }
+            )
         }
     }
 }

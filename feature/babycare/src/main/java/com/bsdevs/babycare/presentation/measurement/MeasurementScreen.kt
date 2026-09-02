@@ -382,14 +382,32 @@ fun MeasurementHistoryItem(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    val weightStr = measurement.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
-                    val heightStr = measurement.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
-                    val headStr = measurement.headCircumference?.let { String.format(Locale.getDefault(), "%.1fcm HC", it) } ?: ""
+                    val weightStr = measurement.weight?.let { "Weight: " + String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
+                    val heightStr = measurement.height?.let { "Height: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    val headStr = measurement.headCircumference?.let { "Head Circ.: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    
+                    val allValues = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }
+                    
                     Text(
-                        text = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(" "),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        text = "Measurement:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    
+                    if (allValues.isEmpty()) {
+                        Text(
+                            text = "No data recorded",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = allValues.joinToString(", "),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
                     Text(
                         text = if (measurement.isMedical) "Medical check-up" else "Self measurement",
                         style = MaterialTheme.typography.bodySmall,

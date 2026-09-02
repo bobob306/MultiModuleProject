@@ -77,7 +77,7 @@ internal object FormSeeds {
     val temperatureLog: Map<String, Any> = mapOf(
         "title" to "Log temperature",
         "submitTarget" to "temperatureLog",
-        "submitDestination" to "baby_home",
+        "submitDestination" to "back",
         "deletable" to true,
         "fields" to listOf(
             mapOf("fieldKey" to "date", "type" to "DATE_INPUT", "label" to "Date", "required" to true, "index" to 0),
@@ -94,7 +94,7 @@ internal object FormSeeds {
     val measurementLog: Map<String, Any> = mapOf(
         "title" to "Log measurement",
         "submitTarget" to "measurementLog",
-        "submitDestination" to "baby_home",
+        "submitDestination" to "back",
         "deletable" to true,
         "fields" to listOf(
             mapOf("fieldKey" to "date", "type" to "DATE_INPUT", "label" to "Date", "required" to true, "index" to 0),
@@ -128,7 +128,7 @@ internal object FormSeeds {
     val nappyLog: Map<String, Any> = mapOf(
         "title" to "Log a nappy change",
         "submitTarget" to "nappyLog",
-        "submitDestination" to "baby_home",
+        "submitDestination" to "back",
         "deletable" to true,
         "fields" to listOf(
             mapOf(
@@ -154,7 +154,7 @@ internal object FormSeeds {
     val vaccinationLog: Map<String, Any> = mapOf(
         "title" to "Log vaccination",
         "submitTarget" to "vaccinationLog",
-        "submitDestination" to "baby_home",
+        "submitDestination" to "back",
         "deletable" to true,
         "fields" to listOf(
             mapOf("fieldKey" to "date", "type" to "DATE_INPUT", "label" to "Date", "required" to true, "index" to 0),

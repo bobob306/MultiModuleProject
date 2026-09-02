@@ -157,7 +157,7 @@ class BabyCareRepositoryImpl @Inject constructor(
             temperature = (eventMap["temperature"] as? Number)?.toDouble(),
             height = (eventMap["height"] as? Number)?.toDouble(),
             weight = (eventMap["weight"] as? Number)?.toDouble(),
-            headCircumference = (eventMap["headCircumference"] as? Number)?.toDouble(),
+            headCircumference = (eventMap["headCircumference"] as? Number)?.toDouble() ?: (eventMap["head_circumference"] as? Number)?.toDouble(),
             isMedical = eventMap["isMedical"] as? Boolean,
             vaccinationNames = (eventMap["vaccinationNames"] as? List<*>)?.filterIsInstance<String>(),
             location = eventMap["location"] as? String,

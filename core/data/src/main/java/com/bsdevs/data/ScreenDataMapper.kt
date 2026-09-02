@@ -107,6 +107,26 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                 is ScreenDto.VaccinationHistoryDto -> NetworkScreenData.VaccinationHistoryDataNetwork(
                     index = item.index
                 )
+
+                is ScreenDto.TemperatureHistoryDto -> NetworkScreenData.TemperatureHistoryDataNetwork(
+                    index = item.index
+                )
+
+                is ScreenDto.TemperatureChartDto -> NetworkScreenData.TemperatureChartDataNetwork(
+                    index = item.index
+                )
+
+                is ScreenDto.FeedingFrequencyChartDto -> NetworkScreenData.FeedingFrequencyChartDataNetwork(
+                    index = item.index
+                )
+
+                is ScreenDto.FeedingGapChartDto -> NetworkScreenData.FeedingGapChartDataNetwork(
+                    index = item.index
+                )
+
+                is ScreenDto.FeedingInsightCardDto -> NetworkScreenData.FeedingInsightCardDataNetwork(
+                    index = item.index
+                )
             }
         }
         return listOfData

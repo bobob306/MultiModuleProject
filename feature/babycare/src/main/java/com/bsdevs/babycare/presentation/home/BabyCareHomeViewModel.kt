@@ -229,7 +229,8 @@ class BabyCareHomeViewModel @Inject constructor(
         val absoluteLastMeasurement = lastMeasurementEvent?.let {
             val weight = it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
             val height = it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
-            "Last: $weight $height".trim()
+            val head = it.headCircumference?.let { hc -> String.format(Locale.getDefault(), "%.1fcm", hc) } ?: ""
+            "Last: $weight $height $head".trim()
         }
 
         val absoluteLastVaccination = allEventsFlattened.firstOrNull {
