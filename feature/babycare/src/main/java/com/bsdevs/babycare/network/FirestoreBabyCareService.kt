@@ -208,7 +208,12 @@ class FirestoreBabyCareService @Inject constructor(
             Log.d("FIREBASE_CALL", "Read All Vaccinations (Single Doc) for Baby: $babyId")
             val snapshot = getVaccinationsDocument(babyId).get().await()
             val data = if (snapshot.exists()) snapshot.data else null
+            data?.let {
+                val sizeKb = it.toString().toByteArray().size / 1024.0
+                Log.d("FIREBASE_CALL", "Vaccinations Doc Size: %.2f KB".format(sizeKb))
+            }
             val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+            Log.d("FIREBASE_CALL", "Fetched ${items.size} vaccinations")
             items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
         } catch (e: Exception) {
             Log.e("BABYCARE_SERVICE", "Error fetching vaccinations", e)
