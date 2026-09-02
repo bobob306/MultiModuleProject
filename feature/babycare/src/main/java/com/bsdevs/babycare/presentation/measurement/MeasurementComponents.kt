@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
@@ -112,20 +114,18 @@ fun MeasurementHistoryComponent(
         )
     }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
         Text(
             text = "Measurement History",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 8.dp)
         )
 
         if (measurements.isEmpty()) {
-            Text("No measurements found.")
+            Text("No measurements found.", modifier = Modifier.padding(horizontal = 8.dp))
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium),
+                modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 measurements.forEach { item ->
@@ -447,33 +447,45 @@ fun MeasurementHistoryItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClick = onEdit,
+                    onClick = {},
                     onLongClick = onEdit
                 ),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "${measurement.date} ${measurement.time ?: ""}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color(0xFFF3E5F5), CircleShape)
+                        .clip(CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoGraph,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = Color(0xFF7B1FA2)
                     )
-                    val details = mutableListOf<String>()
-                    measurement.weight?.let { details.add("Weight: ${it}kg") }
-                    measurement.height?.let { details.add("Height: ${it}cm") }
-                    measurement.headCircumference?.let { details.add("Head: ${it}cm") }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    val weightStr = measurement.weight?.let { "Weight: " + String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
+                    val heightStr = measurement.height?.let { "Height: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    val headStr = measurement.headCircumference?.let { "Head Circ.: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    val typeStr = if (measurement.isMedical) " (Medical)" else " (Self)"
+                    val title = "${listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", ")}$typeStr"
 
                     Text(
-                        text = details.joinToString(" • "),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
                     )
 
                     if (!measurement.comment.isNullOrEmpty()) {
@@ -484,6 +496,21 @@ fun MeasurementHistoryItem(
                         )
                     }
                 }
+
+                val displayDate = remember(measurement.date) {
+                    try {
+                        val date = LocalDate.parse(measurement.date)
+                        date.format(DateTimeFormatter.ofPattern("dd MMM"))
+                    } catch (_: Exception) {
+                        measurement.date ?: ""
+                    }
+                }
+
+                Text(
+                    text = displayDate,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
