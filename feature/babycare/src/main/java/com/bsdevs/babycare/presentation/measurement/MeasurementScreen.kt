@@ -385,16 +385,29 @@ fun MeasurementHistoryItem(
                     val weightStr = measurement.weight?.let { "Weight: " + String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
                     val heightStr = measurement.height?.let { "Height: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
                     val headStr = measurement.headCircumference?.let { "Head Circ.: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    
+                    val allValues = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }
+                    
                     Text(
                         text = "Measurement:",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", "),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    
+                    if (allValues.isEmpty()) {
+                        Text(
+                            text = "No data recorded",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Text(
+                            text = allValues.joinToString(", "),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
                     Text(
                         text = if (measurement.isMedical) "Medical check-up" else "Self measurement",
                         style = MaterialTheme.typography.bodySmall,

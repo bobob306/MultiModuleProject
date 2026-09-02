@@ -1,6 +1,8 @@
 package com.bsdevs.babycare.presentation.graph
 
 import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +37,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
@@ -296,12 +302,12 @@ fun DailyAverageGapCanvas(
     val topPaddingSpace = 24.dp
     val leftAxisLabelSpace = 50.dp
 
-    val rawValues = dailyGaps.flatMap { listOfNotNull(it.averageGapMinutes, it.rolling14DayAverageMinutes) }
-    val rawMax = rawValues.maxOfOrNull { it } ?: 60
-    val rawMin = rawValues.minOfOrNull { it } ?: 30
-    val yAxisMin = (rawMin - 10).coerceAtLeast(0)
-    val yAxisMax = rawMax + 10
-    val yAxisRange = (yAxisMax - yAxisMin).coerceAtLeast(1)
+    val rawValues = dailyGaps.flatMap { listOfNotNull(it.averageGapMinutes.toFloat(), it.rolling14DayAverageMinutes?.toFloat()) }
+    val rawMax = rawValues.maxOrNull() ?: 60f
+    val rawMin = rawValues.minOrNull() ?: 30f
+    val yAxisMin = (rawMin - 10).coerceAtLeast(0f)
+    val yAxisMax = rawMax + 10f
+    val yAxisRange = (yAxisMax - yAxisMin).coerceAtLeast(1f)
 
     val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
     val chartTotalWidth = maxOf(400.dp, contentWidth + 64.dp)
@@ -321,7 +327,7 @@ fun DailyAverageGapCanvas(
                 val ratio = i.toFloat() / (numYMarkers - 1)
                 val value = yAxisMin + (ratio * yAxisRange)
                 val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * ratio))
-                drawContext.canvas.nativeCanvas.drawText("${value}m", size.width - 6.dp.toPx(), y + 3.dp.toPx(), axisTextPaint)
+                drawContext.canvas.nativeCanvas.drawText("${value.toInt()}m", size.width - 6.dp.toPx(), y + 3.dp.toPx(), axisTextPaint)
             }
         }
 
@@ -339,7 +345,7 @@ fun DailyAverageGapCanvas(
                                 val daysOffset = ChronoUnit.DAYS.between(minDate, date)
                                 val x = startX + (daysOffset.toFloat() / totalDaysSpan.toFloat() * availableWidth)
                                 val itemValue = sortedGaps[index].first.averageGapMinutes
-                                val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (itemValue - yAxisMin).toFloat() / yAxisRange))
+                                val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (itemValue - yAxisMin) / yAxisRange))
                                 val dist = (tapOffset - Offset(x, dailyY)).getDistance()
                                 if (dist < minDistance) { minDistance = dist; bestIndex = index }
                             }
@@ -359,18 +365,111 @@ fun DailyAverageGapCanvas(
                     }
                 }
                 
-                val points = sortedGaps.map { (item, date) ->
+                // Plot Daily Gaps (Solid "Hard" Line)
+                val dailyPoints = sortedGaps.map { (item, date) ->
                     val x = startX + (ChronoUnit.DAYS.between(minDate, date).toFloat() / totalDaysSpan.toFloat() * availableWidth)
-                    val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (item.averageGapMinutes - yAxisMin).toFloat() / yAxisRange))
+                    val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (item.averageGapMinutes - yAxisMin) / yAxisRange))
                     Offset(x, y)
                 }
 
-                if (points.size > 1) {
-                    for (i in 0 until points.size - 1) {
-                        drawLine(color = lineColor, start = points[i], end = points[i+1], strokeWidth = 3.dp.toPx())
+                if (dailyPoints.size > 1) {
+                    for (i in 0 until dailyPoints.size - 1) {
+                        drawLine(
+                            color = lineColor, 
+                            start = dailyPoints[i], 
+                            end = dailyPoints[i+1], 
+                            strokeWidth = 3.dp.toPx()
+                        )
                     }
                 }
-                points.forEach { drawCircle(color = lineColor, radius = 5.dp.toPx(), center = it) }
+                dailyPoints.forEach { drawCircle(color = lineColor, radius = 5.dp.toPx(), center = it) }
+
+                // Plot Rolling Average (Dotted Line)
+                val rollingPoints = sortedGaps.mapNotNull { (item, date) ->
+                    item.rolling14DayAverageMinutes?.let { rollingVal ->
+                        val x = startX + (ChronoUnit.DAYS.between(minDate, date).toFloat() / totalDaysSpan.toFloat() * availableWidth)
+                        val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (rollingVal - yAxisMin) / yAxisRange))
+                        Offset(x, y)
+                    }
+                }
+
+                if (rollingPoints.size > 1) {
+                    val path = Path().apply {
+                        moveTo(rollingPoints[0].x, rollingPoints[0].y)
+                        for (i in 1 until rollingPoints.size) {
+                            lineTo(rollingPoints[i].x, rollingPoints[i].y)
+                        }
+                    }
+                    drawPath(
+                        path = path,
+                        color = lineColor,
+                        style = Stroke(
+                            width = 2.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                        )
+                    )
+                }
+                
+                // Draw Compact Tooltip next to the dot
+                selectedIndex?.let { index ->
+                    val item = sortedGaps[index].first
+                    val point = dailyPoints[index]
+                    
+                    // Format date for the tooltip (e.g., 20/05)
+                    val dateParts = item.dateString.split("-")
+                    val shortDate = if (dateParts.size >= 3) "${dateParts[2]}/${dateParts[1]}" else item.dateString
+                    val text = "$shortDate: ${item.averageGapMinutes}m"
+                    
+                    val textPaint = Paint().apply {
+                        color = Color.White.toArgb()
+                        textSize = 10.sp.toPx()
+                        textAlign = Paint.Align.CENTER
+                        isFakeBoldText = true
+                    }
+                    
+                    val textBounds = Rect()
+                    textPaint.getTextBounds(text, 0, text.length, textBounds)
+                    
+                    val hPadding = 8.dp.toPx()
+                    val vPadding = 4.dp.toPx()
+                    val bgWidth = textBounds.width() + hPadding * 2
+                    val bgHeight = textBounds.height() + vPadding * 2
+                    
+                    // Position logic with bounds checking
+                    var startX = point.x + 8.dp.toPx()
+                    // If it's too close to the right edge of the canvas, flip it to the left of the dot
+                    if (startX + bgWidth > size.width - 8.dp.toPx()) {
+                        startX = point.x - bgWidth - 8.dp.toPx()
+                    }
+                    
+                    val bgRect = RectF(
+                        startX,
+                        point.y - bgHeight - 8.dp.toPx(),
+                        startX + bgWidth,
+                        point.y - 8.dp.toPx()
+                    )
+                    
+                    val bgPaint = Paint().apply {
+                        color = android.graphics.Color.BLACK
+                        alpha = 200
+                        style = Paint.Style.FILL
+                        isAntiAlias = true
+                    }
+                    
+                    drawContext.canvas.nativeCanvas.drawRoundRect(
+                        bgRect, 
+                        6.dp.toPx(), 
+                        6.dp.toPx(), 
+                        bgPaint
+                    )
+                    
+                    drawContext.canvas.nativeCanvas.drawText(
+                        text,
+                        bgRect.centerX(),
+                        bgRect.centerY() + textBounds.height() / 2f,
+                        textPaint
+                    )
+                }
             }
         }
     }
