@@ -209,11 +209,11 @@ fun TemperatureChartComponent(
     val latestDate = uiData.dates.firstOrNull() ?: return
     val readings = uiData.dailyReadings[latestDate] ?: emptyList()
 
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)) {
         Text(
             text = "Daily Trend ($latestDate)",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 16.dp)
         )
         TemperatureChart(
             readings = readings,
