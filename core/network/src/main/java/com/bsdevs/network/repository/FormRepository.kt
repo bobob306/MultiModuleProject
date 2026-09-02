@@ -22,6 +22,7 @@ interface FormRepository {
     suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto?
     suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>)
     suspend fun updateForm(formId: String, data: Map<String, Any>)
+    suspend fun deleteForm(formId: String)
     suspend fun getDynamicOptions(type: String): Flow<List<String>>
 }
 
@@ -82,6 +83,14 @@ class FormRepositoryImpl @Inject constructor(
         forms.document(formId).set(data).await()
         schemaCache[formId] = mapper.mapToDto(data as HashMap)
         seededFormIds.add(formId)
+        Unit
+    }
+
+    override suspend fun deleteForm(formId: String) = withContext(dispatchers.io) {
+        Log.d("FIREBASE_CALL", "Deleting Form: $formId")
+        forms.document(formId).delete().await()
+        schemaCache.remove(formId)
+        seededFormIds.remove(formId)
         Unit
     }
 

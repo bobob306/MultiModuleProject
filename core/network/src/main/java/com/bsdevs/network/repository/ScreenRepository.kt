@@ -1,5 +1,6 @@
 package com.bsdevs.network.repository
 
+import android.util.Log
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.FirestoreHolder
@@ -20,6 +21,8 @@ interface ScreenRepository {
     suspend fun getScreenFlow(screen: String, forceRefresh: Boolean = false): Flow<Result<List<ScreenDto>>>
 
     suspend fun updateScreen(screen: String, dtos: List<ScreenDto>)
+
+    suspend fun deleteScreen(screen: String)
 
     fun clearCache()
 }
@@ -48,7 +51,7 @@ class ScreenRepositoryImpl @Inject constructor(
             flowOf(Result.Success(cached))
         } else {
             try {
-                android.util.Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
+                Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
                 val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
                 val document = scr.document(screen).get(source).await().data
                 val dto = mapper.mapToDto(document as HashMap)
@@ -62,9 +65,16 @@ class ScreenRepositoryImpl @Inject constructor(
 
     override suspend fun updateScreen(screen: String, dtos: List<ScreenDto>) = withContext(dispatchers.io) {
         val map = mapper.mapToFirebase(dtos)
-        android.util.Log.d("FIREBASE_CALL", "Update Screen: $screen")
+        Log.d("FIREBASE_CALL", "Update Screen: $screen")
         scr.document(screen).set(map).await()
         cacheFlowMap[screen] = dtos
+    }
+
+    override suspend fun deleteScreen(screen: String) = withContext(dispatchers.io) {
+        Log.d("FIREBASE_CALL", "Delete Screen: $screen")
+        scr.document(screen).delete().await()
+        cacheFlowMap.remove(screen)
+        Unit
     }
 
     override fun clearCache() {

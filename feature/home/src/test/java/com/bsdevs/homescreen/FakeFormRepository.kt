@@ -21,4 +21,14 @@ class FakeFormRepository : FormRepository {
     override suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>) {
         seededForms.putIfAbsent(formId, data)
     }
+
+    override suspend fun updateForm(formId: String, data: Map<String, Any>) {
+        seededForms[formId] = data
+    }
+
+    override suspend fun deleteForm(formId: String) {
+        seededForms.remove(formId)
+    }
+
+    override suspend fun getDynamicOptions(type: String): Flow<List<String>> = flowOf(emptyList())
 }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -411,4 +412,7 @@ private class FakeFormRepository : FormRepository {
     override suspend fun submitForm(userId: String, formId: String, values: Map<String, Any>): Result<Unit> = Result.Success(Unit)
     override suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto? = null
     override suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>) {}
+    override suspend fun updateForm(formId: String, data: Map<String, Any>) {}
+    override suspend fun deleteForm(formId: String) {}
+    override suspend fun getDynamicOptions(type: String): Flow<List<String>> = flowOf(emptyList())
 }
