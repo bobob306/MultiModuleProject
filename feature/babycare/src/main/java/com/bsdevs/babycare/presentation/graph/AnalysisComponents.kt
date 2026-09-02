@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
@@ -33,6 +34,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -57,7 +59,7 @@ fun FeedingFrequencyChartComponent(
     uiState: FeedingGraphUiState
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -75,7 +77,12 @@ fun FeedingFrequencyChartComponent(
 
         if (uiState.totalFeedsInCache == 0) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(200.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "No feeding logs available yet.")
@@ -88,8 +95,10 @@ fun FeedingFrequencyChartComponent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(260.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 16.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+                    .padding(horizontal = 8.dp, vertical = 16.dp)
             )
         }
     }
@@ -100,7 +109,7 @@ fun FeedingGapChartComponent(
     uiState: FeedingGraphUiState
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -111,7 +120,12 @@ fun FeedingGapChartComponent(
 
         if (uiState.dailyAverageGaps.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "Need consecutive feeds tracked on the same day.")
@@ -124,8 +138,10 @@ fun FeedingGapChartComponent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(260.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                    .padding(horizontal = 16.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
+                    .padding(vertical = 16.dp)
             )
         }
     }
