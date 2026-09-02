@@ -248,4 +248,39 @@ class FormSubmitRouterTest {
     fun `measurementLog returns Error when date missing`() = runTest {
         assertTrue(router.submit("u", "measurementLog", null, mapOf("height_value" to 700)) is Result.Error)
     }
+
+    // --- vaccinationLog ---
+
+    @Test
+    fun `vaccinationLog routes to BabyCareRepository with VACCINATION event type`() = runTest {
+        val eventSlot = slot<UnifiedEventDto>()
+        coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
+
+        val result = router.submit("user1", "vaccinationLog", null, mapOf(
+            "date" to "2026-08-31",
+            "time" to "10:30",
+            "vaccination_names" to listOf("HepB"),
+            "location" to "Clinic A",
+            "series_id" to "hep_b_series"
+        ))
+
+        assertTrue(result is Result.Success)
+        assertEquals("VACCINATION", eventSlot.captured.type)
+        assertEquals("Clinic A", eventSlot.captured.location)
+        assertEquals("hep_b_series", eventSlot.captured.seriesId)
+        assertEquals(listOf("HepB"), eventSlot.captured.vaccinationNames)
+    }
+
+    @Test
+    fun `vaccinationLog autogenerates seriesId if missing`() = runTest {
+        val eventSlot = slot<UnifiedEventDto>()
+        coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
+
+        router.submit("u", "vaccinationLog", null, mapOf(
+            "date" to "2026-08-31",
+            "vaccination_names" to listOf("6-in-1")
+        ))
+
+        assertEquals("6_in_1", eventSlot.captured.seriesId)
+    }
 }

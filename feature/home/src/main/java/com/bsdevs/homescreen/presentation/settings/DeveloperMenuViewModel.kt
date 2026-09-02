@@ -40,9 +40,12 @@ class DeveloperMenuViewModel @Inject constructor(
                 formRepository.updateForm("nappyLog", FormSeeds.nappyLog)
                 formRepository.updateForm("temperatureLog", FormSeeds.temperatureLog)
                 formRepository.updateForm("measurementLog", FormSeeds.measurementLog)
+                formRepository.updateForm("vaccinationLog", FormSeeds.vaccinationLog)
 
                 // Sync Screens
+                seedBabyHomeScreen()
                 seedMeasurementScreen()
+                seedVaccinationHistoryScreen()
 
                 _uiState.update { it.copy(isSeeding = false, seedSuccess = true) }
             } catch (e: Exception) {
@@ -59,5 +62,63 @@ class DeveloperMenuViewModel @Inject constructor(
             ScreenDto.MeasurementHistoryDto(index = 3)
         )
         screenRepository.updateScreen("measurement_screen", measurementScreen)
+    }
+
+    private suspend fun seedBabyHomeScreen() {
+        val babyHomeTiles = listOf(
+            ScreenDto.TileDto(
+                index = 0,
+                title = "Nappy",
+                iconName = "ChildCare",
+                destination = "babycare://nappy",
+                subtitleType = "NAPPY",
+                sharedElementKey = "tile_nappy"
+            ),
+            ScreenDto.TileDto(
+                index = 1,
+                title = "Feeding",
+                iconName = "Restaurant",
+                destination = "babycare://feeding",
+                subtitleType = "FEEDING",
+                sharedElementKey = "tile_feeding"
+            ),
+            ScreenDto.TileDto(
+                index = 2,
+                title = "Temperature",
+                iconName = "Thermostat",
+                destination = "babycare://temperature",
+                subtitleType = "TEMPERATURE",
+                sharedElementKey = "tile_temperature"
+            ),
+            ScreenDto.TileDto(
+                index = 3,
+                title = "Growth",
+                iconName = "AutoGraph",
+                destination = "babycare://measurement",
+                subtitleType = "MEASUREMENT",
+                sharedElementKey = "tile_measurement"
+            ),
+            ScreenDto.TileDto(
+                index = 4,
+                title = "Vaccination",
+                iconName = "Vaccines",
+                destination = "babycare://vaccination",
+                subtitleType = "VACCINATION",
+                sharedElementKey = "tile_vaccination"
+            )
+        )
+
+        val babyHomeScreen = listOf(
+            ScreenDto.TileRowDto(index = 0, tiles = babyHomeTiles),
+            ScreenDto.ActivityFeedDto(index = 1)
+        )
+        screenRepository.updateScreen("baby_home", babyHomeScreen)
+    }
+
+    private suspend fun seedVaccinationHistoryScreen() {
+        val vaccinationHistoryScreen = listOf(
+            ScreenDto.VaccinationHistoryDto(index = 0)
+        )
+        screenRepository.updateScreen("vaccination_history", vaccinationHistoryScreen)
     }
 }

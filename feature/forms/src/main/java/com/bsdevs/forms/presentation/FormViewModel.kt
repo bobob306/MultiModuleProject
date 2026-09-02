@@ -90,6 +90,13 @@ class FormViewModel @Inject constructor(
 
                         _fieldValues.value = prefilled
                         _formSchema.value = Result.Success(schema)
+                        
+                        // Handle dynamic options (like vaccination series)
+                        schema.fields.filterIsInstance<FormFieldData.DropdownFieldData>()
+                            .filter { it.dynamicOptions != null }
+                            .forEach { field ->
+                                updateDynamicOptions(field)
+                            }
                     }
                     is Result.Error -> _formSchema.value = Result.Error(result.exception)
                     Result.Loading -> _formSchema.value = Result.Loading
@@ -100,6 +107,24 @@ class FormViewModel @Inject constructor(
 
     fun onFieldChanged(fieldKey: String, value: Any) {
         _fieldValues.update { it + (fieldKey to value) }
+    }
+
+    private fun updateDynamicOptions(field: FormFieldData.DropdownFieldData) {
+        val type = field.dynamicOptions?.get("type") ?: return
+        viewModelScope.launch(dispatchers.io) {
+            formRepository.getDynamicOptions(type).collect { options ->
+                _formSchema.update { result ->
+                    if (result is Result.Success) {
+                        val updatedFields = result.data.fields.map { f ->
+                            if (f.fieldKey == field.fieldKey && f is FormFieldData.DropdownFieldData) {
+                                f.copy(options = options)
+                            } else f
+                        }
+                        Result.Success(result.data.copy(fields = updatedFields))
+                    } else result
+                }
+            }
+        }
     }
 
     fun onSubmit() {

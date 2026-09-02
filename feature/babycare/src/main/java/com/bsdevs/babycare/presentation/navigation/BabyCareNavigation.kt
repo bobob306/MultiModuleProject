@@ -14,6 +14,7 @@ import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
 import com.bsdevs.babycare.presentation.measurement.MeasurementScreenRoute
 import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
 import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
+import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryScreenRoute
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -24,6 +25,9 @@ data object BabyCareHomeRoute
 
 @Serializable
 data object BabyGraphRoute
+
+@Serializable
+data object VaccinationHistoryRoute
 
 @Serializable
 data class TemperatureRoute(val activityId: String? = null)
@@ -42,6 +46,9 @@ fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
 
 fun NavController.navigateToGraph(navOptions: NavOptions? = null) =
     navigate(route = BabyGraphRoute, navOptions = navOptions)
+
+fun NavController.navigateToVaccinationHistory(navOptions: NavOptions? = null) =
+    navigate(route = VaccinationHistoryRoute, navOptions = navOptions)
 
 fun NavController.navigateToNappyChange(
     activityId: String? = null,
@@ -78,10 +85,12 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateToFeeding = { navController.navigateToFeeding() },
                 onNavigateToTemperature = { navController.navigateToTemperature() },
                 onNavigateToMeasurement = { navController.navigateToMeasurement() },
+                onNavigateToVaccination = { navController.navigateToVaccinationHistory() },
                 onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
                 onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
                 onNavigateToEditTemperature = { id -> navigateToForm("temperatureLog", id) },
                 onNavigateToEditMeasurement = { id -> navigateToForm("measurementLog", id) },
+                onNavigateToEditVaccination = { id -> navigateToForm("vaccinationLog", id) },
                 onNavigateToGraph = { navController.navigateToGraph() },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
@@ -145,6 +154,19 @@ fun NavGraphBuilder.babyCareSection(
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("measurementLog", null) },
                 onEditItem = { id -> navigateToForm("measurementLog", id) },
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = this@composable
+            )
+        }
+        composable<VaccinationHistoryRoute>(
+            deepLinks = listOf(
+                navDeepLink<VaccinationHistoryRoute>(basePath = "babycare://vaccination")
+            )
+        ) {
+            VaccinationHistoryScreenRoute(
+                onNavigateBack = { navController.popBackStack() },
+                onAddNew = { navigateToForm("vaccinationLog", null) },
+                onEditItem = { id -> navigateToForm("vaccinationLog", id) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = this@composable
             )

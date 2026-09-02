@@ -214,55 +214,65 @@ private fun DropdownField(
     val filteredOptions = if (searchText.isBlank()) field.options
         else field.options.filter { it.contains(searchText, ignoreCase = true) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        OutlinedTextField(
-            value = displayValue,
-            onValueChange = { searchText = it; expanded = true },
-            label = { Text(field.label) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-            suffix = if (expanded && field.multiSelect && selectedMulti.isNotEmpty()) {
-                { Text(selectedMulti.joinToString(), modifier = Modifier.fillMaxWidth(0.5f)) }
-            } else null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
-        )
-        ExposedDropdownMenu(
+        ExposedDropdownMenuBox(
             expanded = expanded,
-            onDismissRequest = { expanded = false; searchText = "" },
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            filteredOptions.forEach { option ->
-                if (field.multiSelect) {
-                    DropdownMenuItem(
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = option in selectedMulti, onCheckedChange = null)
-                                Text(option, modifier = Modifier.padding(start = 8.dp))
-                            }
-                        },
-                        onClick = {
-                            val updated = if (option in selectedMulti) selectedMulti - option else selectedMulti + option
-                            onFieldChanged(field.fieldKey, updated)
-                            searchText = ""
-                        },
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onFieldChanged(field.fieldKey, option)
-                            searchText = ""
-                            expanded = false
-                        },
-                    )
+            OutlinedTextField(
+                value = if (field.editable && expanded) searchText else displayValue,
+                onValueChange = { 
+                    if (field.editable) {
+                        searchText = it
+                        onFieldChanged(field.fieldKey, it)
+                    } else {
+                        searchText = it
+                    }
+                    expanded = true 
+                },
+                label = { Text(field.label) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                suffix = if (expanded && field.multiSelect && selectedMulti.isNotEmpty()) {
+                    { Text(selectedMulti.joinToString(), modifier = Modifier.fillMaxWidth(0.5f)) }
+                } else null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable),
+            )
+            if (filteredOptions.isNotEmpty()) {
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false; searchText = "" },
+                ) {
+                    filteredOptions.forEach { option ->
+                        if (field.multiSelect) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = option in selectedMulti, onCheckedChange = null)
+                                        Text(option, modifier = Modifier.padding(start = 8.dp))
+                                    }
+                                },
+                                onClick = {
+                                    val updated = if (option in selectedMulti) selectedMulti - option else selectedMulti + option
+                                    onFieldChanged(field.fieldKey, updated)
+                                    searchText = ""
+                                },
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    onFieldChanged(field.fieldKey, option)
+                                    searchText = ""
+                                    expanded = false
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
 }
 
 @Composable

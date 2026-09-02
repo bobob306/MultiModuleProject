@@ -9,6 +9,7 @@ import com.bsdevs.network.dto.FormSchemaDto
 import com.bsdevs.network.dto.FormSubmissionDto
 import com.google.firebase.Timestamp
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -21,6 +22,7 @@ interface FormRepository {
     suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto?
     suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>)
     suspend fun updateForm(formId: String, data: Map<String, Any>)
+    suspend fun getDynamicOptions(type: String): Flow<List<String>>
 }
 
 class FormRepositoryImpl @Inject constructor(
@@ -95,6 +97,24 @@ class FormRepositoryImpl @Inject constructor(
             )
         } catch (e: Exception) {
             null
+        }
+    }
+
+    override suspend fun getDynamicOptions(type: String): Flow<List<String>> = when (type) {
+        "VACCINATION_SERIES" -> getVaccinationSeries()
+        else -> flowOf(emptyList())
+    }
+
+    private fun getVaccinationSeries(): Flow<List<String>> = flow {
+        try {
+            val snapshot = firestoreHolder.firestore.collectionGroup("vaccinations").get().await()
+            val allSeries = snapshot.documents.flatMap { doc ->
+                val items = doc.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+                items.values.mapNotNull { it["seriesId"] as? String }
+            }.distinct().sorted()
+            emit(allSeries)
+        } catch (e: Exception) {
+            emit(emptyList<String>())
         }
     }
 }

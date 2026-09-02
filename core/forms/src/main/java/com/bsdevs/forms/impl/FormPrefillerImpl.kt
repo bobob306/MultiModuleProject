@@ -20,6 +20,7 @@ class FormPrefillerImpl @Inject constructor(
         "feedingLog" -> loadFeedingValues(userId, entityId)
         "temperatureLog" -> loadTemperatureValues(userId, entityId)
         "measurementLog" -> loadMeasurementValues(userId, entityId)
+        "vaccinationLog" -> loadVaccinationValues(userId, entityId)
         else -> null
     }
 
@@ -49,7 +50,7 @@ class FormPrefillerImpl @Inject constructor(
     }
 
     private suspend fun loadTemperatureValues(userId: String, entityId: String): Map<String, Any>? {
-        val event = babyCareRepository.getFeedingEventById(userId, entityId)
+        val event = babyCareRepository.getNappyEventById(userId, entityId)
             ?.takeIf { it.type == "TEMPERATURE" } ?: return null
         return buildMap {
             put("date", event.dateTimeString.substringBefore(" "))
@@ -90,6 +91,19 @@ class FormPrefillerImpl @Inject constructor(
             event.bottleAmountMl?.let { put("bottle_amount_ml", it.toString()) }
             event.comment?.let { put("comment", it) }
             put("date", event.dateTimeString.substringBefore(" "))
+        }
+    }
+
+    private suspend fun loadVaccinationValues(userId: String, entityId: String): Map<String, Any>? {
+        val event = babyCareRepository.getVaccinationEventById(userId, entityId)
+            ?.takeIf { it.type == "VACCINATION" } ?: return null
+        return buildMap {
+            put("date", event.dateTimeString.substringBefore(" "))
+            put("time", event.time)
+            event.vaccinationNames?.let { put("vaccination_names", it) }
+            event.location?.let { put("location", it) }
+            event.seriesId?.let { put("series_id", it) }
+            event.comment?.let { put("comment", it) }
         }
     }
 }

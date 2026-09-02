@@ -150,4 +150,31 @@ internal object FormSeeds {
             ),
         ),
     )
+
+    val vaccinationLog: Map<String, Any> = mapOf(
+        "title" to "Log vaccination",
+        "submitTarget" to "vaccinationLog",
+        "submitDestination" to "baby_home",
+        "deletable" to true,
+        "fields" to listOf(
+            mapOf("fieldKey" to "date", "type" to "DATE_INPUT", "label" to "Date", "required" to true, "index" to 0),
+            mapOf("fieldKey" to "time", "type" to "TIME_INPUT", "label" to "Time", "required" to true, "index" to 1),
+            mapOf(
+                "fieldKey" to "vaccination_names", "type" to "DROPDOWN", "label" to "Vaccination(s)",
+                "required" to true, "index" to 2, "multiSelect" to true,
+                "options" to listOf(
+                    "6-in-1 (DTaP/IPV/Hib/HepB)", "Rotavirus", "MenB", "Pneumococcal (PCV)",
+                    "Hib/MenC", "MMR", "4-in-1 (DTaP/IPV)", "Children's flu vaccine",
+                    "HPV", "MenACWY", "3-in-1 (Td/IPV)"
+                ),
+            ),
+            mapOf("fieldKey" to "location", "type" to "TEXT_INPUT", "label" to "Location", "required" to false, "index" to 3),
+            mapOf(
+                "fieldKey" to "series_id", "type" to "DROPDOWN", "label" to "Series (optional)",
+                "required" to false, "index" to 4, "multiSelect" to false, "editable" to true,
+                "dynamicOptions" to mapOf("type" to "VACCINATION_SERIES")
+            ),
+            mapOf("fieldKey" to "comment", "type" to "TEXT_INPUT", "label" to "Comment", "required" to false, "index" to 5),
+        ),
+    )
 }

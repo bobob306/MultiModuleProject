@@ -6,6 +6,7 @@ import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import java.time.LocalDate
 
 import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.common.result.Result
@@ -89,6 +90,10 @@ class BabyCareHomeViewModelTest {
         val measurement = mapOf("id" to "m1", "type" to "MEASUREMENT", "weight" to 3.5, "dateTimeString" to "$date 11:00")
         fakeService.saveMeasurement(userId, "m1", measurement)
 
+        // Add a vaccination
+        val vaccination = mapOf("id" to "v1", "type" to "VACCINATION", "vaccinationNames" to listOf("HepB"), "dateTimeString" to "$date 12:00")
+        fakeService.saveVaccination(userId, "v1", vaccination)
+
         // When - triggering a refresh or just observing (init already triggered it)
         viewModel.refreshData()
 
@@ -97,9 +102,10 @@ class BabyCareHomeViewModelTest {
             val result = awaitItem()
             assertTrue(result is Result.Success)
             val data = (result as Result.Success).data
-            assertEquals(2, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
+            assertEquals(3, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
             assertEquals("Last feed: 10:00", data.lastFeeding)
             assertEquals("Last: 3.50kg", data.lastMeasurement)
+            assertEquals("Last vaccine: 12:00", data.lastVaccination)
         }
     }
 
@@ -225,6 +231,9 @@ class BabyCareHomeViewModelTest {
         // Measurement
         fakeService.saveMeasurement(userId, "m1", mapOf("id" to "m1", "type" to "MEASUREMENT", "dateTimeString" to "$date 13:00"))
 
+        // Vaccination
+        fakeService.saveVaccination(userId, "v1", mapOf("id" to "v1", "type" to "VACCINATION", "dateTimeString" to "$date 14:00"))
+
         // When
         viewModel.refreshData()
 
@@ -235,6 +244,7 @@ class BabyCareHomeViewModelTest {
         assertEquals(1, header.nappyCount)
         assertEquals(0, header.temperatureCount)
         assertEquals(1, header.measurementCount)
+        assertEquals(1, header.vaccinationCount)
     }
 
     @Test
@@ -274,6 +284,28 @@ class BabyCareHomeViewModelTest {
         // Then
         state = (viewModel.viewData.value as Result.Success).data
         assertEquals("Last feed: 23:00", state.lastFeeding)
+    }
+
+    @Test
+    fun `toggling vaccination filter updates viewData correctly`() = runTest {
+        // Given
+        val date = "2026-08-26"
+        val vaccine = mapOf("id" to "v1", "type" to "VACCINATION", "vaccinationNames" to listOf("HepB"), "dateTimeString" to "$date 10:00")
+        val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "11:00", "dateTimeString" to "$date 11:00")
+        fakeService.saveVaccination(userId, "v1", vaccine)
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(feeding))))
+        
+        viewModel.refreshData()
+
+        // When
+        viewModel.toggleActivityFilter(ActivityFilter.VACCINATION)
+
+        // Then
+        val result = viewModel.viewData.value as Result.Success
+        val rows = result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>()
+        assertEquals(1, rows.size)
+        assertTrue(rows.first().activity is BabyActivity.Vaccination)
+        assertEquals(ActivityFilter.VACCINATION, result.data.currentFilter)
     }
 
     @Test

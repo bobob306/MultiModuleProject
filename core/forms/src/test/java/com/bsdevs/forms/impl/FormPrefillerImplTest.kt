@@ -158,4 +158,26 @@ class FormPrefillerImplTest {
         coEvery { babyCareRepository.getMeasurementEventById("u", "missing") } returns null
         assertNull(prefiller.loadExistingValues("u", "measurementLog", "missing"))
     }
+
+    // --- vaccinationLog ---
+
+    @Test
+    fun `vaccinationLog maps all fields correctly`() = runTest {
+        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns UnifiedEventDto(
+            type = "VACCINATION",
+            time = "10:30",
+            dateTimeString = "2026-08-31 10:30",
+            vaccinationNames = listOf("HepB"),
+            location = "Clinic",
+            seriesId = "hep_b_series",
+            comment = "No reaction"
+        )
+        val result = prefiller.loadExistingValues("u", "vaccinationLog", "v1")!!
+        assertEquals("2026-08-31", result["date"])
+        assertEquals("10:30", result["time"])
+        assertEquals(listOf("HepB"), result["vaccination_names"])
+        assertEquals("Clinic", result["location"])
+        assertEquals("hep_b_series", result["series_id"])
+        assertEquals("No reaction", result["comment"])
+    }
 }

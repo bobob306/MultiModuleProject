@@ -4,6 +4,7 @@ import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.MeasurementDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.TemperatureDto
+import com.bsdevs.babycare.network.VaccinationDto
 
 sealed class BabyActivity {
     abstract val id: String?
@@ -37,6 +38,14 @@ sealed class BabyActivity {
     }
 
     data class Measurement(val dto: MeasurementDto) : BabyActivity() {
+        override val id: String? = dto.id
+        override val date: String? = dto.date
+        override val time: String? = dto.time
+        override val dateTime: String = dto.dateTime
+        override val comment: String? = dto.comment
+    }
+
+    data class Vaccination(val dto: VaccinationDto) : BabyActivity() {
         override val id: String? = dto.id
         override val date: String? = dto.date
         override val time: String? = dto.time

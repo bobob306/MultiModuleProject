@@ -198,6 +198,37 @@ class FormSeedsTest {
         assertEquals(1, field["decimalPlaces"])
     }
 
+    // --- vaccinationLog ---
+
+    @Test
+    fun `vaccinationLog has correct top-level metadata`() {
+        val seed = FormSeeds.vaccinationLog
+        assertEquals("vaccinationLog", seed["submitTarget"])
+        assertEquals("baby_home", seed["submitDestination"])
+        assertTrue(seed["deletable"] as Boolean)
+    }
+
+    @Test
+    fun `vaccinationLog fields cover date, time, vaccines, location, series, comment`() {
+        val fields = formFields(FormSeeds.vaccinationLog)
+        assertEquals(6, fields.size)
+        assertEquals("DATE_INPUT", fields[0]["type"])
+        assertEquals("TIME_INPUT", fields[1]["type"])
+        assertEquals("DROPDOWN",   fields[2]["type"])
+        assertEquals("TEXT_INPUT", fields[3]["type"])
+        assertEquals("DROPDOWN",   fields[4]["type"])
+        assertEquals("TEXT_INPUT", fields[5]["type"])
+    }
+
+    @Test
+    fun `vaccinationLog series field is a dynamic dropdown with editable enabled`() {
+        val field = formFields(FormSeeds.vaccinationLog).first { it["fieldKey"] == "series_id" }
+        assertEquals("DROPDOWN", field["type"])
+        assertEquals(true, field["editable"])
+        val dynamicOptions = field["dynamicOptions"] as Map<*, *>
+        assertEquals("VACCINATION_SERIES", dynamicOptions["type"])
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun formFields(seed: Map<String, Any>): List<Map<String, Any>> =
         seed["fields"] as List<Map<String, Any>>

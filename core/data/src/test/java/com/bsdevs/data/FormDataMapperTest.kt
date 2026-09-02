@@ -107,6 +107,15 @@ class FormDataMapperTest {
     }
 
     @Test
+    fun `DROPDOWN maps editable and dynamicOptions correctly`() {
+        val dynamic = mapOf("type" to "VACCINATION_SERIES")
+        val field = FormFieldDto("series", "DROPDOWN", "Series", false, 0, editable = true, dynamicOptions = dynamic)
+        val result = mapper.mapToData("f", schema(field)).fields[0] as FormFieldData.DropdownFieldData
+        assertTrue(result.editable)
+        assertEquals("VACCINATION_SERIES", result.dynamicOptions?.get("type"))
+    }
+
+    @Test
     fun `DATE_INPUT maps to DateInputData`() {
         val field = FormFieldDto("date", "DATE_INPUT", "Date", true, 0)
         assertTrue(mapper.mapToData("f", schema(field)).fields[0] is FormFieldData.DateInputData)

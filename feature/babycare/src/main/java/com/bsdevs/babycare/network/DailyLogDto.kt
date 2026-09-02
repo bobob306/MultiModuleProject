@@ -34,5 +34,10 @@ data class UnifiedEventDto(
     val height: Double? = null,
     val weight: Double? = null,
     val headCircumference: Double? = null,
-    val isMedical: Boolean? = null
+    val isMedical: Boolean? = null,
+
+    // Vaccination-specific fields (nullable)
+    val vaccinationNames: List<String>? = null,
+    val location: String? = null,
+    val seriesId: String? = null
 )

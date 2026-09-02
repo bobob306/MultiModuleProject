@@ -168,6 +168,16 @@ class ScreenDataMapperTest {
     }
 
     @Test
+    fun `mapToData converts VaccinationHistoryDto correctly`() {
+        val dto = listOf(ScreenDto.VaccinationHistoryDto(index = 7))
+        val result = mapper.mapToData(dto)
+
+        assertEquals(1, result.size)
+        val historyData = result[0] as NetworkScreenData.VaccinationHistoryDataNetwork
+        assertEquals(7, historyData.index)
+    }
+
+    @Test
     fun `mapToData converts TileRowDto correctly`() {
         val tile = ScreenDto.TileDto(
             index = 0,

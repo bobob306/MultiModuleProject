@@ -19,6 +19,7 @@ class FormSubmitRouter @Inject constructor(
         "feedingLog" -> submitFeeding(userId, entityId, values)
         "temperatureLog" -> submitTemperature(userId, entityId, values)
         "measurementLog" -> submitMeasurement(userId, entityId, values)
+        "vaccinationLog" -> submitVaccination(userId, entityId, values)
         else -> Result.Error(IllegalArgumentException("Unknown submit target: $target"))
     }
 
@@ -133,6 +134,34 @@ class FormSubmitRouter @Inject constructor(
             dateTimeString = "$date ${values["start_time"] ?: "00:00"}",
             mainFeedingSide = values["feeding_side"] as? String,
             bottleAmountMl = (values["bottle_amount_ml"] as? String)?.toIntOrNull(),
+            comment = values["comment"] as? String,
+        )
+        if (entityId != null) {
+            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
+        } else {
+            babyCareRepository.saveActivityEvent(userId, date, event)
+        }
+        Result.Success(Unit)
+    } catch (e: Exception) {
+        Result.Error(e)
+    }
+
+    private suspend fun submitVaccination(userId: String, entityId: String?, values: Map<String, Any>): Result<Unit> = try {
+        val date = values["date"] as? String
+            ?: return Result.Error(IllegalArgumentException("vaccinationLog requires 'date' field"))
+        val names = (values["vaccination_names"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
+        val seriesId = (values["series_id"] as? String)?.takeIf { it.isNotBlank() }
+            ?: names.firstOrNull()?.replace(Regex("[^a-zA-Z0-9]"), "_")?.lowercase()
+            ?: UUID.randomUUID().toString()
+
+        val event = UnifiedEventDto(
+            id = entityId ?: UUID.randomUUID().toString(),
+            type = "VACCINATION",
+            time = values["time"] as? String ?: "",
+            dateTimeString = "$date ${values["time"] ?: "00:00"}",
+            vaccinationNames = names,
+            location = values["location"] as? String,
+            seriesId = seriesId,
             comment = values["comment"] as? String,
         )
         if (entityId != null) {
