@@ -124,6 +124,10 @@ sealed class NetworkScreenData(
         override val index: Int,
     ) : NetworkScreenData(index)
 
+    data class VaccinationHistoryDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
     data class TileDataNetwork(
         val index: Int,
         val title: String,

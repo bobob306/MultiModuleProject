@@ -64,6 +64,8 @@ sealed class FormFieldData(
         override val index: Int,
         val options: List<String>,
         val multiSelect: Boolean,
+        val editable: Boolean = false,
+        val dynamicOptions: Map<String, String>? = null,
         override val showWhen: FormFieldCondition? = null,
     ) : FormFieldData(fieldKey, label, required, index, showWhen)
 

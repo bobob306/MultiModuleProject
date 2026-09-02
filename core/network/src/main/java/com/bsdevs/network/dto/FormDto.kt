@@ -17,6 +17,8 @@ data class FormFieldDto(
     val defaultValue: Any? = null,
     val options: List<String> = emptyList(),
     val multiSelect: Boolean = false,
+    val editable: Boolean = false,
+    val dynamicOptions: Map<String, String>? = null,
     val startNumber: Int = 0,
     val endNumber: Int = 100,
     val decimalPlaces: Int = 0,

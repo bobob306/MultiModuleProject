@@ -11,6 +11,7 @@ import com.bsdevs.babycare.network.MeasurementDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.TemperatureDto
 import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
@@ -231,6 +232,10 @@ class BabyCareHomeViewModel @Inject constructor(
             "Last: $weight $height".trim()
         }
 
+        val absoluteLastVaccination = allEventsFlattened.firstOrNull {
+            it.type == "VACCINATION"
+        }?.let { "Last vaccine: ${it.time}" }
+
         dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
@@ -244,6 +249,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     ActivityFilter.FEEDING -> event.type == "FEEDING"
                     ActivityFilter.TEMPERATURE -> event.type == "TEMPERATURE"
                     ActivityFilter.MEASUREMENT -> event.type == "MEASUREMENT"
+                    ActivityFilter.VACCINATION -> event.type == "VACCINATION"
                 }
             }
 
@@ -252,6 +258,7 @@ class BabyCareHomeViewModel @Inject constructor(
                 visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
             val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
             val measurementCount = visibleEvents.count { it.type == "MEASUREMENT" }
+            val vaccinationCount = visibleEvents.count { it.type == "VACCINATION" }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
             finalizedFeed.add(
@@ -260,7 +267,8 @@ class BabyCareHomeViewModel @Inject constructor(
                     feedingCount,
                     nappyCount,
                     temperatureCount,
-                    measurementCount
+                    measurementCount,
+                    vaccinationCount
                 )
             )
 
@@ -277,6 +285,7 @@ class BabyCareHomeViewModel @Inject constructor(
             lastFeeding = absoluteLastFeeding,
             lastTemperature = absoluteLastTemperature,
             lastMeasurement = absoluteLastMeasurement,
+            lastVaccination = absoluteLastVaccination,
             activityFeed = finalizedFeed,
             dynamicUi = _dynamicUi.value,
             currentFilter = filter,
@@ -298,6 +307,7 @@ class BabyCareHomeViewModel @Inject constructor(
             event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
         val isTemperature = event.type == "TEMPERATURE"
         val isMeasurement = event.type == "MEASUREMENT"
+        val isVaccination = event.type == "VACCINATION"
 
         return if (isNappy) {
             // Fallback: If nappyType is missing because it was saved under 'type', recover it here
@@ -336,6 +346,19 @@ class BabyCareHomeViewModel @Inject constructor(
                     weight = event.weight,
                     headCircumference = event.headCircumference,
                     isMedical = event.isMedical ?: false,
+                    comment = event.comment
+                )
+            )
+        } else if (isVaccination) {
+            BabyActivity.Vaccination(
+                VaccinationDto(
+                    id = event.id,
+                    date = parentDate,
+                    time = extractedTime,
+                    dateTime = event.dateTimeString,
+                    vaccinationNames = event.vaccinationNames ?: emptyList(),
+                    location = event.location,
+                    seriesId = event.seriesId,
                     comment = event.comment
                 )
             )
@@ -415,6 +438,7 @@ class BabyCareHomeViewModel @Inject constructor(
             is BabyActivity.Nappy -> activity.dto.date to activity.dto.id
             is BabyActivity.Temperature -> activity.dto.date to activity.dto.id
             is BabyActivity.Measurement -> activity.dto.date to activity.dto.id
+            is BabyActivity.Vaccination -> activity.dto.date to activity.dto.id
         }
 
         if (date != null && eventId != null) {

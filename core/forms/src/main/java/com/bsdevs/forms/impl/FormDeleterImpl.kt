@@ -14,6 +14,7 @@ class FormDeleterImpl @Inject constructor(
         "feedingLog" -> deleteFeeding(userId, entityId)
         "temperatureLog" -> deleteTemperature(userId, entityId)
         "measurementLog" -> deleteMeasurement(userId, entityId)
+        "vaccinationLog" -> deleteVaccination(userId, entityId)
         else -> Result.Error(UnsupportedOperationException("Delete not supported for target: $target"))
     }
 
@@ -50,6 +51,16 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteFeeding(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getFeedingEventById(userId, entityId)
             ?: return Result.Error(Exception("Feeding record not found"))
+        val date = event.dateTimeString.substringBefore(" ")
+        babyCareRepository.deleteActivityEvent(userId, date, entityId)
+        Result.Success(Unit)
+    } catch (e: Exception) {
+        Result.Error(e)
+    }
+
+    private suspend fun deleteVaccination(userId: String, entityId: String): Result<Unit> = try {
+        val event = babyCareRepository.getVaccinationEventById(userId, entityId)
+            ?: return Result.Error(Exception("Vaccination record not found"))
         val date = event.dateTimeString.substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)

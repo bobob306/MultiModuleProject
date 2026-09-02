@@ -27,7 +27,7 @@ class FormDataMapperImpl @Inject constructor() : FormDataMapper {
             "SWITCH" -> FormFieldData.SwitchFieldData(fieldKey, label, required, index, defaultValue as? Boolean ?: false, condition)
             "RADIO" -> FormFieldData.RadioFieldData(fieldKey, label, required, index, options, condition)
             "CHECKBOX_LIST" -> FormFieldData.CheckboxListFieldData(fieldKey, label, required, index, options, condition)
-            "DROPDOWN" -> FormFieldData.DropdownFieldData(fieldKey, label, required, index, options, multiSelect, condition)
+            "DROPDOWN" -> FormFieldData.DropdownFieldData(fieldKey, label, required, index, options, multiSelect, editable, dynamicOptions, condition)
             "DATE_INPUT" -> FormFieldData.DateInputData(fieldKey, label, required, index, condition)
             "TIME_INPUT" -> FormFieldData.TimeInputData(fieldKey, label, required, index, condition)
             "WHEEL_INPUT" -> FormFieldData.WheelInputData(fieldKey, label, required, index, startNumber, endNumber, decimalPlaces, (defaultValue as? Number)?.toInt() ?: startNumber, condition)

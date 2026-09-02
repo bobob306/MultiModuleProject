@@ -5,6 +5,7 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.repository.UserRepository
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
@@ -41,6 +42,9 @@ class FirestoreBabyCareService @Inject constructor(
 
     private fun getMeasurementsDocument(babyId: String) =
         firestore.collection("babyLogs").document(babyId).collection("measurements").document("all_data")
+
+    private fun getVaccinationsDocument(babyId: String) =
+        firestore.collection("babyLogs").document(babyId).collection("vaccinations").document("all_data")
 
     override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? = withContext(dispatchers.io) {
         try {
@@ -195,6 +199,47 @@ class FirestoreBabyCareService @Inject constructor(
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext
         Log.d("FIREBASE_CALL", "Delete Measurement from Single Doc for Baby: $babyId / $eventId")
         getMeasurementsDocument(babyId).update("items.$eventId", FieldValue.delete()).await()
+        Unit
+    }
+
+    override suspend fun fetchAllVaccinations(userId: String): List<Map<String, Any?>> = withContext(dispatchers.io) {
+        try {
+            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+            Log.d("FIREBASE_CALL", "Read All Vaccinations (Single Doc) for Baby: $babyId")
+            val snapshot = getVaccinationsDocument(babyId).get().await()
+            val data = if (snapshot.exists()) snapshot.data else null
+            val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+            items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Error fetching vaccinations", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun saveVaccination(userId: String, eventId: String, vaccination: Map<String, Any?>) = withContext(dispatchers.io) {
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        Log.d("FIREBASE_CALL", "Save Vaccination into Single Doc for Baby: $babyId / $eventId")
+        val docRef = getVaccinationsDocument(babyId)
+        try {
+            docRef.update("items.$eventId", vaccination).await()
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
+                docRef.set(mapOf("items" to mapOf(eventId to vaccination))).await()
+            } else {
+                docRef.set(mapOf("items" to mapOf(eventId to vaccination)), SetOptions.merge()).await()
+            }
+        }
+        Unit
+    }
+
+    override suspend fun updateVaccination(userId: String, eventId: String, updatedVaccination: Map<String, Any?>) = withContext(dispatchers.io) {
+        saveVaccination(userId, eventId, updatedVaccination)
+    }
+
+    override suspend fun deleteVaccination(userId: String, eventId: String) = withContext(dispatchers.io) {
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext
+        Log.d("FIREBASE_CALL", "Delete Vaccination from Single Doc for Baby: $babyId / $eventId")
+        getVaccinationsDocument(babyId).update("items.$eventId", FieldValue.delete()).await()
         Unit
     }
 }

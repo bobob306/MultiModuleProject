@@ -14,4 +14,10 @@ interface BabyCareFirestoreService {
     suspend fun saveMeasurement(userId: String, eventId: String, measurement: Map<String, Any?>)
     suspend fun updateMeasurement(userId: String, eventId: String, updatedMeasurement: Map<String, Any?>)
     suspend fun deleteMeasurement(userId: String, eventId: String)
+
+    // Vaccination-specific methods
+    suspend fun fetchAllVaccinations(userId: String): List<Map<String, Any?>>
+    suspend fun saveVaccination(userId: String, eventId: String, vaccination: Map<String, Any?>)
+    suspend fun updateVaccination(userId: String, eventId: String, updatedVaccination: Map<String, Any?>)
+    suspend fun deleteVaccination(userId: String, eventId: String)
 }

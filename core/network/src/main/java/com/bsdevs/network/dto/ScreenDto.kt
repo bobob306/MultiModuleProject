@@ -126,6 +126,11 @@ sealed class ScreenDto(
         @SerialName("index") override val index: Int,
     ) : ScreenDto(index)
 
+    @SerialName("VACCINATION_HISTORY")
+    data class VaccinationHistoryDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
     @Serializable
     data class TileDto(
         @SerialName("index") val index: Int,

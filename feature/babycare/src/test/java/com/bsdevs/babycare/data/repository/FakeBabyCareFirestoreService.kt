@@ -10,6 +10,9 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
     // Map<UserId, Map<EventId, Map<String, Any>>>
     private val measurementsDb = mutableMapOf<String, MutableMap<String, Map<String, Any>>>()
 
+    // Map<UserId, Map<EventId, Map<String, Any>>>
+    private val vaccinationsDb = mutableMapOf<String, MutableMap<String, Map<String, Any>>>()
+
     fun injectMonth(userId: String, monthId: String, data: Map<String, Any>) {
         database.getOrPut(userId) { mutableMapOf() }[monthId] = data
     }
@@ -87,6 +90,34 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
 
     override suspend fun deleteMeasurement(userId: String, eventId: String) {
         val userDb = measurementsDb[userId] ?: return
+        val allData = userDb["all_data"]?.toMutableMap() ?: return
+        val items = (allData["items"] as? Map<String, Map<String, Any?>> ?: return).toMutableMap()
+        items.remove(eventId)
+        allData["items"] = items
+        userDb["all_data"] = allData as Map<String, Any>
+    }
+
+    override suspend fun fetchAllVaccinations(userId: String): List<Map<String, Any?>> {
+        val allData = vaccinationsDb[userId]?.get("all_data") as? Map<String, Any?>
+        val items = allData?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+        return items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
+    }
+
+    override suspend fun saveVaccination(userId: String, eventId: String, vaccination: Map<String, Any?>) {
+        val userDb = vaccinationsDb.getOrPut(userId) { mutableMapOf() }
+        val allData = userDb.getOrDefault("all_data", mutableMapOf<String, Any?>()).toMutableMap()
+        val items = (allData["items"] as? Map<String, Map<String, Any?>> ?: emptyMap()).toMutableMap()
+        items[eventId] = vaccination
+        allData["items"] = items
+        userDb["all_data"] = allData as Map<String, Any>
+    }
+
+    override suspend fun updateVaccination(userId: String, eventId: String, updatedVaccination: Map<String, Any?>) {
+        saveVaccination(userId, eventId, updatedVaccination)
+    }
+
+    override suspend fun deleteVaccination(userId: String, eventId: String) {
+        val userDb = vaccinationsDb[userId] ?: return
         val allData = userDb["all_data"]?.toMutableMap() ?: return
         val items = (allData["items"] as? Map<String, Map<String, Any?>> ?: return).toMutableMap()
         items.remove(eventId)

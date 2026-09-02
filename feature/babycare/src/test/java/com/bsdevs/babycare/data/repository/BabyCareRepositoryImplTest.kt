@@ -270,6 +270,32 @@ class BabyCareRepositoryImplTest {
     }
 
     @Test
+    fun `saveActivityEvent for vaccination updates separate collection and cache`() = runTest {
+        val date = "2026-08-26"
+        val event = UnifiedEventDto(id = "v1", type = "VACCINATION", vaccinationNames = listOf("HepB"), dateTimeString = "$date 10:00")
+
+        repository.saveActivityEvent(userId, date, event)
+
+        // Check cache
+        repository.cachedDays.test {
+            val cached = awaitItem()
+            assertTrue(cached.any { it.date == date && it.events.any { e -> e.id == "v1" } })
+        }
+        
+        // Check vaccinations flow
+        repository.vaccinations.test {
+            val vaccines = awaitItem()
+            assertEquals(1, vaccines.size)
+            assertEquals("v1", vaccines.first().id)
+        }
+
+        // Check fake database
+        val vaccines = fakeService.fetchAllVaccinations(userId)
+        assertEquals(1, vaccines.size)
+        assertEquals("v1", vaccines.first()["id"])
+    }
+
+    @Test
     fun `updateActivityEvent updates document and cache`() = runTest {
         val date = "2026-08-26"
         val event = UnifiedEventDto(id = "e1", type = "FEEDING", comment = "Old")
@@ -321,6 +347,31 @@ class BabyCareRepositoryImplTest {
         // Check fake database
         val measurements = fakeService.fetchAllMeasurements(userId)
         assertTrue(measurements.isEmpty())
+    }
+
+    @Test
+    fun `deleteActivityEvent for vaccination updates separate collection and cache`() = runTest {
+        val date = "2026-08-26"
+        val event = UnifiedEventDto(id = "v1", type = "VACCINATION", dateTimeString = "$date 10:00")
+        repository.saveActivityEvent(userId, date, event)
+
+        repository.deleteActivityEvent(userId, date, "v1")
+
+        // Check cache
+        repository.cachedDays.test {
+            val cached = awaitItem()
+            assertTrue(cached.isEmpty() || cached.none { day -> day.events.any { it.id == "v1" } })
+        }
+
+        // Check vaccinations flow
+        repository.vaccinations.test {
+            val vaccines = awaitItem()
+            assertTrue(vaccines.isEmpty())
+        }
+        
+        // Check fake database
+        val vaccines = fakeService.fetchAllVaccinations(userId)
+        assertTrue(vaccines.isEmpty())
     }
 
     // --- CACHE & DATA PARSING TESTS ---
@@ -401,14 +452,19 @@ class BabyCareRepositoryImplTest {
         val measurement = mapOf("id" to "m1", "type" to "MEASUREMENT", "weight" to 3.5, "dateTimeString" to "$date 11:00")
         fakeService.saveMeasurement(userId, "m1", measurement)
 
+        // Vaccination in vaccinations collection
+        val vaccination = mapOf("id" to "v1", "type" to "VACCINATION", "vaccinationNames" to listOf("HepB"), "dateTimeString" to "$date 12:00")
+        fakeService.saveVaccination(userId, "v1", vaccination)
+
         repository.loadInitialData(userId, 2)
 
         repository.cachedDays.test {
             val cached = awaitItem()
             val day = cached.first { it.date == date }
-            assertEquals(2, day.events.size)
+            assertEquals(3, day.events.size)
             assertTrue(day.events.any { it.id == "feed1" })
             assertTrue(day.events.any { it.id == "m1" })
+            assertTrue(day.events.any { it.id == "v1" })
         }
     }
 

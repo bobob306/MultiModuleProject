@@ -146,4 +146,41 @@ class FirestoreBabyCareServiceTest {
         
         verify { transaction.update(docRef, "days.2026-08-27", listOf(event2)) }
     }
+
+    @Test
+    fun `saveVaccination uses update with dot notation when document exists`() = runTest {
+        val user = UserDto(id = userId, babyId = babyId)
+        every { userRepository.userProfile } returns MutableStateFlow(user)
+        
+        val docRef = mockk<DocumentReference>(relaxed = true)
+        every { firestore.collection("babyLogs").document(babyId).collection("vaccinations").document("all_data") } returns docRef
+        
+        val vaccine = mapOf("id" to "v1", "type" to "VACCINATION")
+        coEvery { docRef.update("items.v1", vaccine).await() } returns mockk()
+
+        service.saveVaccination(userId, "v1", vaccine)
+        
+        coVerify { docRef.update("items.v1", vaccine) }
+    }
+
+    @Test
+    fun `fetchAllVaccinations returns list from document map`() = runTest {
+        val user = UserDto(id = userId, babyId = babyId)
+        every { userRepository.userProfile } returns MutableStateFlow(user)
+        
+        val docRef = mockk<DocumentReference>(relaxed = true)
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { firestore.collection("babyLogs").document(babyId).collection("vaccinations").document("all_data") } returns docRef
+        coEvery { docRef.get().await() } returns snapshot
+        every { snapshot.exists() } returns true
+        
+        val v1 = mapOf("id" to "v1", "dateTimeString" to "2026-08-27 10:00")
+        val v2 = mapOf("id" to "v2", "dateTimeString" to "2026-08-27 11:00")
+        every { snapshot.data } returns mapOf("items" to mapOf("v1" to v1, "v2" to v2))
+
+        val result = service.fetchAllVaccinations(userId)
+        
+        assertEquals(2, result.size)
+        assertEquals("v2", result[0]["id"]) // Sorted by dateTimeString desc
+    }
 }

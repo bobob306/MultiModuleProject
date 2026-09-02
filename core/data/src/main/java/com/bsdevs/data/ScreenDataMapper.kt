@@ -103,6 +103,10 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                 is ScreenDto.MeasurementHistoryDto -> NetworkScreenData.MeasurementHistoryDataNetwork(
                     index = item.index
                 )
+
+                is ScreenDto.VaccinationHistoryDto -> NetworkScreenData.VaccinationHistoryDataNetwork(
+                    index = item.index
+                )
             }
         }
         return listOfData

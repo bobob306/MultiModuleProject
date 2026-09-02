@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.AlertDialog
@@ -89,11 +90,13 @@ fun BabyCareHomeScreenRoute(
     onNavigateToFeeding: () -> Unit,
     onNavigateToTemperature: () -> Unit,
     onNavigateToMeasurement: () -> Unit,
+    onNavigateToVaccination: () -> Unit,
     onNavigateToGraph: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
     onNavigateToEditMeasurement: (String) -> Unit,
+    onNavigateToEditVaccination: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: BabyCareHomeViewModel = hiltViewModel(),
@@ -106,6 +109,7 @@ fun BabyCareHomeScreenRoute(
             "babycare://feeding" -> onNavigateToFeeding()
             "babycare://temperature" -> onNavigateToTemperature()
             "babycare://measurement" -> onNavigateToMeasurement()
+            "babycare://vaccination" -> onNavigateToVaccination()
             "babycare://graph" -> onNavigateToGraph()
             else -> {
                 // Handle unknown or generic navigation if necessary
@@ -123,6 +127,7 @@ fun BabyCareHomeScreenRoute(
                     onNavigateToEditFeeding = onNavigateToEditFeeding,
                     onNavigateToEditTemperature = onNavigateToEditTemperature,
                     onNavigateToEditMeasurement = onNavigateToEditMeasurement,
+                    onNavigateToEditVaccination = onNavigateToEditVaccination,
                     onToggleFilter = viewModel::toggleActivityFilter,
                     onToggleHeaderCollapse = viewModel::toggleHeaderCollapse,
                     onLoadMore = viewModel::loadMore,
@@ -156,6 +161,7 @@ internal fun BabyCareHomeScreen(
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
     onNavigateToEditMeasurement: (String) -> Unit,
+    onNavigateToEditVaccination: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onToggleHeaderCollapse: (String) -> Unit,
     onLoadMore: () -> Unit,
@@ -226,6 +232,7 @@ internal fun BabyCareHomeScreen(
                                 onNavigateToEditFeeding = onNavigateToEditFeeding,
                                 onNavigateToEditTemperature = onNavigateToEditTemperature,
                                 onNavigateToEditMeasurement = onNavigateToEditMeasurement,
+                                onNavigateToEditVaccination = onNavigateToEditVaccination,
                                 onToggleFilter = onToggleFilter,
                                 onDeleteActivity = { activityToDelete = it },
                                 onLoadMore = onLoadMore,
@@ -302,6 +309,7 @@ private fun LazyListScope.renderActivityFeed(
     onNavigateToEditFeeding: (String) -> Unit,
     onNavigateToEditTemperature: (String) -> Unit,
     onNavigateToEditMeasurement: (String) -> Unit,
+    onNavigateToEditVaccination: (String) -> Unit,
     onToggleFilter: (ActivityFilter) -> Unit,
     onDeleteActivity: (BabyActivity) -> Unit,
     onLoadMore: () -> Unit,
@@ -361,6 +369,12 @@ private fun LazyListScope.renderActivityFeed(
                                     style = MaterialTheme.typography.labelMedium
                                 )
                             }
+                            if (feedItem.vaccinationCount > 0) {
+                                Text(
+                                    text = "💉 ${feedItem.vaccinationCount}",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -373,6 +387,7 @@ private fun LazyListScope.renderActivityFeed(
                     is BabyActivity.Feeding -> currentActivity.dto.id
                     is BabyActivity.Temperature -> currentActivity.dto.id
                     is BabyActivity.Measurement -> currentActivity.dto.id
+                    is BabyActivity.Vaccination -> currentActivity.dto.id
                 }
 
                 item(key = "row_$uniqueId") {
@@ -426,6 +441,7 @@ private fun LazyListScope.renderActivityFeed(
                                         is BabyActivity.Feeding -> currentActivity.dto.id
                                         is BabyActivity.Temperature -> currentActivity.dto.id
                                         is BabyActivity.Measurement -> currentActivity.dto.id
+                                        is BabyActivity.Vaccination -> currentActivity.dto.id
                                     }
                                     activityId?.let {
                                         when (currentActivity) {
@@ -433,6 +449,7 @@ private fun LazyListScope.renderActivityFeed(
                                             is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
                                             is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
                                             is BabyActivity.Measurement -> onNavigateToEditMeasurement(activityId)
+                                            is BabyActivity.Vaccination -> onNavigateToEditVaccination(activityId)
                                         }
                                     }
                                 },
@@ -442,6 +459,7 @@ private fun LazyListScope.renderActivityFeed(
                                         is BabyActivity.Feeding -> ActivityFilter.FEEDING
                                         is BabyActivity.Temperature -> ActivityFilter.TEMPERATURE
                                         is BabyActivity.Measurement -> ActivityFilter.MEASUREMENT
+                                        is BabyActivity.Vaccination -> ActivityFilter.VACCINATION
                                     }
                                     onToggleFilter(targetFilter)
                                 },
@@ -482,6 +500,7 @@ private fun BabyCareTileRow(
                 "FEEDING" -> viewData.lastFeeding
                 "TEMPERATURE" -> viewData.lastTemperature
                 "MEASUREMENT" -> viewData.lastMeasurement
+                "VACCINATION" -> viewData.lastVaccination
                 else -> null
             }
             BabyCareTile(
@@ -509,6 +528,7 @@ private fun mapIconNameToVector(iconName: String): ImageVector {
         "Thermostat" -> Icons.Default.Thermostat
         "AutoGraph" -> Icons.Default.AutoGraph
         "Scale" -> Icons.Default.AutoGraph
+        "Vaccines" -> Icons.Default.MedicalServices
         else -> Icons.Default.ChildCare
     }
 }
@@ -544,6 +564,11 @@ fun ActivityFeedItem(
             Color(0xFFF3E5F5), // Light Purple
             Color(0xFF7B1FA2)  // Dark Purple
         )
+        is BabyActivity.Vaccination -> Triple(
+            Icons.Default.MedicalServices,
+            Color(0xFFFCE4EC), // Light Pink
+            Color(0xFFC2185B)  // Dark Pink
+        )
     }
 
     val title = when (item) {
@@ -564,6 +589,10 @@ fun ActivityFeedItem(
             val typeStr = if (item.dto.isMedical) " (Medical)" else " (Self)"
             "Measurement: ${listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(" ")}$typeStr"
         }
+        is BabyActivity.Vaccination -> {
+            val names = item.dto.vaccinationNames.joinToString(", ")
+            "Vaccination: $names"
+        }
     }
 
     val activityId = when (item) {
@@ -571,6 +600,7 @@ fun ActivityFeedItem(
         is BabyActivity.Feeding -> item.dto.id
         is BabyActivity.Temperature -> item.dto.id
         is BabyActivity.Measurement -> item.dto.id
+        is BabyActivity.Vaccination -> item.dto.id
     }
 
     val dismissState = rememberSwipeToDismissBoxState()

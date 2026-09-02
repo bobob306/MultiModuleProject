@@ -101,4 +101,19 @@ class FormDeleterImplTest {
         coEvery { babyCareRepository.getMeasurementEventById("u", "missing") } returns null
         assertTrue(deleter.delete("u", "measurementLog", "missing") is Result.Error)
     }
+
+    // --- vaccinationLog ---
+
+    @Test
+    fun `vaccinationLog extracts date from space-separated dateTimeString`() = runTest {
+        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns UnifiedEventDto(
+            id = "v1", type = "VACCINATION", time = "10:30",
+            dateTimeString = "2026-09-03 10:30",
+        )
+
+        val result = deleter.delete("u", "vaccinationLog", "v1")
+
+        assertTrue(result is Result.Success)
+        coVerify { babyCareRepository.deleteActivityEvent("u", "2026-09-03", "v1") }
+    }
 }
