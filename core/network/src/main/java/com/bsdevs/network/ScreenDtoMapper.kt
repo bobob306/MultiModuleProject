@@ -96,6 +96,10 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "type" to "MEASUREMENT_HISTORY",
                     "index" to dto.index
                 )
+                is ScreenDto.VaccinationHistoryDto -> mapOf(
+                    "type" to "VACCINATION_HISTORY",
+                    "index" to dto.index
+                )
                 else -> emptyMap<String, Any?>()
             }
         }
@@ -213,6 +217,12 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
 
                     "MEASUREMENT_HISTORY" -> {
                         ScreenDto.MeasurementHistoryDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "VACCINATION_HISTORY" -> {
+                        ScreenDto.VaccinationHistoryDto(
                             index = item["index"].toString().toInt()
                         )
                     }

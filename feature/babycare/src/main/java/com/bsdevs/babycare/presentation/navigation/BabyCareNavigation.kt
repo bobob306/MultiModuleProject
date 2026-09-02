@@ -14,7 +14,9 @@ import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
 import com.bsdevs.babycare.presentation.measurement.MeasurementScreenRoute
 import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
 import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
-import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryScreenRoute
+import com.bsdevs.babycare.presentation.common.GenericSduiScreen
+import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryComponent
+import com.bsdevs.data.NetworkScreenData
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -163,12 +165,21 @@ fun NavGraphBuilder.babyCareSection(
                 navDeepLink<VaccinationHistoryRoute>(basePath = "babycare://vaccination")
             )
         ) {
-            VaccinationHistoryScreenRoute(
+            GenericSduiScreen(
+                screenId = "vaccination_history",
+                title = "Vaccinations",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("vaccinationLog", null) },
-                onEditItem = { id -> navigateToForm("vaccinationLog", id) },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
+                featureContent = { item ->
+                    when (item) {
+                        is NetworkScreenData.VaccinationHistoryDataNetwork -> {
+                            VaccinationHistoryComponent(
+                                onEdit = { id -> navigateToForm("vaccinationLog", id) }
+                            )
+                        }
+                        else -> {}
+                    }
+                }
             )
         }
     }
