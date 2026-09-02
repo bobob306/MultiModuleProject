@@ -1,11 +1,13 @@
 package com.bsdevs.babycare.presentation.common
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +38,7 @@ fun GenericSduiScreen(
     onNavigateBack: () -> Unit,
     onAddNew: (() -> Unit)? = null,
     onDynamicClick: (String, String) -> Unit = { _, _ -> },
-    featureContent: @Composable (NetworkScreenData) -> Unit = {},
+    lazyFeatureContent: LazyListScope.(NetworkScreenData) -> Boolean = { false },
     viewModel: GenericSduiViewModel = hiltViewModel(),
 ) {
     val uiState by remember(screenId) { viewModel.getUiState(screenId) }.collectAsStateWithLifecycle()
@@ -60,22 +62,27 @@ fun GenericSduiScreen(
             modifier = Modifier.padding(padding)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp), // Unified horizontal padding
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 when (val result = uiState) {
                     is Result.Success -> {
                         result.data.forEach { component ->
-                            item(key = "dynamic_${component.index}") {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    RenderUI(
-                                        item = component,
-                                        context = context,
-                                        onClick = onDynamicClick,
-                                        onChipClick = {},
-                                        onSwitchClick = {},
-                                        featureContent = featureContent
-                                    )
+                            val handled = lazyFeatureContent(component)
+                            if (!handled) {
+                                item(key = "dynamic_${component.index}") {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        RenderUI(
+                                            item = component,
+                                            context = context,
+                                            onClick = onDynamicClick,
+                                            onChipClick = {},
+                                            onSwitchClick = {}
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -131,6 +131,31 @@ sealed class ScreenDto(
         @SerialName("index") override val index: Int,
     ) : ScreenDto(index)
 
+    @SerialName("TEMPERATURE_HISTORY")
+    data class TemperatureHistoryDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
+    @SerialName("TEMPERATURE_CHART")
+    data class TemperatureChartDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
+    @SerialName("FEEDING_FREQUENCY_CHART")
+    data class FeedingFrequencyChartDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
+    @SerialName("FEEDING_GAP_CHART")
+    data class FeedingGapChartDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
+    @SerialName("FEEDING_INSIGHT_CARD")
+    data class FeedingInsightCardDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
     @Serializable
     data class TileDto(
         @SerialName("index") val index: Int,

@@ -62,8 +62,21 @@ class FeedingViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     init {
-        activityIdArg?.let { id ->
-            loadFeeding(id)
+        val currentTimerState = timerManager.timerState.value
+
+        if (activityIdArg != null) {
+            // 🔄 EDIT MODE: If the manager is holding a different activity, reset it first
+            if (currentTimerState.activityId != activityIdArg) {
+                timerManager.reset()
+            }
+            // Always load data for edit mode to populate local UI state (comment, bottle, etc.)
+            loadFeeding(activityIdArg)
+        } else {
+            // 🆕 NEW FEED: If the manager is holding an "Edit" session, clear it for a fresh start.
+            // Note: We don't reset if it's a "New" session (id == null) already in progress.
+            if (currentTimerState.activityId != null) {
+                timerManager.reset()
+            }
         }
         
         startSide?.let { sideStr ->

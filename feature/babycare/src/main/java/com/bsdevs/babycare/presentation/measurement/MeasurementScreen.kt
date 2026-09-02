@@ -382,11 +382,16 @@ fun MeasurementHistoryItem(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    val weightStr = measurement.weight?.let { String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
-                    val heightStr = measurement.height?.let { String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
-                    val headStr = measurement.headCircumference?.let { String.format(Locale.getDefault(), "%.1fcm HC", it) } ?: ""
+                    val weightStr = measurement.weight?.let { "Weight: " + String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
+                    val heightStr = measurement.height?.let { "Height: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+                    val headStr = measurement.headCircumference?.let { "Head Circ.: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
                     Text(
-                        text = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(" "),
+                        text = "Measurement:",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", "),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold
                     )

@@ -83,7 +83,14 @@ fun ColumnScope.RenderUI(
 
         is NetworkScreenData.GrowthChartDataNetwork,
         is NetworkScreenData.MeasurementHistoryDataNetwork,
-        is NetworkScreenData.VaccinationHistoryDataNetwork -> {
+        is NetworkScreenData.VaccinationHistoryDataNetwork,
+        is NetworkScreenData.TemperatureHistoryDataNetwork,
+        is NetworkScreenData.TemperatureChartDataNetwork,
+        is NetworkScreenData.FeedingFrequencyChartDataNetwork,
+        is NetworkScreenData.FeedingGapChartDataNetwork,
+        is NetworkScreenData.FeedingInsightCardDataNetwork,
+        is NetworkScreenData.TileRowDataNetwork,
+        is NetworkScreenData.ActivityFeedDataNetwork -> {
             featureContent(item)
         }
 

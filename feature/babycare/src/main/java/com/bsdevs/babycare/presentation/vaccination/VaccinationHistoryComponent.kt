@@ -21,26 +21,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 data class VaccinationGroup(
@@ -56,7 +59,6 @@ class VaccinationDataViewModel @Inject constructor(
 ) : ViewModel() {
 
     init {
-        // 🚀 Ensure vaccinations are loaded if the screen is opened directly
         viewModelScope.launch(dispatchers.io) {
             if (repository.vaccinations.value.isEmpty()) {
                 repository.loadInitialData(accountService.currentUserId, 20)
@@ -87,7 +89,7 @@ class VaccinationDataViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    fun deleteVaccination(date: String, id: String) {
+    fun deleteVaccination(id: String, date: String) {
         viewModelScope.launch {
             repository.deleteActivityEvent(accountService.currentUserId, date, id)
         }
@@ -96,10 +98,27 @@ class VaccinationDataViewModel @Inject constructor(
 
 @Composable
 fun VaccinationHistoryComponent(
+    groupedVaccinations: List<VaccinationGroup>,
     onEdit: (String) -> Unit,
-    viewModel: VaccinationDataViewModel = hiltViewModel()
+    onDelete: (String, String) -> Unit
 ) {
-    val groupedVaccinations by viewModel.groupedVaccinations.collectAsStateWithLifecycle()
+    var itemToDelete by remember { mutableStateOf<VaccinationDto?>(null) }
+
+    if (itemToDelete != null) {
+        DeleteConfirmationDialog(
+            onConfirm = {
+                itemToDelete?.let { item ->
+                    val id = item.id
+                    val date = item.date
+                    if (id != null && date != null) {
+                        onDelete(id, date)
+                    }
+                }
+                itemToDelete = null
+            },
+            onDismiss = { itemToDelete = null }
+        )
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -109,7 +128,7 @@ fun VaccinationHistoryComponent(
             VaccinationGroupItem(
                 group = group,
                 onEdit = onEdit,
-                onDelete = viewModel::deleteVaccination
+                onDelete = { vaccination -> itemToDelete = vaccination }
             )
         }
     }
@@ -119,7 +138,7 @@ fun VaccinationHistoryComponent(
 internal fun VaccinationGroupItem(
     group: VaccinationGroup,
     onEdit: (String) -> Unit,
-    onDelete: (String, String) -> Unit
+    onDelete: (VaccinationDto) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -139,11 +158,7 @@ internal fun VaccinationGroupItem(
                 VaccinationRow(
                     vaccination = vaccination,
                     onEdit = { vaccination.id?.let { onEdit(it) } },
-                    onDelete = {
-                        vaccination.date?.let { d -> 
-                            vaccination.id?.let { id -> onDelete(d, id) } 
-                        }
-                    }
+                    onDelete = { onDelete(vaccination) }
                 )
                 if (index < (group.vaccinations.size - 1)) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

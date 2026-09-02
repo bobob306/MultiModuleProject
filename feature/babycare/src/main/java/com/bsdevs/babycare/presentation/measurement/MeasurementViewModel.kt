@@ -44,6 +44,7 @@ class MeasurementViewModel @Inject constructor(
                 dateTime = event.dateTimeString,
                 height = event.height,
                 weight = event.weight,
+                headCircumference = event.headCircumference,
                 isMedical = event.isMedical ?: false,
                 comment = event.comment
             )
@@ -79,8 +80,10 @@ class MeasurementViewModel @Inject constructor(
                             time = event.time,
                             height = event.height,
                             weight = event.weight,
+                            headCircumference = event.headCircumference,
                             recordHeight = event.height != null,
                             recordWeight = event.weight != null,
+                            recordHeadCircumference = event.headCircumference != null,
                             isMedical = event.isMedical ?: false,
                             comment = event.comment ?: "",
                             isLoading = false
@@ -112,12 +115,20 @@ class MeasurementViewModel @Inject constructor(
         _localState.update { it.copy(weight = weightValue.toDouble() / 100.0, recordWeight = true) }
     }
 
+    fun onHeadCircumferenceChanged(headValue: Int) {
+        _localState.update { it.copy(headCircumference = headValue.toDouble() / 10.0, recordHeadCircumference = true) }
+    }
+
     fun toggleRecordHeight(enabled: Boolean) {
         _localState.update { it.copy(recordHeight = enabled) }
     }
 
     fun toggleRecordWeight(enabled: Boolean) {
         _localState.update { it.copy(recordWeight = enabled) }
+    }
+
+    fun toggleRecordHeadCircumference(enabled: Boolean) {
+        _localState.update { it.copy(recordHeadCircumference = enabled) }
     }
 
     fun onIsMedicalChanged(isMedical: Boolean) {
@@ -156,8 +167,10 @@ class MeasurementViewModel @Inject constructor(
                 time = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
                 height = null,
                 weight = null,
+                headCircumference = null,
                 recordHeight = false,
                 recordWeight = false,
+                recordHeadCircumference = false,
                 isMedical = false,
                 comment = "",
                 error = null,
@@ -174,8 +187,8 @@ class MeasurementViewModel @Inject constructor(
     fun submitMeasurement() {
         val currentState = uiState.value
         
-        if (!currentState.recordHeight && !currentState.recordWeight) {
-            _localState.update { it.copy(error = "Please record at least height or weight") }
+        if (!currentState.recordHeight && !currentState.recordWeight && !currentState.recordHeadCircumference) {
+            _localState.update { it.copy(error = "Please record at least height, weight or head circumference") }
             return
         }
 
@@ -190,6 +203,7 @@ class MeasurementViewModel @Inject constructor(
             comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
             height = if (currentState.recordHeight) (currentState.height ?: 50.0) else null,
             weight = if (currentState.recordWeight) (currentState.weight ?: 3.5) else null,
+            headCircumference = if (currentState.recordHeadCircumference) (currentState.headCircumference ?: 40.0) else null,
             isMedical = currentState.isMedical
         )
 
@@ -222,6 +236,18 @@ class MeasurementViewModel @Inject constructor(
                 _events.send(MeasurementEvent.DeleteSuccess)
             } catch (e: Exception) {
                 _localState.update { it.copy(error = e.message, isLoading = false) }
+            }
+        }
+    }
+
+    fun deleteMeasurement(id: String, date: String) {
+        val userId = accountService.currentUserId
+        viewModelScope.launch {
+            try {
+                repository.deleteActivityEvent(userId, date, id)
+                _events.send(MeasurementEvent.DeleteSuccess)
+            } catch (e: Exception) {
+                _localState.update { it.copy(error = e.message) }
             }
         }
     }

@@ -112,6 +112,7 @@ fun MMPNavHost(
                         "home" -> navController.navigate(HomeScreenBaseRoute)
                         "coffee_home" -> navController.navigateToCoffeeHome()
                         "baby_home" -> navController.navigateToBabyCareHome()
+                        "back" -> navController.popBackStack()
                         else -> navController.navigate(HomeScreenBaseRoute)
                     }
                 },

@@ -8,16 +8,39 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
+import androidx.navigation.toRoute
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
-import com.bsdevs.babycare.presentation.graph.BabyGraphRoute
-import com.bsdevs.babycare.presentation.home.BabyCareHomeScreenRoute
-import com.bsdevs.babycare.presentation.measurement.MeasurementScreenRoute
-import com.bsdevs.babycare.presentation.nappy.NappyChangeScreenRoute
-import com.bsdevs.babycare.presentation.temperature.TemperatureScreenRoute
 import com.bsdevs.babycare.presentation.common.GenericSduiScreen
+import com.bsdevs.babycare.presentation.home.BabyCareTileRowComponent
+import com.bsdevs.babycare.presentation.home.ActivityFeedItems
+import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
+import com.bsdevs.common.result.Result
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsdevs.babycare.presentation.graph.BabyGraphViewModel
 import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryComponent
+import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryComponent
+import com.bsdevs.babycare.presentation.temperature.TemperatureChartComponent
+import com.bsdevs.babycare.presentation.graph.FeedingFrequencyChartComponent
+import com.bsdevs.babycare.presentation.graph.FeedingGapChartComponent
+import com.bsdevs.babycare.presentation.graph.FeedingInsightComponent
+import com.bsdevs.babycare.presentation.home.BabyCareHomeViewData
+import com.bsdevs.babycare.presentation.measurement.GrowthChartComponent
+import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryComponent
+import com.bsdevs.babycare.presentation.measurement.MeasurementViewModel
+import com.bsdevs.babycare.presentation.temperature.TemperatureDataViewModel
+import com.bsdevs.babycare.presentation.vaccination.VaccinationDataViewModel
 import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import kotlinx.serialization.Serializable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @Serializable
 data object BabyCareBaseRoute
@@ -82,33 +105,90 @@ fun NavGraphBuilder.babyCareSection(
 ) {
     navigation<BabyCareBaseRoute>(startDestination = BabyCareHomeRoute) {
         composable<BabyCareHomeRoute> {
-            BabyCareHomeScreenRoute(
-                onNavigateToNappyChange = { navigateToForm("nappyLog", null) },
-                onNavigateToFeeding = { navController.navigateToFeeding() },
-                onNavigateToTemperature = { navController.navigateToTemperature() },
-                onNavigateToMeasurement = { navController.navigateToMeasurement() },
-                onNavigateToVaccination = { navController.navigateToVaccinationHistory() },
-                onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
-                onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
-                onNavigateToEditTemperature = { id -> navigateToForm("temperatureLog", id) },
-                onNavigateToEditMeasurement = { id -> navigateToForm("measurementLog", id) },
-                onNavigateToEditVaccination = { id -> navigateToForm("vaccinationLog", id) },
-                onNavigateToGraph = { navController.navigateToGraph() },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
+            val homeViewModel: BabyCareHomeViewModel = hiltViewModel()
+            val homeViewState by homeViewModel.viewData.collectAsStateWithLifecycle()
+            
+            var activityToDelete by remember { mutableStateOf<BabyActivity?>(null) }
+            
+            if (activityToDelete != null) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        activityToDelete?.let { homeViewModel.deleteActivity(it) }
+                        activityToDelete = null
+                    },
+                    onDismiss = { activityToDelete = null }
+                )
+            }
+
+            GenericSduiScreen(
+                screenId = "baby_home",
+                title = "Baby Care",
+                onNavigateBack = { navController.popBackStack() },
+                onDynamicClick = { destination, _ ->
+                    when (destination) {
+                        "babycare://nappy" -> navigateToForm("nappyLog", null)
+                        "babycare://feeding" -> navController.navigateToFeeding()
+                        "babycare://temperature" -> navController.navigateToTemperature()
+                        "babycare://measurement" -> navController.navigateToMeasurement()
+                        "babycare://vaccination" -> navController.navigateToVaccinationHistory()
+                        "babycare://graph" -> navController.navigateToGraph()
+                    }
+                },
+                lazyFeatureContent = { component ->
+                    when (component) {
+                        is NetworkScreenData.TileRowDataNetwork -> {
+                            item(key = "tiles_${component.index}") {
+                                val data = (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data
+                                BabyCareTileRowComponent(
+                                    viewData = data,
+                                    tiles = component.tiles,
+                                    onDynamicClick = { destination, _ ->
+                                        when (destination) {
+                                            "babycare://nappy" -> navigateToForm("nappyLog", null)
+                                            "babycare://feeding" -> navController.navigateToFeeding()
+                                            "babycare://temperature" -> navController.navigateToTemperature()
+                                            "babycare://measurement" -> navController.navigateToMeasurement()
+                                            "babycare://vaccination" -> navController.navigateToVaccinationHistory()
+                                            "babycare://graph" -> navController.navigateToGraph()
+                                        }
+                                    },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = this@composable
+                                )
+                            }
+                            true
+                        }
+                        is NetworkScreenData.ActivityFeedDataNetwork -> {
+                            (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data?.let { data ->
+                                ActivityFeedItems(
+                                    viewData = data,
+                                    onToggleHeaderCollapse = homeViewModel::toggleHeaderCollapse,
+                                    onToggleActivityFilter = homeViewModel::toggleActivityFilter,
+                                    onDeleteActivity = { activityToDelete = it },
+                                    onLoadMore = homeViewModel::loadMore,
+                                    onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
+                                    onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
+                                    onNavigateToEditTemperature = { id -> navigateToForm("temperatureLog", id) },
+                                    onNavigateToEditMeasurement = { id -> navigateToForm("measurementLog", id) },
+                                    onNavigateToEditVaccination = { id -> navigateToForm("vaccinationLog", id) },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = this@composable
+                                )
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }
             )
         }
         composable<NappyChangeRoute>(
             deepLinks = listOf(
                 navDeepLink<NappyChangeRoute>(basePath = "babycare://nappy")
             )
-        ) {
-            NappyChangeScreenRoute(
-                onShowSnackBar = onShowSnackBar,
-                onNavigateBack = { navController.popBackStack() },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
-            )
+        ) { backStackEntry ->
+            val route = backStackEntry.toRoute<NappyChangeRoute>()
+            navigateToForm("nappyLog", route.activityId)
         }
         composable<FeedingRoute>(
             deepLinks = listOf(
@@ -127,10 +207,30 @@ fun NavGraphBuilder.babyCareSection(
                 navDeepLink<BabyGraphRoute>(basePath = "babycare://graph")
             )
         ) {
-            BabyGraphRoute(
+            val graphViewModel: BabyGraphViewModel = hiltViewModel()
+            val graphUiState by graphViewModel.uiState.collectAsStateWithLifecycle()
+
+            GenericSduiScreen(
+                screenId = "analysis_screen",
+                title = "Routine Analysis",
                 onNavigateBack = { navController.popBackStack() },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
+                lazyFeatureContent = { item ->
+                    when (item) {
+                        is NetworkScreenData.FeedingFrequencyChartDataNetwork -> {
+                            item { FeedingFrequencyChartComponent(uiState = graphUiState) }
+                            true
+                        }
+                        is NetworkScreenData.FeedingGapChartDataNetwork -> {
+                            item { FeedingGapChartComponent(uiState = graphUiState) }
+                            true
+                        }
+                        is NetworkScreenData.FeedingInsightCardDataNetwork -> {
+                            item { FeedingInsightComponent(uiState = graphUiState) }
+                            true
+                        }
+                        else -> false
+                    }
+                }
             )
         }
         composable<TemperatureRoute>(
@@ -138,12 +238,35 @@ fun NavGraphBuilder.babyCareSection(
                 navDeepLink<TemperatureRoute>(basePath = "babycare://temperature")
             )
         ) {
-            TemperatureScreenRoute(
-                onShowSnackBar = onShowSnackBar,
+            val tempViewModel: TemperatureDataViewModel = hiltViewModel()
+            val tempUiState by tempViewModel.uiState.collectAsStateWithLifecycle()
+
+            GenericSduiScreen(
+                screenId = "temperature_screen",
+                title = "Temperature",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("temperatureLog", null) },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
+                lazyFeatureContent = { item ->
+                    when (item) {
+                        is NetworkScreenData.TemperatureHistoryDataNetwork -> {
+                            item {
+                                TemperatureHistoryComponent(
+                                    uiData = tempUiState,
+                                    onEdit = { id -> navigateToForm("temperatureLog", id) },
+                                    onDelete = { id, date -> tempViewModel.deleteTemperature(id, date) }
+                                )
+                            }
+                            true
+                        }
+                        is NetworkScreenData.TemperatureChartDataNetwork -> {
+                            item {
+                                TemperatureChartComponent(uiData = tempUiState)
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }
             )
         }
         composable<MeasurementRoute>(
@@ -151,13 +274,39 @@ fun NavGraphBuilder.babyCareSection(
                 navDeepLink<MeasurementRoute>(basePath = "babycare://measurement")
             )
         ) {
-            MeasurementScreenRoute(
-                onShowSnackBar = onShowSnackBar,
+            val measureViewModel: MeasurementViewModel = hiltViewModel()
+            val measureUiState by measureViewModel.uiState.collectAsStateWithLifecycle()
+
+            GenericSduiScreen(
+                screenId = "measurement_screen",
+                title = "Growth tracking",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("measurementLog", null) },
-                onEditItem = { id -> navigateToForm("measurementLog", id) },
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = this@composable
+                lazyFeatureContent = { item ->
+                    when (item) {
+                        is NetworkScreenData.GrowthChartDataNetwork -> {
+                            item {
+                                GrowthChartComponent(
+                                    title = item.title,
+                                    dataType = item.dataType,
+                                    measurements = measureUiState.allMeasurements
+                                )
+                            }
+                            true
+                        }
+                        is NetworkScreenData.MeasurementHistoryDataNetwork -> {
+                            item {
+                                MeasurementHistoryComponent(
+                                    measurements = measureUiState.allMeasurements,
+                                    onEdit = { id -> navigateToForm("measurementLog", id) },
+                                    onDelete = { id, date -> measureViewModel.deleteMeasurement(id, date) }
+                                )
+                            }
+                            true
+                        }
+                        else -> false
+                    }
+                }
             )
         }
         composable<VaccinationHistoryRoute>(
@@ -165,19 +314,27 @@ fun NavGraphBuilder.babyCareSection(
                 navDeepLink<VaccinationHistoryRoute>(basePath = "babycare://vaccination")
             )
         ) {
+            val vaccViewModel: VaccinationDataViewModel = hiltViewModel()
+            val groupedVaccinations by vaccViewModel.groupedVaccinations.collectAsStateWithLifecycle()
+
             GenericSduiScreen(
                 screenId = "vaccination_history",
                 title = "Vaccinations",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("vaccinationLog", null) },
-                featureContent = { item ->
+                lazyFeatureContent = { item ->
                     when (item) {
                         is NetworkScreenData.VaccinationHistoryDataNetwork -> {
-                            VaccinationHistoryComponent(
-                                onEdit = { id -> navigateToForm("vaccinationLog", id) }
-                            )
+                            item {
+                                VaccinationHistoryComponent(
+                                    groupedVaccinations = groupedVaccinations,
+                                    onEdit = { id -> navigateToForm("vaccinationLog", id) },
+                                    onDelete = vaccViewModel::deleteVaccination
+                                )
+                            }
+                            true
                         }
-                        else -> {}
+                        else -> false
                     }
                 }
             )

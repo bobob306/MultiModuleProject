@@ -100,6 +100,26 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "type" to "VACCINATION_HISTORY",
                     "index" to dto.index
                 )
+                is ScreenDto.TemperatureHistoryDto -> mapOf(
+                    "type" to "TEMPERATURE_HISTORY",
+                    "index" to dto.index
+                )
+                is ScreenDto.TemperatureChartDto -> mapOf(
+                    "type" to "TEMPERATURE_CHART",
+                    "index" to dto.index
+                )
+                is ScreenDto.FeedingFrequencyChartDto -> mapOf(
+                    "type" to "FEEDING_FREQUENCY_CHART",
+                    "index" to dto.index
+                )
+                is ScreenDto.FeedingGapChartDto -> mapOf(
+                    "type" to "FEEDING_GAP_CHART",
+                    "index" to dto.index
+                )
+                is ScreenDto.FeedingInsightCardDto -> mapOf(
+                    "type" to "FEEDING_INSIGHT_CARD",
+                    "index" to dto.index
+                )
                 else -> emptyMap<String, Any?>()
             }
         }
@@ -223,6 +243,36 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
 
                     "VACCINATION_HISTORY" -> {
                         ScreenDto.VaccinationHistoryDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "TEMPERATURE_HISTORY" -> {
+                        ScreenDto.TemperatureHistoryDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "TEMPERATURE_CHART" -> {
+                        ScreenDto.TemperatureChartDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "FEEDING_FREQUENCY_CHART" -> {
+                        ScreenDto.FeedingFrequencyChartDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "FEEDING_GAP_CHART" -> {
+                        ScreenDto.FeedingGapChartDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "FEEDING_INSIGHT_CARD" -> {
+                        ScreenDto.FeedingInsightCardDto(
                             index = item["index"].toString().toInt()
                         )
                     }

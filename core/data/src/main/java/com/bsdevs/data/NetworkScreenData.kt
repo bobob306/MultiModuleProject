@@ -128,6 +128,26 @@ sealed class NetworkScreenData(
         override val index: Int,
     ) : NetworkScreenData(index)
 
+    data class TemperatureHistoryDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
+    data class TemperatureChartDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
+    data class FeedingFrequencyChartDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
+    data class FeedingGapChartDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
+    data class FeedingInsightCardDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
     data class TileDataNetwork(
         val index: Int,
         val title: String,
