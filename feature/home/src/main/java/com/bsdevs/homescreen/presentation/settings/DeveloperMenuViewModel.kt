@@ -42,6 +42,10 @@ class DeveloperMenuViewModel @Inject constructor(
                 formRepository.updateForm("measurementLog", FormSeeds.measurementLog)
                 formRepository.updateForm("vaccinationLog", FormSeeds.vaccinationLog)
 
+                // Cleanup Sleep experiment data
+                formRepository.deleteForm("sleepLog")
+                screenRepository.deleteScreen("sleep_screen")
+
                 // Sync Screens
                 seedBabyHomeScreen()
                 seedMeasurementScreen()
