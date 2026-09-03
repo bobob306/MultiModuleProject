@@ -10,6 +10,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -210,31 +211,13 @@ fun GrowthChartSection(
             val minDate = validData.first().second
             val maxDate = validData.last().second
             val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
-            var scaleFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
-
-            val transformModifier = Modifier.pointerInput(Unit) {
-                detectTransformGestures { _, _, zoom, _ ->
-                    scaleFactor = (scaleFactor * zoom).coerceIn(1f, 10f)
-                }
-            }
 
             val bottomAxisSpace = 32.dp
             val topPadding = 24.dp
             val leftAxisLabelSpace = 50.dp
-
-            val values = validData.map { valueSelector(it.first)!! }
-            val rawMin = values.minOrNull() ?: 0.0
-            val rawMax = values.maxOrNull() ?: 1.0
-
-            val yMin = (rawMin * 0.95).coerceAtLeast(0.0)
-            val yMax = (rawMax * 1.05)
-            val yRange = (yMax - yMin).coerceAtLeast(0.1)
-
             val baseWidthPerDay = 48.dp
-            val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
-            val chartTotalWidth = maxOf(300.dp, contentWidth + 64.dp)
 
-            Row(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(240.dp)
@@ -245,8 +228,39 @@ fun GrowthChartSection(
                         color = MaterialTheme.colorScheme.outlineVariant,
                         shape = MaterialTheme.shapes.medium
                     )
-                    .then(transformModifier)
             ) {
+                val availableWidth = maxWidth - leftAxisLabelSpace - 32.dp
+                val scaleToFit = (availableWidth / (baseWidthPerDay * totalDaysSpan.toFloat())).coerceAtMost(1.0f)
+                val minScale = minOf(scaleToFit, 0.05f)
+
+                var scaleFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
+
+                LaunchedEffect(scaleToFit) {
+                    if (scaleFactor < minScale) scaleFactor = minScale
+                }
+
+                val transformModifier = Modifier.pointerInput(Unit) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        scaleFactor = (scaleFactor * zoom).coerceIn(minScale, 15f)
+                    }
+                }
+
+                val values = validData.map { valueSelector(it.first)!! }
+                val rawMin = values.minOrNull() ?: 0.0
+                val rawMax = values.maxOrNull() ?: 1.0
+
+                val yMin = (rawMin * 0.95).coerceAtLeast(0.0)
+                val yMax = (rawMax * 1.05)
+                val yRange = (yMax - yMin).coerceAtLeast(0.1)
+
+                val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
+                val chartTotalWidth = maxOf(maxWidth - leftAxisLabelSpace, contentWidth + 32.dp)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(transformModifier)
+                ) {
                 // Y-Axis
                 Canvas(
                     modifier = Modifier
@@ -368,6 +382,7 @@ fun GrowthChartSection(
         }
     }
 }
+}
 
 @Composable
 private fun LegendItem(label: String, color: Color) {
@@ -447,7 +462,7 @@ fun MeasurementHistoryItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClick = {},
+                    onClick = onEdit,
                     onLongClick = onEdit
                 ),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)

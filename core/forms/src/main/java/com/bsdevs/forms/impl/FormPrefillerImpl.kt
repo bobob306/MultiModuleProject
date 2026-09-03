@@ -50,7 +50,7 @@ class FormPrefillerImpl @Inject constructor(
     }
 
     private suspend fun loadTemperatureValues(userId: String, entityId: String): Map<String, Any>? {
-        val event = babyCareRepository.getNappyEventById(userId, entityId)
+        val event = babyCareRepository.getTemperatureEventById(userId, entityId)
             ?.takeIf { it.type == "TEMPERATURE" } ?: return null
         return buildMap {
             put("date", event.dateTimeString.substringBefore(" "))

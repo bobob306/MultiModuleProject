@@ -337,7 +337,7 @@ fun ActivityFeedItem(
     ) {
         with(sharedTransitionScope) {
             Card(
-                modifier = Modifier.fillMaxWidth().sharedElement(rememberSharedContentState(key = "activity_card_${item.id}"), animatedVisibilityScope).combinedClickable(onClick = {}, onLongClick = onEdit),
+                modifier = Modifier.fillMaxWidth().sharedElement(rememberSharedContentState(key = "activity_card_${item.id}"), animatedVisibilityScope).combinedClickable(onClick = onEdit, onLongClick = onEdit),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
