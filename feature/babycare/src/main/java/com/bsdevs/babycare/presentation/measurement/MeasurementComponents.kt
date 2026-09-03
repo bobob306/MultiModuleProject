@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -85,8 +88,8 @@ fun GrowthChartComponent(
             title = title,
             data = measurements,
             valueSelector = valueSelector,
-            dotColorMedical = MaterialTheme.colorScheme.primary,
-            dotColorSelf = MaterialTheme.colorScheme.secondary
+            dotColorMedical = Color(0xFFEF5350), // Distinct Red 400
+            dotColorSelf = Color(0xFF42A5F5)    // Distinct Blue 400
         )
     }
 }
@@ -94,10 +97,14 @@ fun GrowthChartComponent(
 @Composable
 fun MeasurementHistoryComponent(
     measurements: List<MeasurementDto>,
+    showMedicalOnly: Boolean,
+    onMedicalOnlyChange: (Boolean) -> Unit,
     onEdit: (String) -> Unit,
     onDelete: (String, String) -> Unit
 ) {
     var itemToDelete by remember { mutableStateOf<MeasurementDto?>(null) }
+    
+    // ...
 
     if (itemToDelete != null) {
         DeleteConfirmationDialog(
@@ -116,11 +123,37 @@ fun MeasurementHistoryComponent(
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-        Text(
-            text = "Measurement History",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 8.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Measurement History",
+                style = MaterialTheme.typography.titleMedium,
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.clickable { onMedicalOnlyChange(!showMedicalOnly) }
+            ) {
+                Text(
+                    text = "Medical Only",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (showMedicalOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Switch(
+                    checked = showMedicalOnly,
+                    onCheckedChange = onMedicalOnlyChange,
+                    modifier = Modifier.scale(0.7f)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         if (measurements.isEmpty()) {
             Text("No measurements found.", modifier = Modifier.padding(horizontal = 8.dp))
@@ -473,18 +506,21 @@ fun MeasurementHistoryItem(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val iconBgColor = if (measurement.isMedical) Color(0xFFFFEBEE) else Color(0xFFE3F2FD)
+                val iconTintColor = if (measurement.isMedical) Color(0xFFEF5350) else Color(0xFF42A5F5)
+
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color(0xFFF3E5F5), CircleShape)
+                        .background(iconBgColor, CircleShape)
                         .clip(CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.AutoGraph,
+                        imageVector = if (measurement.isMedical) Icons.Default.MedicalServices else Icons.Default.AutoGraph,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = Color(0xFF7B1FA2)
+                        tint = iconTintColor
                     )
                 }
 

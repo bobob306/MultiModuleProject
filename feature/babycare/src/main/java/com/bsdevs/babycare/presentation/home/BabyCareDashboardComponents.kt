@@ -280,7 +280,13 @@ fun ActivityFeedItem(
         is BabyActivity.Nappy -> Triple(Icons.Default.ChildCare, Color(0xFFE8F5E9), Color(0xFF2E7D32))
         is BabyActivity.Feeding -> Triple(Icons.Default.Restaurant, Color(0xFFE3F2FD), Color(0xFF1565C0))
         is BabyActivity.Temperature -> Triple(Icons.Default.Thermostat, Color(0xFFFFF3E0), Color(0xFFE65100))
-        is BabyActivity.Measurement -> Triple(Icons.Default.AutoGraph, Color(0xFFF3E5F5), Color(0xFF7B1FA2))
+        is BabyActivity.Measurement -> {
+            if (item.dto.isMedical) {
+                Triple(Icons.Default.MedicalServices, Color(0xFFFFEBEE), Color(0xFFEF5350))
+            } else {
+                Triple(Icons.Default.AutoGraph, Color(0xFFE3F2FD), Color(0xFF42A5F5))
+            }
+        }
         is BabyActivity.Vaccination -> Triple(Icons.Default.MedicalServices, Color(0xFFFCE4EC), Color(0xFFC2185B))
     }
 
