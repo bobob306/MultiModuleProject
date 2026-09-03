@@ -276,7 +276,18 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getNappyEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
-    override suspend fun getMeasurementEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
+
+    override suspend fun getTemperatureEventById(userId: String, activityId: String) = getFeedingEventById(userId, activityId)
+
+    override suspend fun getMeasurementEventById(userId: String, activityId: String): UnifiedEventDto? = withContext(dispatchers.io) {
+        val cached = _measurements.value.firstOrNull { it.id == activityId }
+        if (cached != null) return@withContext cached
+
+        // 📡 Network Fallback: Scan the specialized measurements collection
+        apiService.fetchAllMeasurements(userId).map { parseUnifiedEvent(it) }
+            .firstOrNull { it.id == activityId } ?: getFeedingEventById(userId, activityId)
+    }
+
     override suspend fun getVaccinationEventById(userId: String, activityId: String): UnifiedEventDto? = withContext(dispatchers.io) {
         val cached = _vaccinations.value.firstOrNull { it.id == activityId }
         if (cached != null) return@withContext cached

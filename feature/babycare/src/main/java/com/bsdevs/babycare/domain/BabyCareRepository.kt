@@ -22,6 +22,7 @@ interface BabyCareRepository {
     suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto)
     suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun getNappyEventById(userId: String, activityId: String): UnifiedEventDto?
+    suspend fun getTemperatureEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun getMeasurementEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun getVaccinationEventById(userId: String, activityId: String): UnifiedEventDto?
     suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto)

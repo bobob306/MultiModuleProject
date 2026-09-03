@@ -29,7 +29,7 @@ class FormDeleterImpl @Inject constructor(
     }
 
     private suspend fun deleteTemperature(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getFeedingEventById(userId, entityId)
+        val event = babyCareRepository.getTemperatureEventById(userId, entityId)
             ?: return Result.Error(Exception("Temperature record not found"))
         val date = event.dateTimeString.substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
