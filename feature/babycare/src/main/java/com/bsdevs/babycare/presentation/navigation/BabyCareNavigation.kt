@@ -298,6 +298,8 @@ fun NavGraphBuilder.babyCareSection(
                             item {
                                 MeasurementHistoryComponent(
                                     measurements = measureUiState.allMeasurements,
+                                    showMedicalOnly = measureUiState.showMedicalOnly,
+                                    onMedicalOnlyChange = measureViewModel::toggleMedicalOnly,
                                     onEdit = { id -> navigateToForm("measurementLog", id) },
                                     onDelete = { id, date -> measureViewModel.deleteMeasurement(id, date) }
                                 )

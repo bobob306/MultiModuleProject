@@ -49,7 +49,14 @@ class MeasurementViewModel @Inject constructor(
                 comment = event.comment
             )
         }
-        local.copy(allMeasurements = mapped)
+
+        val filtered = if (local.showMedicalOnly) {
+            mapped.filter { it.isMedical }
+        } else {
+            mapped
+        }
+
+        local.copy(allMeasurements = filtered)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
