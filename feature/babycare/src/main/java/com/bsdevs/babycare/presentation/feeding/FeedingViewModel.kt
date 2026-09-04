@@ -50,7 +50,8 @@ class FeedingViewModel @Inject constructor(
             isLeftRunning = timer.isLeftRunning,
             isRightRunning = timer.isRightRunning,
             startTime = timer.startTime ?: local.startTime,
-            date = timer.date ?: local.date
+            date = timer.date ?: local.date,
+            hasVitaminD = timer.hasVitaminD
         )
     }.stateIn(
         scope = viewModelScope,
@@ -113,7 +114,8 @@ class FeedingViewModel @Inject constructor(
                             leftDuration = feedingEvent.leftDuration,
                             rightDuration = feedingEvent.rightDuration,
                             isLoading = false,
-                            comment = feedingEvent.comment ?: ""
+                            comment = feedingEvent.comment ?: "",
+                            hasVitaminD = feedingEvent.hasVitaminD ?: false
                         )
                     }
                     timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration, feedingEvent.id)
@@ -122,6 +124,7 @@ class FeedingViewModel @Inject constructor(
                     // 🌟 SYNC METADATA: When editing an existing feed, update the manager so notifications 
                     // and process restarts keep the correct historical start time.
                     timerManager.setSessionMetadata(feedingEvent.time, extractedDate)
+                    timerManager.setVitaminD(feedingEvent.hasVitaminD ?: false)
                 } else {
                     _localState.update { it.copy(isLoading = false) }
                 }
@@ -133,6 +136,11 @@ class FeedingViewModel @Inject constructor(
 
     fun onCommentChanged(newComment: String) {
         _localState.update { it.copy(comment = newComment) }
+    }
+
+    fun onVitaminDChanged(hasVitaminD: Boolean) {
+        _localState.update { it.copy(hasVitaminD = hasVitaminD) }
+        timerManager.setVitaminD(hasVitaminD)
     }
 
     fun toggleTimer(side: FeedingSide) {
@@ -230,7 +238,8 @@ class FeedingViewModel @Inject constructor(
             leftDuration = currentState.leftDuration,
             rightDuration = currentState.rightDuration,
             totalDuration = currentState.leftDuration + currentState.rightDuration,
-            bottleAmountMl = currentState.bottleAmountMl
+            bottleAmountMl = currentState.bottleAmountMl,
+            hasVitaminD = currentState.hasVitaminD
         )
 
         viewModelScope.launch {

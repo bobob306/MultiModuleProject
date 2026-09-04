@@ -29,17 +29,24 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -144,6 +151,7 @@ fun FeedingScreenRoute(
             onLeftDurationChanged = viewModel::onLeftDurationChanged,
             onRightDurationChanged = viewModel::onRightDurationChanged,
             onUpdateBottleAmount = viewModel::updateBottleAmount,
+            onVitaminDChanged = viewModel::onVitaminDChanged,
             onCommentChanged = viewModel::onCommentChanged,
             onSave = viewModel::submitFeeding,
             onDelete = viewModel::deleteFeeding,
@@ -180,6 +188,7 @@ internal fun FeedingScreen(
     onLeftDurationChanged: (Long) -> Unit,
     onRightDurationChanged: (Long) -> Unit,
     onUpdateBottleAmount: (Int?) -> Unit,
+    onVitaminDChanged: (Boolean) -> Unit,
     onCommentChanged: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
@@ -272,6 +281,13 @@ internal fun FeedingScreen(
                             onLongClick = {}
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    VitaminDToggle(
+                        hasVitaminD = uiState.hasVitaminD,
+                        onVitaminDChanged = onVitaminDChanged
+                    )
                 }
 
                 // Right Column: Summary Panel & Active Action Button Layout
@@ -399,6 +415,13 @@ internal fun FeedingScreen(
                         onLongClick = {}
                     )
                 }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                VitaminDToggle(
+                    hasVitaminD = uiState.hasVitaminD,
+                    onVitaminDChanged = onVitaminDChanged
+                )
 
                 LogCommentInput(
                     uiState.comment,
@@ -634,6 +657,29 @@ internal fun FeedingScreen(
         }
     }
 }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VitaminDToggle(
+    hasVitaminD: Boolean,
+    onVitaminDChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FilterChip(
+        selected = hasVitaminD,
+        onClick = { onVitaminDChanged(!hasVitaminD) },
+        label = { Text("Vitamin D Drops") },
+        leadingIcon = {
+            Icon(
+                imageVector = if (hasVitaminD) Icons.Default.WaterDrop else Icons.Outlined.WaterDrop,
+                contentDescription = null,
+                modifier = Modifier.size(FilterChipDefaults.IconSize),
+                tint = if (hasVitaminD) Color(0xFFFBC02D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        },
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

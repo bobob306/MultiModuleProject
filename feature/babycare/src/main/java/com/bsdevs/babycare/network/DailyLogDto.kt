@@ -39,5 +39,8 @@ data class UnifiedEventDto(
     // Vaccination-specific fields (nullable)
     val vaccinationNames: List<String>? = null,
     val location: String? = null,
-    val seriesId: String? = null
+    val seriesId: String? = null,
+
+    // Vitamin D
+    val hasVitaminD: Boolean? = null
 )

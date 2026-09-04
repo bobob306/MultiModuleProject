@@ -26,7 +26,8 @@ data class FeedingTimerState(
     val isLeftRunning: Boolean = false,
     val isRightRunning: Boolean = false,
     val startTime: String? = null,
-    val date: String? = null
+    val date: String? = null,
+    val hasVitaminD: Boolean = false
 )
 
 @Singleton
@@ -56,6 +57,10 @@ class FeedingTimerManager @Inject constructor(
 
     fun setSessionMetadata(startTime: String, date: String) {
         _timerState.update { it.copy(startTime = startTime, date = date) }
+    }
+
+    fun setVitaminD(hasVitaminD: Boolean) {
+        _timerState.update { it.copy(hasVitaminD = hasVitaminD) }
     }
 
     fun startTimer(side: FeedingSide, activityId: String? = null) {

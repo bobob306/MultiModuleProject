@@ -17,4 +17,5 @@ data class FeedingDto(
     val mainFeedingSide: String? = null, // "Left", "Right", "Both", "Bottle"
     val bottleAmountMl: Int? = null,
     val comment: String? = null,
+    val hasVitaminD: Boolean = false,
 )

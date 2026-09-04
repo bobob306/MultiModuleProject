@@ -167,6 +167,7 @@ fun NavGraphBuilder.babyCareSection(
                                     onToggleHeaderCollapse = homeViewModel::toggleHeaderCollapse,
                                     onToggleActivityFilter = homeViewModel::toggleActivityFilter,
                                     onDeleteActivity = { activityToDelete = it },
+                                    onToggleVitaminD = homeViewModel::toggleVitaminD,
                                     onLoadMore = homeViewModel::loadMore,
                                     onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
                                     onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
