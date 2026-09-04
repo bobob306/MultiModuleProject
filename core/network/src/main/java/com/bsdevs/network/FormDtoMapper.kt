@@ -27,6 +27,8 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
                     defaultValue = field["defaultValue"],
                     options = (field["options"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                     multiSelect = field["multiSelect"] as? Boolean ?: false,
+                    editable = field["editable"] as? Boolean ?: false,
+                    dynamicOptions = (field["dynamicOptions"] as? Map<*, *>)?.map { it.key.toString() to it.value.toString() }?.toMap(),
                     startNumber = (field["startNumber"] as? Number)?.toInt() ?: 0,
                     endNumber = (field["endNumber"] as? Number)?.toInt() ?: 100,
                     decimalPlaces = (field["decimalPlaces"] as? Number)?.toInt() ?: 0,

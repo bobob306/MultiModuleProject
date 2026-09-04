@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -96,40 +98,26 @@ class VaccinationDataViewModel @Inject constructor(
     }
 }
 
-@Composable
-fun VaccinationHistoryComponent(
+fun LazyListScope.VaccinationHistoryItems(
     groupedVaccinations: List<VaccinationGroup>,
     onEdit: (String) -> Unit,
-    onDelete: (String, String) -> Unit
+    onDelete: (VaccinationDto) -> Unit
 ) {
-    var itemToDelete by remember { mutableStateOf<VaccinationDto?>(null) }
-
-    if (itemToDelete != null) {
-        DeleteConfirmationDialog(
-            onConfirm = {
-                itemToDelete?.let { item ->
-                    val id = item.id
-                    val date = item.date
-                    if (id != null && date != null) {
-                        onDelete(id, date)
-                    }
-                }
-                itemToDelete = null
-            },
-            onDismiss = { itemToDelete = null }
-        )
-    }
-
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    if (groupedVaccinations.isEmpty()) {
+        item(key = "vacc_empty") {
+            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                Text("No vaccinations recorded.")
+            }
+        }
+    } else {
         groupedVaccinations.forEach { group ->
-            VaccinationGroupItem(
-                group = group,
-                onEdit = onEdit,
-                onDelete = { vaccination -> itemToDelete = vaccination }
-            )
+            item(key = "vacc_group_${group.seriesId ?: group.hashCode()}") {
+                VaccinationGroupItem(
+                    group = group,
+                    onEdit = onEdit,
+                    onDelete = onDelete
+                )
+            }
         }
     }
 }

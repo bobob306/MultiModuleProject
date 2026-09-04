@@ -23,15 +23,17 @@ import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
 import com.bsdevs.common.result.Result
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.graph.BabyGraphViewModel
-import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryComponent
+import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryItems
 import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryComponent
 import com.bsdevs.babycare.presentation.temperature.TemperatureChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingFrequencyChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingGapChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingInsightComponent
+import com.bsdevs.babycare.network.MeasurementDto
+import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewData
 import com.bsdevs.babycare.presentation.measurement.GrowthChartComponent
-import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryComponent
+import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryItems
 import com.bsdevs.babycare.presentation.measurement.MeasurementViewModel
 import com.bsdevs.babycare.presentation.temperature.TemperatureDataViewModel
 import com.bsdevs.babycare.presentation.vaccination.VaccinationDataViewModel
@@ -277,33 +279,49 @@ fun NavGraphBuilder.babyCareSection(
             val measureViewModel: MeasurementViewModel = hiltViewModel()
             val measureUiState by measureViewModel.uiState.collectAsStateWithLifecycle()
 
+            var itemToDelete by remember { mutableStateOf<MeasurementDto?>(null) }
+
+            if (itemToDelete != null) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        itemToDelete?.let { item ->
+                            val id = item.id
+                            val date = item.date
+                            if (id != null && date != null) {
+                                measureViewModel.deleteMeasurement(id, date)
+                            }
+                        }
+                        itemToDelete = null
+                    },
+                    onDismiss = { itemToDelete = null }
+                )
+            }
+
             GenericSduiScreen(
                 screenId = "measurement_screen",
                 title = "Growth tracking",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("measurementLog", null) },
-                lazyFeatureContent = { item ->
-                    when (item) {
+                lazyFeatureContent = { component ->
+                    when (component) {
                         is NetworkScreenData.GrowthChartDataNetwork -> {
-                            item {
+                            item(key = "growth_chart_${component.index}") {
                                 GrowthChartComponent(
-                                    title = item.title,
-                                    dataType = item.dataType,
+                                    title = component.title,
+                                    dataType = component.dataType,
                                     measurements = measureUiState.allMeasurements
                                 )
                             }
                             true
                         }
                         is NetworkScreenData.MeasurementHistoryDataNetwork -> {
-                            item {
-                                MeasurementHistoryComponent(
-                                    measurements = measureUiState.allMeasurements,
-                                    showMedicalOnly = measureUiState.showMedicalOnly,
-                                    onMedicalOnlyChange = measureViewModel::toggleMedicalOnly,
-                                    onEdit = { id -> navigateToForm("measurementLog", id) },
-                                    onDelete = { id, date -> measureViewModel.deleteMeasurement(id, date) }
-                                )
-                            }
+                            MeasurementHistoryItems(
+                                measurements = measureUiState.allMeasurements,
+                                showMedicalOnly = measureUiState.showMedicalOnly,
+                                onMedicalOnlyChange = measureViewModel::toggleMedicalOnly,
+                                onEdit = { id -> navigateToForm("measurementLog", id) },
+                                onDelete = { itemToDelete = it }
+                            )
                             true
                         }
                         else -> false
@@ -319,21 +337,37 @@ fun NavGraphBuilder.babyCareSection(
             val vaccViewModel: VaccinationDataViewModel = hiltViewModel()
             val groupedVaccinations by vaccViewModel.groupedVaccinations.collectAsStateWithLifecycle()
 
+            var itemToDelete by remember { mutableStateOf<VaccinationDto?>(null) }
+
+            if (itemToDelete != null) {
+                DeleteConfirmationDialog(
+                    onConfirm = {
+                        itemToDelete?.let { item ->
+                            val id = item.id
+                            val date = item.date
+                            if (id != null && date != null) {
+                                vaccViewModel.deleteVaccination(id, date)
+                            }
+                        }
+                        itemToDelete = null
+                    },
+                    onDismiss = { itemToDelete = null }
+                )
+            }
+
             GenericSduiScreen(
                 screenId = "vaccination_history",
                 title = "Vaccinations",
                 onNavigateBack = { navController.popBackStack() },
                 onAddNew = { navigateToForm("vaccinationLog", null) },
-                lazyFeatureContent = { item ->
-                    when (item) {
+                lazyFeatureContent = { component ->
+                    when (component) {
                         is NetworkScreenData.VaccinationHistoryDataNetwork -> {
-                            item {
-                                VaccinationHistoryComponent(
-                                    groupedVaccinations = groupedVaccinations,
-                                    onEdit = { id -> navigateToForm("vaccinationLog", id) },
-                                    onDelete = vaccViewModel::deleteVaccination
-                                )
-                            }
+                            VaccinationHistoryItems(
+                                groupedVaccinations = groupedVaccinations,
+                                onEdit = { id -> navigateToForm("vaccinationLog", id) },
+                                onDelete = { itemToDelete = it }
+                            )
                             true
                         }
                         else -> false
