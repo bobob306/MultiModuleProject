@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -94,39 +96,19 @@ fun GrowthChartComponent(
     }
 }
 
-@Composable
-fun MeasurementHistoryComponent(
+fun LazyListScope.MeasurementHistoryItems(
     measurements: List<MeasurementDto>,
     showMedicalOnly: Boolean,
     onMedicalOnlyChange: (Boolean) -> Unit,
     onEdit: (String) -> Unit,
-    onDelete: (String, String) -> Unit
+    onDelete: (MeasurementDto) -> Unit
 ) {
-    var itemToDelete by remember { mutableStateOf<MeasurementDto?>(null) }
-    
-    // ...
-
-    if (itemToDelete != null) {
-        DeleteConfirmationDialog(
-            onConfirm = {
-                itemToDelete?.let { item ->
-                    val id = item.id
-                    val date = item.date
-                    if (id != null && date != null) {
-                        onDelete(id, date)
-                    }
-                }
-                itemToDelete = null
-            },
-            onDismiss = { itemToDelete = null }
-        )
-    }
-
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
+    item(key = "measurement_history_header") {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 8.dp)
+                .padding(top = 16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -152,24 +134,22 @@ fun MeasurementHistoryComponent(
                 )
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (measurements.isEmpty()) {
-            Text("No measurements found.", modifier = Modifier.padding(horizontal = 8.dp))
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                measurements.forEach { item ->
-                    MeasurementHistoryItem(
-                        measurement = item,
-                        onEdit = { item.id?.let { onEdit(it) } },
-                        onDelete = { itemToDelete = item }
-                    )
-                }
-            }
+    if (measurements.isEmpty()) {
+        item(key = "measurement_history_empty") {
+            Text("No measurements found.", modifier = Modifier.padding(16.dp))
+        }
+    } else {
+        items(
+            items = measurements,
+            key = { it.id ?: "temp_${it.hashCode()}" }
+        ) { item ->
+            MeasurementHistoryItem(
+                measurement = item,
+                onEdit = { item.id?.let { onEdit(it) } },
+                onDelete = { onDelete(item) }
+            )
         }
     }
 }

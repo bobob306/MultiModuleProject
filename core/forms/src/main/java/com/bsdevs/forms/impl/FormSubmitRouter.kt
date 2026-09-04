@@ -74,14 +74,14 @@ class FormSubmitRouter @Inject constructor(
     private suspend fun submitTemperature(userId: String, entityId: String?, values: Map<String, Any>): Result<Unit> = try {
         val date = values["date"] as? String
             ?: return Result.Error(IllegalArgumentException("temperatureLog requires 'date' field"))
-        val tempInt = (values["temperature_value"] as? Number)?.toInt()
+        val tNum = values["temperature_value"] as? Number
             ?: return Result.Error(IllegalArgumentException("temperatureLog requires 'temperature_value' field"))
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "TEMPERATURE",
             time = values["time"] as? String ?: "",
             dateTimeString = "$date ${values["time"] ?: "00:00"}",
-            temperature = tempInt.toDouble() / 10.0,
+            temperature = tNum.toDouble() / 10.0,
             comment = values["comment"] as? String,
         )
         if (entityId != null) {
@@ -97,21 +97,28 @@ class FormSubmitRouter @Inject constructor(
     private suspend fun submitMeasurement(userId: String, entityId: String?, values: Map<String, Any>): Result<Unit> = try {
         val date = values["date"] as? String
             ?: return Result.Error(IllegalArgumentException("measurementLog requires 'date' field"))
-        val heightInt = (values["height_value"] as? Number)?.toInt()
-        val weightInt = (values["weight_value"] as? Number)?.toInt()
-        val headInt = (values["head_circumference_value"] as? Number)?.toInt()
-        if (heightInt == null && weightInt == null && headInt == null) {
+        
+        val recordHeight = values["record_height"] == true
+        val recordWeight = values["record_weight"] == true
+        val recordHead = values["record_head_circumference"] == true
+        
+        if (!recordHeight && !recordWeight && !recordHead) {
             return Result.Error(IllegalArgumentException("Please record at least height, weight or head circumference"))
         }
+
+        val hNum = values["height_value"] as? Number
+        val wNum = values["weight_value"] as? Number
+        val hcNum = values["head_circumference_value"] as? Number
+
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "MEASUREMENT",
             time = values["time"] as? String ?: "",
             dateTimeString = "$date ${values["time"] ?: "00:00"}",
-            height = heightInt?.toDouble()?.div(10.0),
-            weight = weightInt?.toDouble()?.div(100.0),
-            headCircumference = headInt?.toDouble()?.div(10.0),
-            isMedical = values["is_medical"] as? Boolean ?: false,
+            height = if (recordHeight) (hNum?.toDouble()?.div(10.0) ?: 50.0) else null,
+            weight = if (recordWeight) (wNum?.toDouble()?.div(100.0) ?: 3.5) else null,
+            headCircumference = if (recordHead) (hcNum?.toDouble()?.div(10.0) ?: 40.0) else null,
+            isMedical = values["is_medical"] == true,
             comment = values["comment"] as? String,
         )
         if (entityId != null) {
@@ -127,13 +134,16 @@ class FormSubmitRouter @Inject constructor(
     private suspend fun submitFeeding(userId: String, entityId: String?, values: Map<String, Any>): Result<Unit> = try {
         val date = values["date"] as? String
             ?: return Result.Error(IllegalArgumentException("feedingLog requires 'date' field"))
+        
+        val bottleStr = values["bottle_amount_ml"] as? String
+        
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "FEEDING",
             time = values["start_time"] as? String ?: "",
             dateTimeString = "$date ${values["start_time"] ?: "00:00"}",
             mainFeedingSide = values["feeding_side"] as? String,
-            bottleAmountMl = (values["bottle_amount_ml"] as? String)?.toIntOrNull(),
+            bottleAmountMl = bottleStr?.toIntOrNull(),
             comment = values["comment"] as? String,
         )
         if (entityId != null) {
@@ -150,8 +160,9 @@ class FormSubmitRouter @Inject constructor(
         val date = values["date"] as? String
             ?: return Result.Error(IllegalArgumentException("vaccinationLog requires 'date' field"))
         val names = (values["vaccination_names"] as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-        val seriesId = (values["series_id"] as? String)?.takeIf { it.isNotBlank() }
-            ?: names.firstOrNull()?.replace(Regex("[^a-zA-Z0-9]"), "_")?.lowercase()
+        val sIdRaw = values["series_id"] as? String
+        val seriesId = if (!sIdRaw.isNullOrBlank()) sIdRaw
+            else names.firstOrNull()?.replace(Regex("[^a-zA-Z0-9]"), "_")?.lowercase()
             ?: UUID.randomUUID().toString()
 
         val event = UnifiedEventDto(

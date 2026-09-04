@@ -117,7 +117,9 @@ class FormViewModel @Inject constructor(
                     if (result is Result.Success) {
                         val updatedFields = result.data.fields.map { f ->
                             if (f.fieldKey == field.fieldKey && f is FormFieldData.DropdownFieldData) {
-                                f.copy(options = options)
+                                // 🔄 Merge static options with dynamic ones to preserve predefined seeds
+                                val merged = (f.options + options).distinct().sorted()
+                                f.copy(options = merged)
                             } else f
                         }
                         Result.Success(result.data.copy(fields = updatedFields))

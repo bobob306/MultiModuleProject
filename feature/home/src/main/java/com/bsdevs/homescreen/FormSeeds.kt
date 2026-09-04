@@ -172,6 +172,11 @@ internal object FormSeeds {
             mapOf(
                 "fieldKey" to "series_id", "type" to "DROPDOWN", "label" to "Series (optional)",
                 "required" to false, "index" to 4, "multiSelect" to false, "editable" to true,
+                "options" to listOf(
+                    "6-in-1 (DTaP/IPV/Hib/HepB)", "Rotavirus", "MenB", "Pneumococcal (PCV)",
+                    "Hib/MenC", "MMR", "4-in-1 (DTaP/IPV)", "Flu vaccine", "HPV",
+                    "MenACWY", "3-in-1 (Td/IPV)", "BCG", "Hepatitis B", "Other"
+                ),
                 "dynamicOptions" to mapOf("type" to "VACCINATION_SERIES")
             ),
             mapOf("fieldKey" to "comment", "type" to "TEXT_INPUT", "label" to "Comment", "required" to false, "index" to 5),
