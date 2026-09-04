@@ -262,6 +262,9 @@ class BabyCareHomeViewModel @Inject constructor(
             val vaccinationCount = visibleEvents.count { it.type == "VACCINATION" }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
+            val isVitaminDTakenForDay =
+                dayLog.events.any { it.type == "FEEDING" && it.hasVitaminD == true }
+
             finalizedFeed.add(
                 HomeFeedItem.Header(
                     displayHeaderTitle,
@@ -275,7 +278,8 @@ class BabyCareHomeViewModel @Inject constructor(
 
             if (!collapsed.contains(displayHeaderTitle)) {
                 visibleEvents.forEach { unifiedEvent ->
-                    val babyActivityModel = mapToBabyActivity(unifiedEvent, dayLog.date)
+                    val babyActivityModel =
+                        mapToBabyActivity(unifiedEvent, dayLog.date, isVitaminDTakenForDay)
                     finalizedFeed.add(HomeFeedItem.ActivityRow(babyActivityModel))
                 }
             }
@@ -295,7 +299,11 @@ class BabyCareHomeViewModel @Inject constructor(
     }
 
 
-    private fun mapToBabyActivity(event: UnifiedEventDto, parentDate: String): BabyActivity {
+    private fun mapToBabyActivity(
+        event: UnifiedEventDto,
+        parentDate: String,
+        isVitaminDTakenForDay: Boolean
+    ): BabyActivity {
         // 🔄 Fix 1: Extract the "HH:mm" time segment dynamically from the dateTimeString if the time field is blank
         val extractedTime = if (event.time.isNotEmpty()) {
             event.time
@@ -364,8 +372,11 @@ class BabyCareHomeViewModel @Inject constructor(
                 )
             )
         } else {
+            val hasVitaminD = event.hasVitaminD ?: false
+            val showToggle = !isVitaminDTakenForDay || hasVitaminD
+
             BabyActivity.Feeding(
-                FeedingDto(
+                dto = FeedingDto(
                     id = event.id,
                     date = parentDate,
                     startTime = extractedTime,
@@ -375,8 +386,10 @@ class BabyCareHomeViewModel @Inject constructor(
                     rightDuration = event.rightDuration,
                     totalDuration = event.totalDuration,
                     bottleAmountMl = event.bottleAmountMl,
-                    comment = event.comment
-                )
+                    comment = event.comment,
+                    hasVitaminD = hasVitaminD
+                ),
+                showVitaminDToggle = showToggle
             )
         }
     }
@@ -453,4 +466,23 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
+    fun toggleVitaminD(activity: BabyActivity.Feeding) {
+        viewModelScope.launch {
+            try {
+                val userId = accountService.currentUserId
+                val date = activity.date ?: return@launch
+                val eventId = activity.id ?: return@launch
+
+                val currentEvent = repository.getFeedingEventById(userId, eventId) ?: return@launch
+
+                val updatedEvent = currentEvent.copy(
+                    hasVitaminD = !(currentEvent.hasVitaminD ?: false)
+                )
+
+                repository.updateActivityEvent(userId, date, eventId, updatedEvent)
+            } catch (e: Exception) {
+                Log.e("HOME_VITD_ERROR", "Failed to toggle Vitamin D", e)
+            }
+        }
+    }
 }

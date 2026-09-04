@@ -37,12 +37,15 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -126,6 +129,7 @@ fun LazyListScope.ActivityFeedItems(
     onToggleHeaderCollapse: (String) -> Unit,
     onToggleActivityFilter: (ActivityFilter) -> Unit,
     onDeleteActivity: (BabyActivity) -> Unit,
+    onToggleVitaminD: (BabyActivity.Feeding) -> Unit,
     onLoadMore: () -> Unit,
     onNavigateToEditNappyChange: (String) -> Unit,
     onNavigateToEditFeeding: (String) -> Unit,
@@ -234,6 +238,7 @@ fun LazyListScope.ActivityFeedItems(
                                     onToggleActivityFilter(targetFilter)
                                 },
                                 onDelete = { onDeleteActivity(currentActivity) },
+                                onToggleVitaminD = onToggleVitaminD,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope
                             )
@@ -273,6 +278,7 @@ fun ActivityFeedItem(
     onEdit: () -> Unit,
     onIconClick: () -> Unit,
     onDelete: () -> Unit,
+    onToggleVitaminD: (BabyActivity.Feeding) -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
@@ -355,6 +361,22 @@ fun ActivityFeedItem(
                         Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                         item.comment?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
+
+                    if (item is BabyActivity.Feeding && item.showVitaminDToggle) {
+                        IconButton(
+                            onClick = { onToggleVitaminD(item) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (item.hasVitaminD) Icons.Default.WaterDrop else Icons.Outlined.WaterDrop,
+                                contentDescription = "Vitamin D Drops",
+                                tint = if (item.hasVitaminD) Color(0xFFFBC02D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+
                     Text(text = item.time ?: "", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 }
             }

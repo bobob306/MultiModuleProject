@@ -22,5 +22,6 @@ data class FeedingUiState(
     val showDurationDialogForSide: String? = null,
     val showDeleteConfirmation: Boolean = false,
     val showCancelConfirmation: Boolean = false,
-    val isPlayingSplodge: Boolean = false
+    val isPlayingSplodge: Boolean = false,
+    val hasVitaminD: Boolean = false
 )

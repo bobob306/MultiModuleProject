@@ -161,7 +161,8 @@ class BabyCareRepositoryImpl @Inject constructor(
             isMedical = eventMap["isMedical"] as? Boolean,
             vaccinationNames = (eventMap["vaccinationNames"] as? List<*>)?.filterIsInstance<String>(),
             location = eventMap["location"] as? String,
-            seriesId = eventMap["seriesId"] as? String
+            seriesId = eventMap["seriesId"] as? String,
+            hasVitaminD = eventMap["hasVitaminD"] as? Boolean
         )
     }
 
@@ -335,7 +336,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         "leftDuration" to e.leftDuration, "rightDuration" to e.rightDuration, "totalDuration" to e.totalDuration,
         "bottleAmountMl" to e.bottleAmountMl, "temperature" to e.temperature,
         "height" to e.height, "weight" to e.weight, "headCircumference" to e.headCircumference, "isMedical" to e.isMedical,
-        "vaccinationNames" to e.vaccinationNames, "location" to e.location, "seriesId" to e.seriesId
+        "vaccinationNames" to e.vaccinationNames, "location" to e.location, "seriesId" to e.seriesId,
+        "hasVitaminD" to e.hasVitaminD
     )
 
     private fun updateLocalCacheWithNewEvent(date: String, userId: String, event: UnifiedEventDto) {

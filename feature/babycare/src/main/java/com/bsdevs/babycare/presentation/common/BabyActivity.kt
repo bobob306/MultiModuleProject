@@ -21,12 +21,16 @@ sealed class BabyActivity {
         override val comment: String? = dto.comment
     }
 
-    data class Feeding(val dto: FeedingDto) : BabyActivity() {
+    data class Feeding(
+        val dto: FeedingDto,
+        val showVitaminDToggle: Boolean = false
+    ) : BabyActivity() {
         override val id: String? = dto.id
         override val date: String? = dto.date
         override val time: String? = dto.startTime
         override val dateTime: String = dto.dateTime
         override val comment: String? = dto.comment
+        val hasVitaminD: Boolean = dto.hasVitaminD
     }
 
     data class Temperature(val dto: TemperatureDto) : BabyActivity() {
