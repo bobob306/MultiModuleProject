@@ -7,12 +7,15 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -25,6 +28,7 @@ import javax.inject.Inject
 class MeasurementViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
+    private val userRepository: UserRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -70,6 +74,25 @@ class MeasurementViewModel @Inject constructor(
         activityIdArg?.let { id ->
             loadMeasurement(id)
         }
+        
+        // Robustly load baby profile and birth date
+        accountService.currentUser.onEach { authUser ->
+            authUser?.id?.let { userId ->
+                val user = userRepository.getUser(userId)
+                user?.babyId?.let { babyId ->
+                    val baby = userRepository.getBaby(babyId)
+                    _localState.update { it.copy(birthDate = baby?.effectiveBirthDate) }
+                }
+            }
+        }.launchIn(viewModelScope)
+
+        // Also react to updates in the shared userProfile flow
+        userRepository.userProfile.onEach { user ->
+            user?.babyId?.let { babyId ->
+                val baby = userRepository.getBaby(babyId)
+                _localState.update { it.copy(birthDate = baby?.effectiveBirthDate) }
+            }
+        }.launchIn(viewModelScope)
     }
 
     private fun loadMeasurement(id: String) {
@@ -148,6 +171,10 @@ class MeasurementViewModel @Inject constructor(
 
     fun toggleMedicalOnly(medicalOnly: Boolean) {
         _localState.update { it.copy(showMedicalOnly = medicalOnly) }
+    }
+
+    fun toggleWhoOverlay(show: Boolean) {
+        _localState.update { it.copy(showWhoOverlay = show) }
     }
 
     fun setShowSheet(show: Boolean) {

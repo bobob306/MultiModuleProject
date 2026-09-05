@@ -310,7 +310,9 @@ fun NavGraphBuilder.babyCareSection(
                                 GrowthChartComponent(
                                     title = component.title,
                                     dataType = component.dataType,
-                                    measurements = measureUiState.allMeasurements
+                                    measurements = measureUiState.allMeasurements,
+                                    showWhoOverlay = measureUiState.showWhoOverlay,
+                                    birthDate = measureUiState.birthDate
                                 )
                             }
                             true
@@ -320,6 +322,8 @@ fun NavGraphBuilder.babyCareSection(
                                 measurements = measureUiState.allMeasurements,
                                 showMedicalOnly = measureUiState.showMedicalOnly,
                                 onMedicalOnlyChange = measureViewModel::toggleMedicalOnly,
+                                showWhoOverlay = measureUiState.showWhoOverlay,
+                                onWhoOverlayChange = measureViewModel::toggleWhoOverlay,
                                 onEdit = { id -> navigateToForm("measurementLog", id) },
                                 onDelete = { itemToDelete = it }
                             )
