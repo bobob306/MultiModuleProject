@@ -2,6 +2,13 @@ package com.bsdevs.babycare.presentation.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
@@ -9,40 +16,33 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import com.bsdevs.babycare.network.MeasurementDto
+import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
-import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.common.GenericSduiScreen
-import com.bsdevs.babycare.presentation.home.BabyCareTileRowComponent
-import com.bsdevs.babycare.presentation.home.ActivityFeedItems
-import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
-import com.bsdevs.common.result.Result
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.graph.BabyGraphViewModel
-import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryItems
-import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryComponent
-import com.bsdevs.babycare.presentation.temperature.TemperatureChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingFrequencyChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingGapChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingInsightComponent
-import com.bsdevs.babycare.network.MeasurementDto
-import com.bsdevs.babycare.network.VaccinationDto
+import com.bsdevs.babycare.presentation.home.ActivityFeedItems
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewData
+import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
+import com.bsdevs.babycare.presentation.home.BabyCareTileRowComponent
+import com.bsdevs.babycare.presentation.home.HomeFeedItem
 import com.bsdevs.babycare.presentation.measurement.GrowthChartComponent
 import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryItems
 import com.bsdevs.babycare.presentation.measurement.MeasurementViewModel
+import com.bsdevs.babycare.presentation.temperature.TemperatureChartComponent
 import com.bsdevs.babycare.presentation.temperature.TemperatureDataViewModel
+import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryComponent
 import com.bsdevs.babycare.presentation.vaccination.VaccinationDataViewModel
+import com.bsdevs.babycare.presentation.vaccination.VaccinationHistoryItems
+import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import kotlinx.serialization.Serializable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.lazy.rememberLazyListState
 
 @Serializable
 data object BabyCareBaseRoute
@@ -110,6 +110,7 @@ fun NavGraphBuilder.babyCareSection(
             val homeViewModel: BabyCareHomeViewModel = hiltViewModel()
             val homeViewState by homeViewModel.viewData.collectAsStateWithLifecycle()
             
+            val listState = rememberLazyListState()
             var activityToDelete by remember { mutableStateOf<BabyActivity?>(null) }
             
             if (activityToDelete != null) {
@@ -126,6 +127,7 @@ fun NavGraphBuilder.babyCareSection(
                 screenId = "baby_home",
                 title = "Baby Care",
                 onNavigateBack = { navController.popBackStack() },
+                listState = listState,
                 onDynamicClick = { destination, _ ->
                     when (destination) {
                         "babycare://nappy" -> navigateToForm("nappyLog", null)
@@ -312,6 +314,7 @@ fun NavGraphBuilder.babyCareSection(
                                     dataType = component.dataType,
                                     measurements = measureUiState.allMeasurements,
                                     showWhoOverlay = measureUiState.showWhoOverlay,
+                                    onWhoOverlayChange = measureViewModel::toggleWhoOverlay,
                                     birthDate = measureUiState.birthDate,
                                     gender = measureUiState.babyGender
                                 )

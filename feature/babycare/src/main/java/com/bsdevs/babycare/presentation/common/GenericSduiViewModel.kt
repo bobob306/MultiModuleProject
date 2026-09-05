@@ -34,19 +34,27 @@ class GenericSduiViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(value = false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
-    fun getUiState(screenId: String): StateFlow<Result<List<NetworkScreenData>>> = flow {
-        emitAll(screenRepository.getScreenFlow(screenId).map { result ->
-            when (result) {
-                is Result.Success -> Result.Success(withContext(dispatchers.default) { mapper.mapToData(result.data) })
-                is Result.Error -> result
-                Result.Loading -> Result.Loading
-            }
-        })
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = Result.Loading
-    )
+    private val uiStateCache = mutableMapOf<String, StateFlow<Result<List<NetworkScreenData>>>>()
+
+    fun getUiState(screenId: String): StateFlow<Result<List<NetworkScreenData>>> {
+        return uiStateCache.getOrPut(screenId) {
+            flow {
+                emitAll(screenRepository.getScreenFlow(screenId).map { result ->
+                    when (result) {
+                        is Result.Success -> Result.Success(withContext(dispatchers.default) {
+                            mapper.mapToData(result.data)
+                        })
+                        is Result.Error -> result
+                        Result.Loading -> Result.Loading
+                    }
+                })
+            }.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000),
+                initialValue = Result.Loading
+            )
+        }
+    }
 
     fun refresh(screenId: String) {
         viewModelScope.launch {

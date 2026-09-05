@@ -45,7 +45,18 @@ class BabyCareHomeViewModel @Inject constructor(
     private val _collapsedHeaders = MutableStateFlow<Set<String>>(emptySet())
     private val _dynamicUi = MutableStateFlow<List<NetworkScreenData>>(emptyList())
 
-    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
+    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(
+        repository.cachedDays.value.let { cached ->
+            if (cached.isNotEmpty()) {
+                // We can't easily compute processFeed here because it's suspend and complex.
+                // But we can at least start with a "Success" flag if we have data?
+                // Actually, let's keep it Loading but make the collector faster.
+                Result.Loading
+            } else {
+                Result.Loading
+            }
+        }
+    )
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {

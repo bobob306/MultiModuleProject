@@ -6,8 +6,21 @@ import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -108,15 +121,59 @@ fun FeedingFrequencyChartComponent(
 fun FeedingGapChartComponent(
     uiState: FeedingGraphUiState
 ) {
+    var isFullScreen by rememberSaveable { mutableStateOf(false) }
+
+    if (isFullScreen) {
+        Dialog(
+            onDismissRequest = { isFullScreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Average Gap Between Feeds", style = MaterialTheme.typography.titleLarge)
+                        IconButton(onClick = { isFullScreen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        DailyAverageGapSection(
+                            dailyGaps = uiState.dailyAverageGaps,
+                            chartHeight = 0.dp
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Average Gap Between Feeds Each Day",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Average Gap Between Feeds Each Day",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Center)
+            )
+            IconButton(
+                onClick = { isFullScreen = true },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fullscreen,
+                    contentDescription = "Full Screen",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
 
         if (uiState.dailyAverageGaps.isEmpty()) {
             Box(
@@ -131,18 +188,369 @@ fun FeedingGapChartComponent(
                 Text(text = "Need consecutive feeds tracked on the same day.")
             }
         } else {
-            DailyAverageGapCanvas(
+            DailyAverageGapSection(
                 dailyGaps = uiState.dailyAverageGaps,
-                lineColor = MaterialTheme.colorScheme.tertiary,
-                labelColor = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(260.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium)
-                    .padding(vertical = 16.dp)
+                chartHeight = 260.dp
             )
+        }
+    }
+}
+
+@Composable
+fun DailyAverageGapSection(
+    dailyGaps: List<DailyAverageGap>,
+    chartHeight: androidx.compose.ui.unit.Dp = 260.dp
+) {
+    if (dailyGaps.isEmpty()) return
+
+    val labelColor = MaterialTheme.colorScheme.onSurface
+    val gridColor = labelColor.copy(alpha = 0.15f)
+    val axisLabelColor = labelColor
+    val lineColor = MaterialTheme.colorScheme.tertiary
+
+    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
+    val sortedGaps = remember(dailyGaps) {
+        dailyGaps.mapNotNull { gap ->
+            try { gap to LocalDate.parse(gap.dateString, formatter) } catch (e: Exception) { null }
+        }.sortedBy { it.second }
+    }
+
+    if (sortedGaps.isEmpty()) return
+
+    val minDate = sortedGaps.first().second
+    val maxDate = sortedGaps.last().second
+    val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
+    
+    val bottomAxisSpace = 32.dp
+    val topPadding = 24.dp
+    val leftAxisLabelSpace = 50.dp
+    val baseWidthPerDay = 48.dp
+    val rightPadding = 40.dp
+    val startPadding = 16.dp
+
+    val horizontalScrollState = rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (chartHeight > 0.dp) Modifier.height(chartHeight) else Modifier.fillMaxHeight())
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+                shape = MaterialTheme.shapes.medium
+            )
+    ) {
+        val availableWidth = maxWidth - leftAxisLabelSpace - startPadding - rightPadding
+        val scaleToFit = (availableWidth / (baseWidthPerDay * totalDaysSpan.toFloat())).coerceAtMost(1.0f)
+        val minScale = minOf(scaleToFit, 0.05f)
+
+        var scaleFactorX by rememberSaveable { mutableFloatStateOf(scaleToFit) }
+        var scaleFactorY by rememberSaveable { mutableFloatStateOf(1.0f) }
+        var pinchWeights by remember { mutableStateOf(Offset(1f, 1f)) }
+        var selectedIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+
+        val transformState = rememberTransformableState { zoomChange, _, _ ->
+            scaleFactorX = (scaleFactorX * (1f + (zoomChange - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
+            val yZoom = 1f + (zoomChange - 1f) * pinchWeights.y * 0.5f
+            scaleFactorY = (scaleFactorY * yZoom).coerceIn(1.0f, 4f)
+        }
+
+        val rawValues = dailyGaps.flatMap { listOfNotNull(it.averageGapMinutes.toFloat(), it.rolling14DayAverageMinutes?.toFloat()) }
+        val rawMax = rawValues.maxOrNull() ?: 60f
+        val rawMin = rawValues.minOrNull() ?: 30f
+        
+        val yMin = (rawMin * 0.9f).coerceAtLeast(0f)
+        val yMax = (rawMax * 1.1f)
+        val yRange = (yMax - yMin).coerceAtLeast(1f)
+
+        val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX)
+        val chartTotalWidth = maxOf(maxWidth - leftAxisLabelSpace, contentWidth + startPadding + rightPadding)
+        
+        val dataViewportHeight = if (chartHeight > 0.dp) chartHeight - bottomAxisSpace else maxHeight - bottomAxisSpace
+        val scrollableHeight = dataViewportHeight * scaleFactorY
+
+        val viewportWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { (maxWidth - leftAxisLabelSpace).toPx() }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (event.changes.size >= 2) {
+                                val dx = Math.abs(event.changes[0].position.x - event.changes[1].position.x)
+                                val dy = Math.abs(event.changes[0].position.y - event.changes[1].position.y)
+                                val maxD = maxOf(dx, dy).coerceAtLeast(1f)
+                                pinchWeights = Offset(dx / maxD, dy / maxD)
+                            }
+                        }
+                    }
+                }
+                .transformable(state = transformState)
+        ) {
+            Row(modifier = Modifier.weight(1f)) {
+                // Y-Axis
+                Canvas(
+                    modifier = Modifier
+                        .width(leftAxisLabelSpace)
+                        .fillMaxHeight()
+                        .verticalScroll(verticalScrollState)
+                        .height(scrollableHeight)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f))
+                ) {
+                    val actualChartHeight = size.height - topPadding.toPx()
+                    val axisPaint = Paint().apply {
+                        color = axisLabelColor.toArgb()
+                        textSize = 10.sp.toPx()
+                        textAlign = Paint.Align.RIGHT
+                        isAntiAlias = true
+                    }
+
+                    val ySteps = (5 * scaleFactorY).toInt().coerceAtLeast(5)
+                    for (i in 0..ySteps) {
+                        val ratio = i.toFloat() / ySteps
+                        val value = yMin + (ratio * yRange)
+                        val y = size.height - (ratio * actualChartHeight)
+
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "${value.toInt()}m",
+                            size.width - 8.dp.toPx(),
+                            y + 4.dp.toPx(),
+                            axisPaint
+                        )
+                    }
+                }
+
+                // Chart Content
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(verticalScrollState)
+                        .horizontalScroll(horizontalScrollState)
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .width(chartTotalWidth)
+                            .height(scrollableHeight)
+                            .pointerInput(sortedGaps, scaleFactorX, scaleFactorY) {
+                                detectTapGestures { tapOffset ->
+                                    val actualChartHeight = size.height - topPadding.toPx()
+                                    val startX = startPadding.toPx()
+                                    val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                                    
+                                    var bestIndex: Int? = null
+                                    var minDistance = 32.dp.toPx()
+                                    
+                                    sortedGaps.forEachIndexed { index, (item, date) ->
+                                        val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
+                                        val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                                        val y = size.height - (((item.averageGapMinutes - yMin) / yRange) * actualChartHeight).toFloat()
+                                        
+                                        val dist = (tapOffset - Offset(x, y)).getDistance()
+                                        if (dist < minDistance) {
+                                            minDistance = dist
+                                            bestIndex = index
+                                        }
+                                    }
+                                    selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
+                                }
+                            }
+                    ) {
+                        val canvasWidth = size.width
+                        val canvasHeight = size.height
+                        val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                        val actualChartHeight = canvasHeight - topPadding.toPx()
+                        val startX = startPadding.toPx()
+
+                        // Grid lines (horizontal)
+                        val ySteps = (5 * scaleFactorY).toInt().coerceAtLeast(5)
+                        for (i in 0..ySteps) {
+                            val ratio = i.toFloat() / ySteps
+                            val y = canvasHeight - (ratio * actualChartHeight)
+                            drawLine(
+                                color = gridColor,
+                                start = Offset(startX, y),
+                                end = Offset(canvasWidth, y),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+
+                        // Grid lines (vertical - X axis guidelines)
+                        val xSteps = (5 * scaleFactorX).toInt().coerceAtLeast(5)
+                        for (i in 0..xSteps) {
+                            val ratio = i.toFloat() / xSteps
+                            val x = startX + (ratio * usableChartWidth)
+                            drawLine(
+                                color = gridColor.copy(alpha = 0.1f),
+                                start = Offset(x, topPadding.toPx()),
+                                end = Offset(x, canvasHeight),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
+
+                        // Axis Lines
+                        drawLine(
+                            color = gridColor.copy(alpha = 0.4f),
+                            start = Offset(startX, topPadding.toPx()),
+                            end = Offset(startX, canvasHeight),
+                            strokeWidth = 2.dp.toPx()
+                        )
+                        drawLine(
+                            color = gridColor.copy(alpha = 0.4f),
+                            start = Offset(startX, canvasHeight),
+                            end = Offset(canvasWidth, canvasHeight),
+                            strokeWidth = 2.dp.toPx()
+                        )
+
+                        // Plot Daily Gaps (Solid Line)
+                        val dailyPoints = sortedGaps.map { (item, date) ->
+                            val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
+                            val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                            val y = canvasHeight - (((item.averageGapMinutes - yMin) / yRange) * actualChartHeight).toFloat()
+                            Offset(x, y)
+                        }
+
+                        if (dailyPoints.size > 1) {
+                            val path = Path().apply {
+                                moveTo(dailyPoints[0].x, dailyPoints[0].y)
+                                for (i in 1 until dailyPoints.size) {
+                                    lineTo(dailyPoints[i].x, dailyPoints[i].y)
+                                }
+                            }
+                            drawPath(
+                                path = path,
+                                color = lineColor,
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                        }
+
+                        dailyPoints.forEach { point ->
+                            drawCircle(color = lineColor, radius = 5.dp.toPx(), center = point)
+                            drawCircle(color = Color.White, radius = 2.dp.toPx(), center = point)
+                        }
+
+                        // Plot Rolling Average (Dotted Line)
+                        val rollingPoints = sortedGaps.mapNotNull { (item, date) ->
+                            item.rolling14DayAverageMinutes?.let { rollingVal ->
+                                val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
+                                val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                                val y = canvasHeight - (((rollingVal - yMin) / yRange) * actualChartHeight).toFloat()
+                                Offset(x, y)
+                            }
+                        }
+
+                        if (rollingPoints.size > 1) {
+                            val path = Path().apply {
+                                moveTo(rollingPoints[0].x, rollingPoints[0].y)
+                                for (i in 1 until rollingPoints.size) {
+                                    lineTo(rollingPoints[i].x, rollingPoints[i].y)
+                                }
+                            }
+                            drawPath(
+                                path = path,
+                                color = lineColor,
+                                style = Stroke(
+                                    width = 2.dp.toPx(),
+                                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                                )
+                            )
+                        }
+
+                        // Tooltip
+                        selectedIndex?.let { index ->
+                            val (item, _) = sortedGaps[index]
+                            val point = dailyPoints[index]
+                            val text = "${item.averageGapMinutes}m"
+                            
+                            val textPaint = Paint().apply {
+                                color = Color.White.toArgb()
+                                textSize = 10.sp.toPx()
+                                textAlign = Paint.Align.CENTER
+                                isFakeBoldText = true
+                            }
+                            
+                            val textBounds = Rect()
+                            textPaint.getTextBounds(text, 0, text.length, textBounds)
+                            
+                            val hPadding = 8.dp.toPx()
+                            val vPadding = 4.dp.toPx()
+                            val bgWidth = textBounds.width() + hPadding * 2
+                            val bgHeight = textBounds.height() + vPadding * 2
+                            
+                            var tipX = point.x + 8.dp.toPx()
+                            if (tipX + bgWidth > canvasWidth - 8.dp.toPx()) tipX = point.x - bgWidth - 8.dp.toPx()
+                            
+                            val bgRect = RectF(tipX, point.y - bgHeight - 8.dp.toPx(), tipX + bgWidth, point.y - 8.dp.toPx())
+                            val bgPaint = Paint().apply {
+                                color = android.graphics.Color.BLACK
+                                alpha = 200
+                                style = Paint.Style.FILL
+                                isAntiAlias = true
+                            }
+                            drawContext.canvas.nativeCanvas.drawRoundRect(bgRect, 6.dp.toPx(), 6.dp.toPx(), bgPaint)
+                            
+                            drawContext.canvas.nativeCanvas.drawText(
+                                text,
+                                bgRect.centerX(),
+                                bgRect.centerY() + textBounds.height() / 2f,
+                                textPaint
+                            )
+                        }
+                    }
+                }
+            }
+            // Bottom X-Axis labels (FIXED)
+            Row(
+                modifier = Modifier
+                    .height(bottomAxisSpace)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f))
+            ) {
+                Spacer(modifier = Modifier.width(leftAxisLabelSpace))
+                Box(modifier = Modifier.weight(1f).fillMaxHeight().horizontalScroll(horizontalScrollState)) {
+                    Canvas(modifier = Modifier.width(chartTotalWidth).fillMaxHeight()) {
+                        val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                        val startX = startPadding.toPx()
+                        val datePaint = Paint().apply {
+                            color = axisLabelColor.toArgb()
+                            textSize = 9.sp.toPx()
+                            textAlign = Paint.Align.CENTER
+                            isAntiAlias = true
+                        }
+                        
+                        val xSteps = (5 * scaleFactorX).toInt().coerceAtLeast(5)
+                        var lastLabelDate: String? = null
+                        
+                        for (i in 0..xSteps) {
+                            val ratio = i.toFloat() / xSteps
+                            val x = startX + (ratio * usableChartWidth)
+                            val date = minDate.plusDays((ratio * totalDaysSpan).toLong())
+                            val dateStr = date.format(DateTimeFormatter.ofPattern("dd/MM"))
+                            
+                            if (dateStr != lastLabelDate) {
+                                drawLine(
+                                    color = axisLabelColor.copy(alpha = 0.8f),
+                                    start = Offset(x, 0f),
+                                    end = Offset(x, 8.dp.toPx()),
+                                    strokeWidth = 1.5.dp.toPx()
+                                )
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    dateStr,
+                                    x,
+                                    24.dp.toPx(),
+                                    datePaint.apply { alpha = 255 }
+                                )
+                                lastLabelDate = dateStr
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -283,210 +691,3 @@ fun FeedingHourCanvas(
     }
 }
 
-@Composable
-fun DailyAverageGapCanvas(
-    dailyGaps: List<DailyAverageGap>,
-    lineColor: Color,
-    labelColor: Color,
-    modifier: Modifier = Modifier
-) {
-    if (dailyGaps.isEmpty()) return
-
-    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
-    val sortedGaps = remember(dailyGaps) {
-        dailyGaps.mapNotNull { gap ->
-            try { gap to LocalDate.parse(gap.dateString, formatter) } catch (e: Exception) { null }
-        }.sortedBy { it.second }
-    }
-
-    if (sortedGaps.isEmpty()) return
-
-    val minDate = sortedGaps.first().second
-    val maxDate = sortedGaps.last().second
-    val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
-    var scaleFactor by rememberSaveable { mutableStateOf(1.0f) }
-    var selectedIndex by remember { mutableStateOf<Int?>(null) }
-
-    val transformModifier = Modifier.pointerInput(Unit) {
-        detectTransformGestures { _, _, zoom, _ ->
-            scaleFactor = (scaleFactor * zoom).coerceIn(0.01f, 30.0f)
-        }
-    }
-
-    val baseWidthPerDay = 48.dp
-    val bottomLabelSpace = 32.dp
-    val topPaddingSpace = 24.dp
-    val leftAxisLabelSpace = 50.dp
-
-    val rawValues = dailyGaps.flatMap { listOfNotNull(it.averageGapMinutes.toFloat(), it.rolling14DayAverageMinutes?.toFloat()) }
-    val rawMax = rawValues.maxOrNull() ?: 60f
-    val rawMin = rawValues.minOrNull() ?: 30f
-    val yAxisMin = (rawMin - 10).coerceAtLeast(0f)
-    val yAxisMax = rawMax + 10f
-    val yAxisRange = (yAxisMax - yAxisMin).coerceAtLeast(1f)
-
-    val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
-    val chartTotalWidth = maxOf(400.dp, contentWidth + 64.dp)
-
-    Row(modifier = modifier.fillMaxHeight().then(transformModifier)) {
-        Canvas(modifier = Modifier.fillMaxHeight().width(leftAxisLabelSpace).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
-            val chartHeight = size.height - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
-            val axisTextPaint = Paint().apply {
-                this.color = labelColor.copy(alpha = 0.6f).toArgb()
-                this.textSize = 9.sp.toPx()
-                this.textAlign = Paint.Align.RIGHT
-                this.isAntiAlias = true
-            }
-
-            val numYMarkers = 5
-            for (i in 0 until numYMarkers) {
-                val ratio = i.toFloat() / (numYMarkers - 1)
-                val value = yAxisMin + (ratio * yAxisRange)
-                val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * ratio))
-                drawContext.canvas.nativeCanvas.drawText("${value.toInt()}m", size.width - 6.dp.toPx(), y + 3.dp.toPx(), axisTextPaint)
-            }
-        }
-
-        Box(modifier = Modifier.fillMaxHeight().weight(1f).horizontalScroll(rememberScrollState())) {
-            Canvas(
-                modifier = Modifier.fillMaxHeight().width(chartTotalWidth)
-                    .pointerInput(sortedGaps, scaleFactor) {
-                        detectTapGestures { tapOffset ->
-                            val startX = 32.dp.toPx()
-                            val chartHeight = size.height - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
-                            val availableWidth = size.width - 64.dp.toPx()
-                            var bestIndex: Int? = null
-                            var minDistance = 32.dp.toPx()
-                            sortedGaps.forEachIndexed { index, (_, date) ->
-                                val daysOffset = ChronoUnit.DAYS.between(minDate, date)
-                                val x = startX + (daysOffset.toFloat() / totalDaysSpan.toFloat() * availableWidth)
-                                val itemValue = sortedGaps[index].first.averageGapMinutes
-                                val dailyY = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (itemValue - yAxisMin) / yAxisRange))
-                                val dist = (tapOffset - Offset(x, dailyY)).getDistance()
-                                if (dist < minDistance) { minDistance = dist; bestIndex = index }
-                            }
-                            selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
-                        }
-                    }
-            ) {
-                val chartHeight = size.height - bottomLabelSpace.toPx() - topPaddingSpace.toPx()
-                val startX = 32.dp.toPx()
-                val availableWidth = size.width - 64.dp.toPx()
-
-                sortedGaps.forEachIndexed { index, (item, date) ->
-                    val x = startX + (ChronoUnit.DAYS.between(minDate, date).toFloat() / totalDaysSpan.toFloat() * availableWidth)
-                    val dateStr = try { val parts = item.dateString.split("-"); "${parts[2]}/${parts[1]}" } catch (e: Exception) { "" }
-                    if (index == 0 || index == sortedGaps.size - 1 || scaleFactor > 1.5f) {
-                        drawContext.canvas.nativeCanvas.drawText(dateStr, x, size.height - 8.dp.toPx(), Paint().apply { color = labelColor.toArgb(); textSize = 10.sp.toPx(); textAlign = Paint.Align.CENTER })
-                    }
-                }
-                
-                // Plot Daily Gaps (Solid "Hard" Line)
-                val dailyPoints = sortedGaps.map { (item, date) ->
-                    val x = startX + (ChronoUnit.DAYS.between(minDate, date).toFloat() / totalDaysSpan.toFloat() * availableWidth)
-                    val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (item.averageGapMinutes - yAxisMin) / yAxisRange))
-                    Offset(x, y)
-                }
-
-                if (dailyPoints.size > 1) {
-                    for (i in 0 until dailyPoints.size - 1) {
-                        drawLine(
-                            color = lineColor, 
-                            start = dailyPoints[i], 
-                            end = dailyPoints[i+1], 
-                            strokeWidth = 3.dp.toPx()
-                        )
-                    }
-                }
-                dailyPoints.forEach { drawCircle(color = lineColor, radius = 5.dp.toPx(), center = it) }
-
-                // Plot Rolling Average (Dotted Line)
-                val rollingPoints = sortedGaps.mapNotNull { (item, date) ->
-                    item.rolling14DayAverageMinutes?.let { rollingVal ->
-                        val x = startX + (ChronoUnit.DAYS.between(minDate, date).toFloat() / totalDaysSpan.toFloat() * availableWidth)
-                        val y = topPaddingSpace.toPx() + (chartHeight - (chartHeight * (rollingVal - yAxisMin) / yAxisRange))
-                        Offset(x, y)
-                    }
-                }
-
-                if (rollingPoints.size > 1) {
-                    val path = Path().apply {
-                        moveTo(rollingPoints[0].x, rollingPoints[0].y)
-                        for (i in 1 until rollingPoints.size) {
-                            lineTo(rollingPoints[i].x, rollingPoints[i].y)
-                        }
-                    }
-                    drawPath(
-                        path = path,
-                        color = lineColor,
-                        style = Stroke(
-                            width = 2.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                        )
-                    )
-                }
-                
-                // Draw Compact Tooltip next to the dot
-                selectedIndex?.let { index ->
-                    val item = sortedGaps[index].first
-                    val point = dailyPoints[index]
-                    
-                    // Format date for the tooltip (e.g., 20/05)
-                    val dateParts = item.dateString.split("-")
-                    val shortDate = if (dateParts.size >= 3) "${dateParts[2]}/${dateParts[1]}" else item.dateString
-                    val text = "$shortDate: ${item.averageGapMinutes}m"
-                    
-                    val textPaint = Paint().apply {
-                        color = Color.White.toArgb()
-                        textSize = 10.sp.toPx()
-                        textAlign = Paint.Align.CENTER
-                        isFakeBoldText = true
-                    }
-                    
-                    val textBounds = Rect()
-                    textPaint.getTextBounds(text, 0, text.length, textBounds)
-                    
-                    val hPadding = 8.dp.toPx()
-                    val vPadding = 4.dp.toPx()
-                    val bgWidth = textBounds.width() + hPadding * 2
-                    val bgHeight = textBounds.height() + vPadding * 2
-                    
-                    // Position logic with bounds checking
-                    var startX = point.x + 8.dp.toPx()
-                    // If it's too close to the right edge of the canvas, flip it to the left of the dot
-                    if (startX + bgWidth > size.width - 8.dp.toPx()) {
-                        startX = point.x - bgWidth - 8.dp.toPx()
-                    }
-                    
-                    val bgRect = RectF(
-                        startX,
-                        point.y - bgHeight - 8.dp.toPx(),
-                        startX + bgWidth,
-                        point.y - 8.dp.toPx()
-                    )
-                    
-                    val bgPaint = Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        alpha = 200
-                        style = Paint.Style.FILL
-                        isAntiAlias = true
-                    }
-                    
-                    drawContext.canvas.nativeCanvas.drawRoundRect(
-                        bgRect, 
-                        6.dp.toPx(), 
-                        6.dp.toPx(), 
-                        bgPaint
-                    )
-                    
-                    drawContext.canvas.nativeCanvas.drawText(
-                        text,
-                        bgRect.centerX(),
-                        bgRect.centerY() + textBounds.height() / 2f,
-                        textPaint
-                    )
-                }
-            }
-        }
-    }
-}
