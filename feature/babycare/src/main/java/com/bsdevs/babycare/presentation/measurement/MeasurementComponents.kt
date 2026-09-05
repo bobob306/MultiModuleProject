@@ -590,7 +590,60 @@ fun GrowthChartSection(
                                 
                                 val dateStr = date.format(DateTimeFormatter.ofPattern("dd/MM"))
                                 val valueStr = String.format(Locale.getDefault(), "%.1f%s", value, unit)
-                                val text = "$dateStr: $valueStr"
+                                
+                                // Calculate Centile
+                                var centileText = ""
+                                if (showWhoOverlay && parsedBirthDate != null) {
+                                    val ageDays = ChronoUnit.DAYS.between(parsedBirthDate, date).toDouble()
+                                    val ageMonths = ageDays / 30.4375 // Average month length
+                                    
+                                    // 1. Interpolate WHO values for the specific age
+                                    val interpolatedWhoValues = if (whoData.isNotEmpty()) {
+                                        val before = whoData.lastOrNull { it.month <= ageMonths }
+                                        val after = whoData.firstOrNull { it.month > ageMonths }
+                                        
+                                        when {
+                                            before != null && after != null -> {
+                                                val monthDiff = after.month - before.month
+                                                val ratio = (ageMonths - before.month) / monthDiff
+                                                before.values.mapIndexed { idx, v1 ->
+                                                    v1 + ratio * (after.values[idx] - v1)
+                                                }
+                                            }
+                                            before != null -> before.values
+                                            after != null -> after.values
+                                            else -> null
+                                        }
+                                    } else null
+
+                                    if (interpolatedWhoValues != null) {
+                                        val centiles = interpolatedWhoValues
+                                        val labels = WhoGrowthData.centileLabels.map { it.toDouble() }
+                                        
+                                        var estimatedPercentile: Double? = null
+                                        when {
+                                            value < centiles[0] -> centileText = "\n< 0.4th centile"
+                                            value > centiles.last() -> centileText = "\n> 99.6th centile"
+                                            else -> {
+                                                for (i in 0 until centiles.size - 1) {
+                                                    if (value >= centiles[i] && value <= centiles[i+1]) {
+                                                        val valRange = centiles[i+1] - centiles[i]
+                                                        val labelRange = labels[i+1] - labels[i]
+                                                        val ratio = (value - centiles[i]) / valRange
+                                                        estimatedPercentile = labels[i] + (ratio * labelRange)
+                                                        break
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        estimatedPercentile?.let {
+                                            centileText = String.format(Locale.getDefault(), "\n%.0fth centile", it)
+                                        }
+                                    }
+                                }
+                                
+                                val text = "$dateStr: $valueStr$centileText"
                                 
                                 val textPaint = Paint().apply {
                                     color = Color.White.toArgb()
@@ -599,13 +652,20 @@ fun GrowthChartSection(
                                     isFakeBoldText = true
                                 }
                                 
+                                val lines = text.split("\n")
                                 val textBounds = Rect()
-                                textPaint.getTextBounds(text, 0, text.length, textBounds)
+                                var maxWidth = 0
+                                var totalHeight = 0
+                                lines.forEach { line ->
+                                    textPaint.getTextBounds(line, 0, line.length, textBounds)
+                                    maxWidth = Math.max(maxWidth, textBounds.width())
+                                    totalHeight += (textBounds.height() + 4.dp.toPx().toInt())
+                                }
                                 
                                 val hPadding = 8.dp.toPx()
                                 val vPadding = 4.dp.toPx()
-                                val bgWidth = textBounds.width() + hPadding * 2
-                                val bgHeight = textBounds.height() + vPadding * 2
+                                val bgWidth = maxWidth + hPadding * 2
+                                val bgHeight = totalHeight + vPadding * 2
                                 
                                 var tipX = point.x + 8.dp.toPx()
                                 if (tipX + bgWidth > size.width - 8.dp.toPx()) {
@@ -633,12 +693,16 @@ fun GrowthChartSection(
                                     bgPaint
                                 )
                                 
-                                drawContext.canvas.nativeCanvas.drawText(
-                                    text,
-                                    bgRect.centerX(),
-                                    bgRect.centerY() + textBounds.height() / 2f,
-                                    textPaint
-                                )
+                                var currentY = bgRect.top + vPadding + 10.sp.toPx()
+                                lines.forEach { line ->
+                                    drawContext.canvas.nativeCanvas.drawText(
+                                        line,
+                                        bgRect.centerX(),
+                                        currentY,
+                                        textPaint
+                                    )
+                                    currentY += (10.sp.toPx() + 4.dp.toPx())
+                                }
                             }
                         }
                     }
