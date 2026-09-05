@@ -79,7 +79,8 @@ fun GrowthChartComponent(
     dataType: String,
     measurements: List<MeasurementDto>,
     showWhoOverlay: Boolean = false,
-    birthDate: String? = null
+    birthDate: String? = null,
+    gender: String? = null
 ) {
     val valueSelector: (MeasurementDto) -> Double? = when (dataType) {
         "WEIGHT" -> { { it.weight } }
@@ -97,7 +98,8 @@ fun GrowthChartComponent(
             dotColorMedical = Color(0xFFEF5350), // Distinct Red 400
             dotColorSelf = Color(0xFF42A5F5),    // Distinct Blue 400
             showWhoOverlay = showWhoOverlay,
-            birthDate = birthDate
+            birthDate = birthDate,
+            gender = gender
         )
     }
 }
@@ -108,6 +110,7 @@ fun LazyListScope.MeasurementHistoryItems(
     onMedicalOnlyChange: (Boolean) -> Unit,
     showWhoOverlay: Boolean,
     onWhoOverlayChange: (Boolean) -> Unit,
+    gender: String? = null,
     onEdit: (String) -> Unit,
     onDelete: (MeasurementDto) -> Unit
 ) {
@@ -158,8 +161,13 @@ fun LazyListScope.MeasurementHistoryItems(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.clickable { onWhoOverlayChange(!showWhoOverlay) }
                 ) {
+                    val labelSuffix = when(gender?.lowercase()) {
+                        "male" -> " (Boys)"
+                        "female" -> " (Girls)"
+                        else -> ""
+                    }
                     Text(
-                        text = "WHO Overlay (Boys)",
+                        text = "WHO Overlay$labelSuffix",
                         style = MaterialTheme.typography.labelMedium,
                         color = if (showWhoOverlay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -200,7 +208,8 @@ fun GrowthChartSection(
     dotColorMedical: Color,
     dotColorSelf: Color,
     showWhoOverlay: Boolean = false,
-    birthDate: String? = null
+    birthDate: String? = null,
+    gender: String? = null
 ) {
     val labelColor = MaterialTheme.colorScheme.onSurface
     val gridColor = labelColor.copy(alpha = 0.1f)
@@ -209,10 +218,11 @@ fun GrowthChartSection(
     val whoColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
 
     val whoData = if (showWhoOverlay) {
+        val isFemale = gender?.lowercase() == "female"
         when (dataType) {
-            "WEIGHT" -> WhoGrowthData.weightForAgeBoys
-            "HEIGHT" -> WhoGrowthData.lengthForAgeBoys
-            "HEAD" -> WhoGrowthData.headCircumferenceForAgeBoys
+            "WEIGHT" -> if (isFemale) WhoGrowthData.weightForAgeGirls else WhoGrowthData.weightForAgeBoys
+            "HEIGHT" -> if (isFemale) WhoGrowthData.lengthForAgeGirls else WhoGrowthData.lengthForAgeBoys
+            "HEAD" -> if (isFemale) WhoGrowthData.headCircumferenceForAgeGirls else WhoGrowthData.headCircumferenceForAgeBoys
             else -> emptyList()
         }
     } else {
@@ -220,31 +230,25 @@ fun GrowthChartSection(
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+
+        // Legend Row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+                .padding(start = 8.dp, end = 8.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            // Legend
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                if (showWhoOverlay) {
-                    LegendItem("WHO Centiles", whoColor)
-                }
-                LegendItem("Medical", dotColorMedical)
-                LegendItem("Self", dotColorSelf)
+            if (showWhoOverlay) {
+                LegendItem("WHO Centiles", whoColor)
             }
+            LegendItem("Medical", dotColorMedical)
+            LegendItem("Self", dotColorSelf)
         }
 
         val validData = remember(data, valueSelector) {
@@ -492,7 +496,7 @@ fun GrowthChartSection(
                                         )
                                     )
 
-                                    // Centile Labels (Start and Dynamic/Sticky End)
+                                    // Centile Labels (Dynamic/Sticky End only)
                                     val labelPaint = Paint().apply {
                                         color = whoColor.toArgb()
                                         textSize = 8.sp.toPx()
@@ -501,12 +505,6 @@ fun GrowthChartSection(
                                         isFakeBoldText = isMedian
                                     }
                                     
-                                    // Start Label (Fixed at birth)
-                                    points.firstOrNull()?.let { start ->
-                                        drawCircle(Color.White.copy(alpha = 0.8f), radius = 6.dp.toPx(), center = Offset(start.x - 8.dp.toPx(), start.y))
-                                        drawContext.canvas.nativeCanvas.drawText(label, start.x - 8.dp.toPx(), start.y + 3.dp.toPx(), labelPaint)
-                                    }
-
                                     // Sticky Right Label (Fixed to right viewport edge)
                                     val stickyX = labelRightLimit.coerceIn(points.first().x, points.last().x)
                                     

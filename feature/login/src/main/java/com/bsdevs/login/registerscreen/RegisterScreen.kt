@@ -397,6 +397,29 @@ fun RegisterScreenContent(
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                                 placeholder = { Text("YYYY-MM-DD") }
                             )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                "Baby Gender *",
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.align(Alignment.Start)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                FilterChip(
+                                    selected = babyGender == "male",
+                                    onClick = { onIntent(RegisterScreenIntent.UpdateBabyGender("male")) },
+                                    label = { Text("Boy") }
+                                )
+                                FilterChip(
+                                    selected = babyGender == "female",
+                                    onClick = { onIntent(RegisterScreenIntent.UpdateBabyGender("female")) },
+                                    label = { Text("Girl") }
+                                )
+                            }
                         }
 
                         babyError?.let {

@@ -21,6 +21,7 @@ data class MeasurementUiState(
     val showMedicalOnly: Boolean = false,
     val showWhoOverlay: Boolean = false,
     val birthDate: String? = null,
+    val babyGender: String? = null,
 
     // Form Toggles
     val recordHeight: Boolean = false,
