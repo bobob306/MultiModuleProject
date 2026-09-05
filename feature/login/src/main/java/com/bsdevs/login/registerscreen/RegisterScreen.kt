@@ -269,11 +269,11 @@ fun RegisterScreenContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("parent", "coffee", "flashcards").forEach { role ->
+                        listOf("parent", "coffee", "flashcards", "shopping_list").forEach { role ->
                             FilterChip(
                                 selected = roles.contains(role),
                                 onClick = { onIntent(RegisterScreenIntent.ToggleRole(role)) },
-                                label = { Text(role.replaceFirstChar { it.uppercase() }) }
+                                label = { Text(role.replace("_", " ").replaceFirstChar { it.uppercase() }) }
                             )
                         }
                     }

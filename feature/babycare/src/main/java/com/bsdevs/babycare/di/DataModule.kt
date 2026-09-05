@@ -1,7 +1,9 @@
 package com.bsdevs.babycare.di
 
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.ShoppingListRepositoryImpl
 import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.domain.ShoppingListRepository
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.babycare.network.FirestoreBabyCareService
 import dagger.Binds
@@ -24,6 +26,12 @@ abstract class DataModule {
     abstract fun bindBabyCareRepository(
         babyCareRepositoryImpl: BabyCareRepositoryImpl
     ): BabyCareRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindShoppingListRepository(
+        shoppingListRepositoryImpl: ShoppingListRepositoryImpl
+    ): ShoppingListRepository
 
     @Binds
     @Singleton

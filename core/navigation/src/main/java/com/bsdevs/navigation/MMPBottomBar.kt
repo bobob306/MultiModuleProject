@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -28,6 +29,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.bsdevs.babycare.presentation.navigation.BabyCareBaseRoute
 import com.bsdevs.babycare.presentation.navigation.BabyCareHomeRoute
+import com.bsdevs.babycare.presentation.navigation.ShoppingListBaseRoute
+import com.bsdevs.babycare.presentation.navigation.ShoppingListRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeHomeScreenRoute
 import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
 import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
@@ -44,6 +47,7 @@ sealed class BottomNavItem(
 ) {
     object Home : BottomNavItem(HomeScreenRoute, HomeScreenBaseRoute::class, Icons.Default.Home, "Home")
     object Coffee : BottomNavItem(CoffeeHomeScreenRoute, CoffeeScreenBaseRoute::class, R.drawable.ic_coffee_bean, "Coffee")
+    object ShoppingList : BottomNavItem(ShoppingListRoute, ShoppingListBaseRoute::class, Icons.Default.ShoppingCart, "Shopping List")
     object Baby : BottomNavItem(BabyCareHomeRoute, BabyCareBaseRoute::class, Icons.Default.Face, "Baby")
     object Settings : BottomNavItem(SettingsRoute, SettingsBaseRoute::class, Icons.Default.Settings, "Settings")
 }
@@ -54,6 +58,7 @@ fun MMPBottomBar(navController: NavHostController, userRoles: List<String>) {
     val items = listOfNotNull(
         BottomNavItem.Home,
         BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
+        BottomNavItem.ShoppingList.takeIf { userRoles.contains("shopping_list") },
         BottomNavItem.Baby.takeIf { userRoles.contains("parent") },
         BottomNavItem.Settings
     )

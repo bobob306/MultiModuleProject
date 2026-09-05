@@ -2,6 +2,7 @@ package com.bsdevs.babycare.presentation.navigation
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,8 @@ import com.bsdevs.babycare.presentation.home.HomeFeedItem
 import com.bsdevs.babycare.presentation.measurement.GrowthChartComponent
 import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryItems
 import com.bsdevs.babycare.presentation.measurement.MeasurementViewModel
+import com.bsdevs.babycare.presentation.shopping.ShoppingListItems
+import com.bsdevs.babycare.presentation.shopping.ShoppingListViewModel
 import com.bsdevs.babycare.presentation.temperature.TemperatureChartComponent
 import com.bsdevs.babycare.presentation.temperature.TemperatureDataViewModel
 import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryComponent
@@ -42,13 +45,18 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import kotlinx.serialization.Serializable
-import androidx.compose.foundation.lazy.rememberLazyListState
 
 @Serializable
 data object BabyCareBaseRoute
 
 @Serializable
+data object ShoppingListBaseRoute
+
+@Serializable
 data object BabyCareHomeRoute
+
+@Serializable
+data object ShoppingListRoute
 
 @Serializable
 data object BabyGraphRoute
@@ -70,6 +78,9 @@ data class FeedingRoute(val activityId: String? = null, val startSide: String? =
 
 fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
     navigate(route = BabyCareHomeRoute, navOptions = navOptions)
+
+fun NavController.navigateToShoppingList(navOptions: NavOptions? = null) =
+    navigate(route = ShoppingListRoute, navOptions = navOptions)
 
 fun NavController.navigateToGraph(navOptions: NavOptions? = null) =
     navigate(route = BabyGraphRoute, navOptions = navOptions)
@@ -126,7 +137,6 @@ fun NavGraphBuilder.babyCareSection(
             GenericSduiScreen(
                 screenId = "baby_home",
                 title = "Baby Care",
-                onNavigateBack = { navController.popBackStack() },
                 listState = listState,
                 onDynamicClick = { destination, _ ->
                     when (destination) {
@@ -378,6 +388,24 @@ fun NavGraphBuilder.babyCareSection(
                                 onEdit = { id -> navigateToForm("vaccinationLog", id) },
                                 onDelete = { itemToDelete = it }
                             )
+                            true
+                        }
+                        else -> false
+                    }
+                }
+            )
+        }
+    }
+    navigation<ShoppingListBaseRoute>(startDestination = ShoppingListRoute) {
+        composable<ShoppingListRoute> {
+            val shoppingViewModel: ShoppingListViewModel = hiltViewModel()
+            GenericSduiScreen(
+                screenId = "shopping_list",
+                title = "Shopping List",
+                lazyFeatureContent = { component ->
+                    when (component) {
+                        is NetworkScreenData.ShoppingListDataNetwork -> {
+                            ShoppingListItems(viewModel = shoppingViewModel)
                             true
                         }
                         else -> false

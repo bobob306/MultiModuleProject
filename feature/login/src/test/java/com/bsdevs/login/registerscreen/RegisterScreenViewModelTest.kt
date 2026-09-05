@@ -177,6 +177,14 @@ class RegisterScreenViewModelTest {
     }
 
     @Test
+    fun `toggleRole handles shopping_list correctly`() = runTest {
+        ensureReady()
+        viewModel.processIntent(RegisterScreenIntent.ToggleRole("shopping_list"))
+        val result = viewModel.viewData.value as Result.Success
+        assertTrue(result.data.roles.contains("shopping_list"))
+    }
+
+    @Test
     fun `updateBabyFields updates viewData correctly`() = runTest {
         ensureReady()
         viewModel.processIntent(RegisterScreenIntent.SetBabyEntryMethod(BabyEntryMethod.BY_ID))
@@ -221,6 +229,7 @@ class RegisterScreenViewModelTest {
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyFirstName("Baby"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyLastName("Boy"))
         viewModel.processIntent(RegisterScreenIntent.UpdateBabyBirthDate("2023-01-01"))
+        viewModel.processIntent(RegisterScreenIntent.UpdateBabyGender("male"))
 
         viewModel.navigationEvent.test {
             viewModel.processIntent(RegisterScreenIntent.Register)

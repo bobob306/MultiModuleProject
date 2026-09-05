@@ -126,6 +126,10 @@ class UserRepositoryImpl @Inject constructor(
                 val months = firestore.collection("babyLogs").document(babyId).collection("months").get().await()
                 months.documents.forEach { it.reference.delete().await() }
                 firestore.collection("babyLogs").document(babyId).delete().await()
+
+                // Delete shopping list
+                Log.d("FIREBASE_CALL", "Delete Shopping List for: $babyId")
+                firestore.collection("shoppingLists").document(babyId).delete().await()
             }
         }
 

@@ -6,6 +6,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,6 +30,7 @@ class MeasurementViewModelTest {
 
     private lateinit var accountService: AccountService
     private lateinit var repository: BabyCareRepository
+    private lateinit var userRepository: UserRepository
     private lateinit var dispatchers: DispatcherProvider
     private lateinit var viewModel: MeasurementViewModel
 
@@ -40,9 +42,12 @@ class MeasurementViewModelTest {
 
         accountService = mockk {
             every { currentUserId } returns userId
+            every { currentUser } returns MutableStateFlow(null)
         }
         repository = mockk(relaxed = true)
+        userRepository = mockk(relaxed = true)
         every { repository.measurements } returns MutableStateFlow(emptyList<UnifiedEventDto>())
+        every { userRepository.userProfile } returns MutableStateFlow(null)
         coEvery { repository.saveActivityEvent(any(), any(), any()) } just Runs
         coEvery { repository.updateActivityEvent(any(), any(), any(), any()) } just Runs
         
@@ -64,7 +69,7 @@ class MeasurementViewModelTest {
         if (activityId != null) {
             savedStateHandle["activityId"] = activityId
         }
-        viewModel = MeasurementViewModel(accountService, repository, savedStateHandle)
+        viewModel = MeasurementViewModel(accountService, repository, userRepository, savedStateHandle)
     }
 
     @Test

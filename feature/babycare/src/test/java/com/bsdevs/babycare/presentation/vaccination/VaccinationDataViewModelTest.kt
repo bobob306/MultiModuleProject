@@ -95,7 +95,7 @@ class VaccinationDataViewModelTest {
         val vm = VaccinationDataViewModel(accountService, repoSpy, dispatchers = dispatchers)
         
         // When
-        vm.deleteVaccination("2026-08-26", "v1")
+        vm.deleteVaccination("v1", "2026-08-26")
         
         // Then
         coVerify { repoSpy.deleteActivityEvent(userId, "2026-08-26", "v1") }
