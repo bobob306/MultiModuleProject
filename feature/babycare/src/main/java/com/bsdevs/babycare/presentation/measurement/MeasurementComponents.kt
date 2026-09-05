@@ -375,12 +375,36 @@ fun GrowthChartSection(
                 }
             }
             
+            val lastMeasurementDate = validData.last().second
+            val ageAtLastMeasurementMonths = if (parsedBirthDate != null) {
+                ChronoUnit.DAYS.between(parsedBirthDate, lastMeasurementDate) / 30.4375
+            } else 0.0
+
+            val relevantWhoData = if (showWhoOverlay && parsedBirthDate != null) {
+                // Include WHO data points up to the current age plus a buffer.
+                // We need at least two points to draw a line segment.
+                val filtered = whoData.filter { it.month <= ageAtLastMeasurementMonths + 2 }
+                if (filtered.size < 2 && whoData.size >= 2) {
+                    whoData.take(2)
+                } else {
+                    filtered
+                }
+            } else emptyList()
+
             val minDate = if (showWhoOverlay && parsedBirthDate != null) {
                 minOf(validData.first().second, parsedBirthDate)
             } else {
                 validData.first().second
             }
-            val maxDate = validData.last().second
+
+            val maxDate = if (relevantWhoData.isNotEmpty() && parsedBirthDate != null) {
+                val lastWhoMonth = relevantWhoData.last().month
+                val lastWhoDate = parsedBirthDate.plusMonths(lastWhoMonth.toLong())
+                maxOf(lastMeasurementDate, lastWhoDate)
+            } else {
+                lastMeasurementDate
+            }
+
             val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
 
             val bottomAxisSpace = 32.dp
@@ -409,7 +433,7 @@ fun GrowthChartSection(
                 val scaleToFit = (availableWidth / (baseWidthPerDay * totalDaysSpan.toFloat())).coerceAtMost(1.0f)
                 val minScale = minOf(scaleToFit, 0.05f)
 
-                var scaleFactorX by rememberSaveable { mutableFloatStateOf(1.0f) }
+                var scaleFactorX by rememberSaveable { mutableFloatStateOf(scaleToFit) }
                 var scaleFactorY by rememberSaveable { mutableFloatStateOf(1.0f) }
                 var pinchWeights by remember { mutableStateOf(Offset(1f, 1f)) }
                 var selectedIndex by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -425,7 +449,9 @@ fun GrowthChartSection(
                 }
 
                 val userValues = validData.map { valueSelector(it.first)!! }
-                val whoValues = if (showWhoOverlay) {
+                val whoValues = if (showWhoOverlay && relevantWhoData.isNotEmpty()) {
+                    relevantWhoData.flatMap { it.values }
+                } else if (showWhoOverlay) {
                     whoData.flatMap { it.values }
                 } else {
                     emptyList()
@@ -435,8 +461,9 @@ fun GrowthChartSection(
                 val rawMin = allValues.minOrNull() ?: 0.0
                 val rawMax = allValues.maxOrNull() ?: 1.0
 
-                val yMin = (rawMin * 0.95).coerceAtLeast(0.0)
-                val yMax = (rawMax * 1.05)
+                // Adaptive Y-axis: Use a tighter range to make the data more visible vertically
+                val yMin = if (rawMin > 20.0) (rawMin * 0.98) else (rawMin * 0.9).coerceAtLeast(0.0)
+                val yMax = (rawMax * 1.02)
                 val yRange = (yMax - yMin).coerceAtLeast(0.1)
 
                 val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX)
@@ -592,7 +619,7 @@ fun GrowthChartSection(
                                     WhoGrowthData.centileLabels.forEachIndexed { centileIdx, label ->
                                         if (label !in desiredCentiles) return@forEachIndexed
 
-                                        val points = whoData.map { point ->
+                                        val points = relevantWhoData.map { point ->
                                             val dateAtMonth = parsedBirthDate.plusMonths(point.month.toLong())
                                             val daysFromStart = ChronoUnit.DAYS.between(minDate, dateAtMonth)
                                             val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
