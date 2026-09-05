@@ -19,6 +19,8 @@ data class MeasurementUiState(
     // Growth Chart Data
     val allMeasurements: List<com.bsdevs.babycare.network.MeasurementDto> = emptyList(),
     val showMedicalOnly: Boolean = false,
+    val showWhoOverlay: Boolean = false,
+    val birthDate: String? = null,
 
     // Form Toggles
     val recordHeight: Boolean = false,
