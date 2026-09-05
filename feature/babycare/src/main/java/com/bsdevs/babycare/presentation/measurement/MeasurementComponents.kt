@@ -9,7 +9,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +29,13 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Delete
@@ -79,9 +87,12 @@ fun GrowthChartComponent(
     dataType: String,
     measurements: List<MeasurementDto>,
     showWhoOverlay: Boolean = false,
+    onWhoOverlayChange: (Boolean) -> Unit = {},
     birthDate: String? = null,
     gender: String? = null
 ) {
+    var isFullScreen by rememberSaveable { mutableStateOf(false) }
+
     val valueSelector: (MeasurementDto) -> Double? = when (dataType) {
         "WEIGHT" -> { { it.weight } }
         "HEIGHT" -> { { it.height } }
@@ -89,18 +100,86 @@ fun GrowthChartComponent(
         else -> { { null } }
     }
 
+    if (isFullScreen) {
+        Dialog(
+            onDismissRequest = { isFullScreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = title, style = MaterialTheme.typography.titleLarge)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.clickable { onWhoOverlayChange(!showWhoOverlay) }
+                            ) {
+                                Text(
+                                    text = "WHO Overlay",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (showWhoOverlay) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Switch(
+                                    checked = showWhoOverlay,
+                                    onCheckedChange = onWhoOverlayChange,
+                                    modifier = Modifier.scale(0.7f)
+                                )
+                            }
+                        }
+                        IconButton(onClick = { isFullScreen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        GrowthChartSection(
+                            title = "",
+                            dataType = dataType,
+                            data = measurements,
+                            valueSelector = valueSelector,
+                            dotColorMedical = Color(0xFFEF5350),
+                            dotColorSelf = Color(0xFF42A5F5),
+                            showWhoOverlay = showWhoOverlay,
+                            birthDate = birthDate,
+                            gender = gender,
+                            chartHeight = 0.dp // 0.dp will be interpreted as fillMaxHeight in our updated logic
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-        GrowthChartSection(
-            title = title,
-            dataType = dataType,
-            data = measurements,
-            valueSelector = valueSelector,
-            dotColorMedical = Color(0xFFEF5350), // Distinct Red 400
-            dotColorSelf = Color(0xFF42A5F5),    // Distinct Blue 400
-            showWhoOverlay = showWhoOverlay,
-            birthDate = birthDate,
-            gender = gender
-        )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            GrowthChartSection(
+                title = title,
+                dataType = dataType,
+                data = measurements,
+                valueSelector = valueSelector,
+                dotColorMedical = Color(0xFFEF5350), // Distinct Red 400
+                dotColorSelf = Color(0xFF42A5F5),    // Distinct Blue 400
+                showWhoOverlay = showWhoOverlay,
+                birthDate = birthDate,
+                gender = gender
+            )
+            IconButton(
+                onClick = { isFullScreen = true },
+                modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fullscreen,
+                    contentDescription = "Full Screen",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }
 
@@ -209,11 +288,12 @@ fun GrowthChartSection(
     dotColorSelf: Color,
     showWhoOverlay: Boolean = false,
     birthDate: String? = null,
-    gender: String? = null
+    gender: String? = null,
+    chartHeight: androidx.compose.ui.unit.Dp = 240.dp
 ) {
     val labelColor = MaterialTheme.colorScheme.onSurface
-    val gridColor = labelColor.copy(alpha = 0.1f)
-    val axisLabelColor = labelColor.copy(alpha = 0.6f)
+    val gridColor = labelColor.copy(alpha = 0.15f)
+    val axisLabelColor = labelColor
     val primaryColor = MaterialTheme.colorScheme.primary
     val whoColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.7f)
 
@@ -284,11 +364,9 @@ fun GrowthChartSection(
             val parsedBirthDate = remember(birthDate) {
                 if (birthDate == null) return@remember null
                 try {
-                    // Try ISO format first (YYYY-MM-DD)
                     LocalDate.parse(birthDate)
                 } catch (_: Exception) {
                     try {
-                        // Try the user's reported format (DD MM YYYY)
                         val formatter = DateTimeFormatter.ofPattern("dd MM yyyy")
                         LocalDate.parse(birthDate, formatter)
                     } catch (_: Exception) {
@@ -312,10 +390,13 @@ fun GrowthChartSection(
             val rightPadding = 40.dp
             val startPadding = 16.dp
 
+            val horizontalScrollState = rememberScrollState()
+            val verticalScrollState = rememberScrollState()
+
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
+                    .then(if (chartHeight > 0.dp) Modifier.height(chartHeight) else Modifier.fillMaxHeight())
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f))
                     .border(
@@ -328,17 +409,19 @@ fun GrowthChartSection(
                 val scaleToFit = (availableWidth / (baseWidthPerDay * totalDaysSpan.toFloat())).coerceAtMost(1.0f)
                 val minScale = minOf(scaleToFit, 0.05f)
 
-                var scaleFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
-                var selectedIndex by remember { mutableStateOf<Int?>(null) }
+                var scaleFactorX by rememberSaveable { mutableFloatStateOf(1.0f) }
+                var scaleFactorY by rememberSaveable { mutableFloatStateOf(1.0f) }
+                var pinchWeights by remember { mutableStateOf(Offset(1f, 1f)) }
+                var selectedIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
                 LaunchedEffect(scaleToFit) {
-                    if (scaleFactor < minScale) scaleFactor = minScale
+                    if (scaleFactorX < minScale) scaleFactorX = minScale
                 }
 
-                val transformModifier = Modifier.pointerInput(Unit) {
-                    detectTransformGestures { _, _, zoom, _ ->
-                        scaleFactor = (scaleFactor * zoom).coerceIn(minScale, 15f)
-                    }
+                val transformState = rememberTransformableState { zoomChange, _, _ ->
+                    scaleFactorX = (scaleFactorX * (1f + (zoomChange - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
+                    val yZoom = 1f + (zoomChange - 1f) * pinchWeights.y * 0.5f
+                    scaleFactorY = (scaleFactorY * yZoom).coerceIn(1.0f, 4f)
                 }
 
                 val userValues = validData.map { valueSelector(it.first)!! }
@@ -356,352 +439,390 @@ fun GrowthChartSection(
                 val yMax = (rawMax * 1.05)
                 val yRange = (yMax - yMin).coerceAtLeast(0.1)
 
-                val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor)
+                val contentWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX)
                 val chartTotalWidth = maxOf(maxWidth - leftAxisLabelSpace, contentWidth + startPadding + rightPadding)
+                
+                val dataViewportHeight = if (chartHeight > 0.dp) chartHeight - bottomAxisSpace else maxHeight - bottomAxisSpace
+                val scrollableHeight = dataViewportHeight * scaleFactorY
 
-                val scrollState = rememberScrollState()
                 val viewportWidthPx = with(LocalDensity.current) { (maxWidth - leftAxisLabelSpace).toPx() }
 
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .then(transformModifier)
-                ) {
-                    // Y-Axis
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(leftAxisLabelSpace)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.2f))
-                    ) {
-                        val chartHeight = size.height - bottomAxisSpace.toPx() - topPadding.toPx()
-                        val axisPaint = Paint().apply {
-                            color = axisLabelColor.toArgb()
-                            textSize = 10.sp.toPx()
-                            textAlign = Paint.Align.RIGHT
-                            isAntiAlias = true
-                        }
-
-                        val steps = 5
-                        for (i in 0..steps) {
-                            val ratio = i.toFloat() / steps
-                            val value = yMin + (ratio * yRange)
-                            val y = size.height - bottomAxisSpace.toPx() - (ratio * chartHeight)
-
-                            drawContext.canvas.nativeCanvas.drawText(
-                                String.format(Locale.getDefault(), "%.1f", value),
-                                size.width - 8.dp.toPx(),
-                                y + 4.dp.toPx(),
-                                axisPaint
-                            )
-                        }
-                    }
-
-                    // Chart Content
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .horizontalScroll(scrollState)
-                    ) {
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .width(chartTotalWidth)
-                                .pointerInput(validData, scaleFactor) {
-                                    detectTapGestures { tapOffset ->
-                                        val chartHeight = size.height - bottomAxisSpace.toPx() - topPadding.toPx()
-                                        val startX = startPadding.toPx()
-                                        val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor).toPx()
-                                        
-                                        var bestIndex: Int? = null
-                                        var minDistance = 32.dp.toPx()
-                                        
-                                        validData.forEachIndexed { index, (dto, date) ->
-                                            val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
-                                            val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
-                                            val value = valueSelector(dto)!!
-                                            val y = size.height - bottomAxisSpace.toPx() - (((value - yMin) / yRange) * chartHeight).toFloat()
-                                            
-                                            val dist = (tapOffset - Offset(x, y)).getDistance()
-                                            if (dist < minDistance) {
-                                                minDistance = dist
-                                                bestIndex = index
-                                            }
-                                        }
-                                        selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    if (event.changes.size >= 2) {
+                                        val dx = Math.abs(event.changes[0].position.x - event.changes[1].position.x)
+                                        val dy = Math.abs(event.changes[0].position.y - event.changes[1].position.y)
+                                        val maxD = maxOf(dx, dy).coerceAtLeast(1f)
+                                        pinchWeights = Offset(dx / maxD, dy / maxD)
                                     }
                                 }
+                            }
+                        }
+                        .transformable(state = transformState)
+                ) {
+                    Row(modifier = Modifier.weight(1f)) {
+                        // Y-Axis
+                        Canvas(
+                            modifier = Modifier
+                                .width(leftAxisLabelSpace)
+                                .fillMaxHeight()
+                                .verticalScroll(verticalScrollState)
+                                .height(scrollableHeight)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f))
                         ) {
-                            val canvasWidth = size.width
-                            val canvasHeight = size.height
-                            val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactor).toPx()
-                            val chartHeight = canvasHeight - bottomAxisSpace.toPx() - topPadding.toPx()
-                            val startX = startPadding.toPx()
-
-                            val datePaint = Paint().apply {
+                            val chartHeight = size.height - topPadding.toPx()
+                            val axisPaint = Paint().apply {
                                 color = axisLabelColor.toArgb()
-                                textSize = 9.sp.toPx()
-                                textAlign = Paint.Align.CENTER
+                                textSize = 10.sp.toPx()
+                                textAlign = Paint.Align.RIGHT
                                 isAntiAlias = true
                             }
 
-                            // Grid lines (horizontal)
-                            val steps = 5
-                            for (i in 0..steps) {
-                                val ratio = i.toFloat() / steps
-                                val y = size.height - bottomAxisSpace.toPx() - (ratio * chartHeight)
-                                drawLine(
-                                    color = gridColor,
-                                    start = Offset(0f, y),
-                                    end = Offset(canvasWidth, y),
-                                    strokeWidth = 1.dp.toPx()
+                            val ySteps = (5 * scaleFactorY).toInt().coerceAtLeast(5)
+                            for (i in 0..ySteps) {
+                                val ratio = i.toFloat() / ySteps
+                                val value = yMin + (ratio * yRange)
+                                val y = size.height - (ratio * chartHeight)
+
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    String.format(Locale.getDefault(), "%.1f", value),
+                                    size.width - 8.dp.toPx(),
+                                    y + 4.dp.toPx(),
+                                    axisPaint
                                 )
                             }
+                        }
 
-                            // WHO Overlay Plotting
-                            if (showWhoOverlay && parsedBirthDate != null) {
-                                val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
-                                val currentScroll = scrollState.value.toFloat()
-                                val stickyPadding = 24.dp.toPx() // Increased padding to prevent cut-off
-                                val labelRightLimit = (currentScroll + viewportWidthPx - stickyPadding)
-
-                                // Only display the requested centiles: 25, 50, 75, 91 (standard WHO closest to 90)
-                                val desiredCentiles = listOf("25", "50", "75", "91")
-
-                                WhoGrowthData.centileLabels.forEachIndexed { centileIdx, label ->
-                                    if (label !in desiredCentiles) return@forEachIndexed
-
-                                    val whoPath = Path()
-                                    val points = whoData.map { point ->
-                                        val dateAtMonth = parsedBirthDate.plusMonths(point.month.toLong())
-                                        val daysFromStart = ChronoUnit.DAYS.between(minDate, dateAtMonth)
-                                        val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
-                                        val value = point.values[centileIdx]
-                                        val y = size.height - bottomAxisSpace.toPx() - (((value - yMin) / yRange) * chartHeight).toFloat()
-                                        Offset(x, y)
-                                    }
-
-                                    points.forEachIndexed { pIdx, offset ->
-                                        if (pIdx == 0) whoPath.moveTo(offset.x, offset.y) else whoPath.lineTo(offset.x, offset.y)
-                                    }
-                                    
-                                    val isMedian = label == "50"
-                                    drawPath(
-                                        path = whoPath,
-                                        color = whoColor,
-                                        style = Stroke(
-                                            width = if (isMedian) 2.dp.toPx() else 1.dp.toPx(),
-                                            pathEffect = if (!isMedian) dashPathEffect else null
-                                        )
-                                    )
-
-                                    // Centile Labels (Dynamic/Sticky End only)
-                                    val labelPaint = Paint().apply {
-                                        color = whoColor.toArgb()
-                                        textSize = 8.sp.toPx()
-                                        textAlign = Paint.Align.CENTER
-                                        isAntiAlias = true
-                                        isFakeBoldText = isMedian
-                                    }
-                                    
-                                    // Sticky Right Label (Fixed to right viewport edge)
-                                    val stickyX = labelRightLimit.coerceIn(points.first().x, points.last().x)
-                                    
-                                    var stickyY = points.last().y
-                                    for (i in 0 until points.size - 1) {
-                                        val p1 = points[i]
-                                        val p2 = points[i+1]
-                                        if (stickyX >= p1.x && stickyX <= p2.x) {
-                                            val ratio = (stickyX - p1.x) / (p2.x - p1.x)
-                                            stickyY = p1.y + ratio * (p2.y - p1.y)
-                                            break
-                                        }
-                                    }
-
-                                    // Use Align.RIGHT to ensure number stays inside the viewport padding
-                                    drawContext.canvas.nativeCanvas.drawText(
-                                        label,
-                                        stickyX,
-                                        stickyY + 3.dp.toPx(),
-                                        labelPaint.apply { textAlign = Paint.Align.RIGHT }
-                                    )
-                                }
-                            }
-
-                            // User Data Plotting
-                            val points = validData.map { (dto, date) ->
-                                val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
-                                val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
-                                val value = valueSelector(dto)!!
-                                val y = size.height - bottomAxisSpace.toPx() - (((value - yMin) / yRange) * chartHeight).toFloat()
-                                
-                                // Draw date label if appropriate
-                                if (scaleFactor > 1.5f || daysFromStart % (totalDaysSpan / 4 + 1) == 0L) {
-                                    drawContext.canvas.nativeCanvas.drawText(
-                                        date.format(DateTimeFormatter.ofPattern("dd/MM")),
-                                        x,
-                                        canvasHeight - 8.dp.toPx(),
-                                        datePaint
-                                    )
-                                }
-                                
-                                Offset(x, y) to dto.isMedical
-                            }
-
-                            if (points.size > 1) {
-                                val path = Path().apply {
-                                    moveTo(points[0].first.x, points[0].first.y)
-                                    for (i in 1 until points.size) {
-                                        lineTo(points[i].first.x, points[i].first.y)
-                                    }
-                                }
-                                drawPath(
-                                    path = path,
-                                    color = primaryColor,
-                                    style = Stroke(width = 2.dp.toPx())
-                                )
-                            }
-
-                            points.forEach { (point, isMedical) ->
-                                drawCircle(
-                                    color = if (isMedical) dotColorMedical else dotColorSelf,
-                                    radius = 5.dp.toPx(),
-                                    center = point
-                                )
-                                drawCircle(
-                                    color = Color.White,
-                                    radius = 2.dp.toPx(),
-                                    center = point
-                                )
-                            }
-
-                            // Draw Tooltip
-                            selectedIndex?.let { index ->
-                                val (dto, date) = validData[index]
-                                val point = points[index].first
-                                val value = valueSelector(dto)!!
-                                
-                                val unit = when (dataType) {
-                                    "WEIGHT" -> "kg"
-                                    "HEIGHT", "HEAD" -> "cm"
-                                    else -> ""
-                                }
-                                
-                                val dateStr = date.format(DateTimeFormatter.ofPattern("dd/MM"))
-                                val valueStr = String.format(Locale.getDefault(), "%.1f%s", value, unit)
-                                
-                                // Calculate Centile
-                                var centileText = ""
-                                if (showWhoOverlay && parsedBirthDate != null) {
-                                    val ageDays = ChronoUnit.DAYS.between(parsedBirthDate, date).toDouble()
-                                    val ageMonths = ageDays / 30.4375 // Average month length
-                                    
-                                    // 1. Interpolate WHO values for the specific age
-                                    val interpolatedWhoValues = if (whoData.isNotEmpty()) {
-                                        val before = whoData.lastOrNull { it.month <= ageMonths }
-                                        val after = whoData.firstOrNull { it.month > ageMonths }
-                                        
-                                        when {
-                                            before != null && after != null -> {
-                                                val monthDiff = after.month - before.month
-                                                val ratio = (ageMonths - before.month) / monthDiff
-                                                before.values.mapIndexed { idx, v1 ->
-                                                    v1 + ratio * (after.values[idx] - v1)
+                        // Chart Content
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .verticalScroll(verticalScrollState)
+                                .horizontalScroll(horizontalScrollState)
+                        ) {
+                            Canvas(
+                                modifier = Modifier
+                                    .width(chartTotalWidth)
+                                    .height(scrollableHeight)
+                                    .pointerInput(validData, scaleFactorX, scaleFactorY) {
+                                        detectTapGestures { tapOffset ->
+                                            val chartHeight = size.height - topPadding.toPx()
+                                            val startX = startPadding.toPx()
+                                            val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                                            
+                                            var bestIndex: Int? = null
+                                            var minDistance = 32.dp.toPx()
+                                            
+                                            validData.forEachIndexed { index, (dto, date) ->
+                                                val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
+                                                val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                                                val value = valueSelector(dto)!!
+                                                val y = size.height - (((value - yMin) / yRange) * chartHeight).toFloat()
+                                                
+                                                val dist = (tapOffset - Offset(x, y)).getDistance()
+                                                if (dist < minDistance) {
+                                                    minDistance = dist
+                                                    bestIndex = index
                                                 }
                                             }
-                                            before != null -> before.values
-                                            after != null -> after.values
-                                            else -> null
+                                            selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
                                         }
-                                    } else null
+                                    }
+                            ) {
+                                val canvasWidth = size.width
+                                val canvasHeight = size.height
+                                val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                                val chartHeight = canvasHeight - topPadding.toPx()
+                                val startX = startPadding.toPx()
 
-                                    if (interpolatedWhoValues != null) {
-                                        val centiles = interpolatedWhoValues
-                                        val labels = WhoGrowthData.centileLabels.map { it.toDouble() }
+                                // Grid lines (horizontal)
+                                val ySteps = (5 * scaleFactorY).toInt().coerceAtLeast(5)
+                                for (i in 0..ySteps) {
+                                    val ratio = i.toFloat() / ySteps
+                                    val y = canvasHeight - (ratio * chartHeight)
+                                    drawLine(
+                                        color = gridColor,
+                                        start = Offset(startX, y),
+                                        end = Offset(canvasWidth, y),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                }
+
+                                // Grid lines (vertical - X axis guidelines)
+                                val xSteps = (5 * scaleFactorX).toInt().coerceAtLeast(5)
+                                for (i in 0..xSteps) {
+                                    val ratio = i.toFloat() / xSteps
+                                    val x = startX + (ratio * usableChartWidth)
+                                    drawLine(
+                                        color = gridColor.copy(alpha = 0.1f),
+                                        start = Offset(x, topPadding.toPx()),
+                                        end = Offset(x, canvasHeight),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                }
+
+                                // Axis Lines
+                                drawLine(
+                                    color = gridColor.copy(alpha = 0.4f),
+                                    start = Offset(startX, topPadding.toPx()),
+                                    end = Offset(startX, canvasHeight),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                                drawLine(
+                                    color = gridColor.copy(alpha = 0.4f),
+                                    start = Offset(startX, canvasHeight),
+                                    end = Offset(canvasWidth, canvasHeight),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+
+                                // WHO Overlay Plotting
+                                if (showWhoOverlay && parsedBirthDate != null) {
+                                    val dashPathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                                    val currentScroll = horizontalScrollState.value.toFloat()
+                                    val stickyPadding = 24.dp.toPx()
+                                    val labelRightLimit = (currentScroll + viewportWidthPx - stickyPadding)
+                                    val desiredCentiles = listOf("25", "50", "75", "91")
+
+                                    WhoGrowthData.centileLabels.forEachIndexed { centileIdx, label ->
+                                        if (label !in desiredCentiles) return@forEachIndexed
+
+                                        val points = whoData.map { point ->
+                                            val dateAtMonth = parsedBirthDate.plusMonths(point.month.toLong())
+                                            val daysFromStart = ChronoUnit.DAYS.between(minDate, dateAtMonth)
+                                            val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                                            val value = point.values[centileIdx]
+                                            val y = size.height - (((value - yMin) / yRange) * chartHeight).toFloat()
+                                            Offset(x, y)
+                                        }
+
+                                        val whoPath = Path()
+                                        points.forEachIndexed { pIdx, offset ->
+                                            if (pIdx == 0) whoPath.moveTo(offset.x, offset.y) else whoPath.lineTo(offset.x, offset.y)
+                                        }
                                         
-                                        var estimatedPercentile: Double? = null
-                                        when {
-                                            value < centiles[0] -> centileText = "\n< 0.4th centile"
-                                            value > centiles.last() -> centileText = "\n> 99.6th centile"
-                                            else -> {
-                                                for (i in 0 until centiles.size - 1) {
-                                                    if (value >= centiles[i] && value <= centiles[i+1]) {
-                                                        val valRange = centiles[i+1] - centiles[i]
-                                                        val labelRange = labels[i+1] - labels[i]
-                                                        val ratio = (value - centiles[i]) / valRange
-                                                        estimatedPercentile = labels[i] + (ratio * labelRange)
-                                                        break
+                                        val isMedian = label == "50"
+                                        drawPath(
+                                            path = whoPath,
+                                            color = whoColor,
+                                            style = Stroke(
+                                                width = if (isMedian) 2.dp.toPx() else 1.dp.toPx(),
+                                                pathEffect = if (!isMedian) dashPathEffect else null
+                                            )
+                                        )
+
+                                        val labelPaint = Paint().apply {
+                                            color = whoColor.toArgb()
+                                            textSize = 8.sp.toPx()
+                                            textAlign = Paint.Align.RIGHT
+                                            isAntiAlias = true
+                                            isFakeBoldText = isMedian
+                                        }
+                                        
+                                        val stickyX = labelRightLimit.coerceIn(points.first().x, points.last().x)
+                                        var stickyY = points.last().y
+                                        for (i in 0 until points.size - 1) {
+                                            val p1 = points[i]
+                                            val p2 = points[i+1]
+                                            if (stickyX >= p1.x && stickyX <= p2.x) {
+                                                val ratio = (stickyX - p1.x) / (p2.x - p1.x)
+                                                stickyY = p1.y + ratio * (p2.y - p1.y)
+                                                break
+                                            }
+                                        }
+
+                                        drawContext.canvas.nativeCanvas.drawText(
+                                            label,
+                                            stickyX,
+                                            stickyY + 3.dp.toPx(),
+                                            labelPaint
+                                        )
+                                    }
+                                }
+
+                                // User Data Plotting
+                                val points = validData.map { (dto, date) ->
+                                    val daysFromStart = ChronoUnit.DAYS.between(minDate, date)
+                                    val x = startX + (daysFromStart.toFloat() / totalDaysSpan.toFloat() * usableChartWidth)
+                                    val value = valueSelector(dto)!!
+                                    val y = size.height - (((value - yMin) / yRange) * chartHeight).toFloat()
+                                    Offset(x, y) to dto.isMedical
+                                }
+
+                                if (points.size > 1) {
+                                    val path = Path().apply {
+                                        moveTo(points[0].first.x, points[0].first.y)
+                                        for (i in 1 until points.size) {
+                                            lineTo(points[i].first.x, points[i].first.y)
+                                        }
+                                    }
+                                    drawPath(
+                                        path = path,
+                                        color = primaryColor,
+                                        style = Stroke(width = 2.dp.toPx())
+                                    )
+                                }
+
+                                points.forEach { (point, isMedical) ->
+                                    drawCircle(
+                                        color = if (isMedical) dotColorMedical else dotColorSelf,
+                                        radius = 5.dp.toPx(),
+                                        center = point
+                                    )
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = 2.dp.toPx(),
+                                        center = point
+                                    )
+                                }
+
+                                // Tooltip
+                                selectedIndex?.let { index ->
+                                    val (dto, date) = validData[index]
+                                    val point = points[index].first
+                                    val value = valueSelector(dto)!!
+                                    val unit = when (dataType) {
+                                        "WEIGHT" -> "kg"
+                                        "HEIGHT", "HEAD" -> "cm"
+                                        else -> ""
+                                    }
+                                    val dateStr = date.format(DateTimeFormatter.ofPattern("dd/MM"))
+                                    val valueStr = String.format(Locale.getDefault(), "%.1f%s", value, unit)
+                                    
+                                    var centileText = ""
+                                    if (showWhoOverlay && parsedBirthDate != null) {
+                                        val ageDays = ChronoUnit.DAYS.between(parsedBirthDate, date).toDouble()
+                                        val ageMonths = ageDays / 30.4375
+                                        val interpolatedWhoValues = if (whoData.isNotEmpty()) {
+                                            val before = whoData.lastOrNull { it.month <= ageMonths }
+                                            val after = whoData.firstOrNull { it.month > ageMonths }
+                                            when {
+                                                before != null && after != null -> {
+                                                    val ratio = (ageMonths - before.month) / (after.month - before.month)
+                                                    before.values.mapIndexed { idx, v1 -> v1 + ratio * (after.values[idx] - v1) }
+                                                }
+                                                before != null -> before.values
+                                                after != null -> after.values
+                                                else -> null
+                                            }
+                                        } else null
+
+                                        if (interpolatedWhoValues != null) {
+                                            val labels = WhoGrowthData.centileLabels.map { it.toDouble() }
+                                            var estimatedPercentile: Double? = null
+                                            when {
+                                                value < interpolatedWhoValues[0] -> centileText = "\n< 0.4th centile"
+                                                value > interpolatedWhoValues.last() -> centileText = "\n> 99.6th centile"
+                                                else -> {
+                                                    for (i in 0 until interpolatedWhoValues.size - 1) {
+                                                        if (value >= interpolatedWhoValues[i] && value <= interpolatedWhoValues[i+1]) {
+                                                            val ratio = (value - interpolatedWhoValues[i]) / (interpolatedWhoValues[i+1] - interpolatedWhoValues[i])
+                                                            estimatedPercentile = labels[i] + (ratio * (labels[i+1] - labels[i]))
+                                                            break
+                                                        }
                                                     }
                                                 }
                                             }
-                                        }
-                                        
-                                        estimatedPercentile?.let {
-                                            centileText = String.format(Locale.getDefault(), "\n%.0fth centile", it)
+                                            estimatedPercentile?.let {
+                                                centileText = String.format(Locale.getDefault(), "\n%.0fth centile", it)
+                                            }
                                         }
                                     }
+                                    
+                                    val text = "$dateStr: $valueStr$centileText"
+                                    val textPaint = Paint().apply {
+                                        color = Color.White.toArgb()
+                                        textSize = 10.sp.toPx()
+                                        textAlign = Paint.Align.CENTER
+                                        isFakeBoldText = true
+                                    }
+                                    val lines = text.split("\n")
+                                    val textBounds = Rect()
+                                    var maxW = 0
+                                    var totalH = 0
+                                    lines.forEach { line ->
+                                        textPaint.getTextBounds(line, 0, line.length, textBounds)
+                                        maxW = maxOf(maxW, textBounds.width())
+                                        totalH += (textBounds.height() + 4.dp.toPx().toInt())
+                                    }
+                                    
+                                    val hPadding = 8.dp.toPx()
+                                    val vPadding = 4.dp.toPx()
+                                    val bgWidth = maxW + hPadding * 2
+                                    val bgHeight = totalH + vPadding * 2
+                                    
+                                    var tipX = point.x + 8.dp.toPx()
+                                    if (tipX + bgWidth > canvasWidth - 8.dp.toPx()) tipX = point.x - bgWidth - 8.dp.toPx()
+                                    
+                                    val bgRect = RectF(tipX, point.y - bgHeight - 8.dp.toPx(), tipX + bgWidth, point.y - 8.dp.toPx())
+                                    val bgPaint = Paint().apply {
+                                        color = android.graphics.Color.BLACK
+                                        alpha = 200
+                                        style = Paint.Style.FILL
+                                        isAntiAlias = true
+                                    }
+                                    drawContext.canvas.nativeCanvas.drawRoundRect(bgRect, 6.dp.toPx(), 6.dp.toPx(), bgPaint)
+                                    
+                                    var currentY = bgRect.top + vPadding + 10.sp.toPx()
+                                    lines.forEach { line ->
+                                        drawContext.canvas.nativeCanvas.drawText(line, bgRect.centerX(), currentY, textPaint)
+                                        currentY += (10.sp.toPx() + 4.dp.toPx())
+                                    }
                                 }
-                                
-                                val text = "$dateStr: $valueStr$centileText"
-                                
-                                val textPaint = Paint().apply {
-                                    color = Color.White.toArgb()
-                                    textSize = 10.sp.toPx()
+                            }
+                        }
+                    }
+                    // Bottom X-Axis labels (FIXED)
+                    Row(
+                        modifier = Modifier
+                            .height(bottomAxisSpace)
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.4f))
+                    ) {
+                        Spacer(modifier = Modifier.width(leftAxisLabelSpace))
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight().horizontalScroll(horizontalScrollState)) {
+                            Canvas(modifier = Modifier.width(chartTotalWidth).fillMaxHeight()) {
+                                val usableChartWidth = (baseWidthPerDay * totalDaysSpan.toFloat() * scaleFactorX).toPx()
+                                val startX = startPadding.toPx()
+                                val datePaint = Paint().apply {
+                                    color = axisLabelColor.toArgb()
+                                    textSize = 9.sp.toPx()
                                     textAlign = Paint.Align.CENTER
-                                    isFakeBoldText = true
-                                }
-                                
-                                val lines = text.split("\n")
-                                val textBounds = Rect()
-                                var maxWidth = 0
-                                var totalHeight = 0
-                                lines.forEach { line ->
-                                    textPaint.getTextBounds(line, 0, line.length, textBounds)
-                                    maxWidth = Math.max(maxWidth, textBounds.width())
-                                    totalHeight += (textBounds.height() + 4.dp.toPx().toInt())
-                                }
-                                
-                                val hPadding = 8.dp.toPx()
-                                val vPadding = 4.dp.toPx()
-                                val bgWidth = maxWidth + hPadding * 2
-                                val bgHeight = totalHeight + vPadding * 2
-                                
-                                var tipX = point.x + 8.dp.toPx()
-                                if (tipX + bgWidth > size.width - 8.dp.toPx()) {
-                                    tipX = point.x - bgWidth - 8.dp.toPx()
-                                }
-                                
-                                val bgRect = RectF(
-                                    tipX,
-                                    point.y - bgHeight - 8.dp.toPx(),
-                                    tipX + bgWidth,
-                                    point.y - 8.dp.toPx()
-                                )
-                                
-                                val bgPaint = Paint().apply {
-                                    color = android.graphics.Color.BLACK
-                                    alpha = 200
-                                    style = Paint.Style.FILL
                                     isAntiAlias = true
                                 }
+                                val xSteps = (5 * scaleFactorX).toInt().coerceAtLeast(5)
+                                var lastLabelDate: String? = null
                                 
-                                drawContext.canvas.nativeCanvas.drawRoundRect(
-                                    bgRect, 
-                                    6.dp.toPx(), 
-                                    6.dp.toPx(), 
-                                    bgPaint
-                                )
-                                
-                                var currentY = bgRect.top + vPadding + 10.sp.toPx()
-                                lines.forEach { line ->
-                                    drawContext.canvas.nativeCanvas.drawText(
-                                        line,
-                                        bgRect.centerX(),
-                                        currentY,
-                                        textPaint
-                                    )
-                                    currentY += (10.sp.toPx() + 4.dp.toPx())
+                                for (i in 0..xSteps) {
+                                    val ratio = i.toFloat() / xSteps
+                                    val x = startX + (ratio * usableChartWidth)
+                                    val date = minDate.plusDays((ratio * totalDaysSpan).toLong())
+                                    val dateStr = date.format(DateTimeFormatter.ofPattern("dd/MM"))
+                                    
+                                    // Avoid overlapping labels on the same day
+                                    if (dateStr != lastLabelDate) {
+                                        drawLine(
+                                            color = axisLabelColor.copy(alpha = 0.8f),
+                                            start = Offset(x, 0f),
+                                            end = Offset(x, 8.dp.toPx()),
+                                            strokeWidth = 1.5.dp.toPx()
+                                        )
+                                        drawContext.canvas.nativeCanvas.drawText(
+                                            dateStr,
+                                            x,
+                                            24.dp.toPx(),
+                                            datePaint.apply { 
+                                                color = axisLabelColor.toArgb()
+                                                alpha = 255 
+                                            }
+                                        )
+                                        lastLabelDate = dateStr
+                                    }
                                 }
                             }
                         }

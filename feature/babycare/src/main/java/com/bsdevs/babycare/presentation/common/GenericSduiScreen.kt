@@ -19,6 +19,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,12 +42,11 @@ fun GenericSduiScreen(
     onDynamicClick: (String, String) -> Unit = { _, _ -> },
     lazyFeatureContent: LazyListScope.(NetworkScreenData) -> Boolean = { false },
     viewModel: GenericSduiViewModel = hiltViewModel(),
+    listState: LazyListState = rememberLazyListState(),
 ) {
     val uiState by remember(screenId) { viewModel.getUiState(screenId) }.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-
-    val listState = rememberLazyListState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     MMPScaffold(
         title = title,

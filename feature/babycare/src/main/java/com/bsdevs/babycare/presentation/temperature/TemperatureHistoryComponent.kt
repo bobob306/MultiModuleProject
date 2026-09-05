@@ -30,6 +30,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -208,13 +219,57 @@ fun TemperatureChartComponent(
 ) {
     val latestDate = uiData.dates.firstOrNull() ?: return
     val readings = uiData.dailyReadings[latestDate] ?: emptyList()
+    var isFullScreen by rememberSaveable { mutableStateOf(false) }
+
+    if (isFullScreen) {
+        Dialog(
+            onDismissRequest = { isFullScreen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Daily Trend ($latestDate)", style = MaterialTheme.typography.titleLarge)
+                        IconButton(onClick = { isFullScreen = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Close")
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f).padding(16.dp)) {
+                        TemperatureChart(
+                            readings = readings,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)) {
-        Text(
-            text = "Daily Trend ($latestDate)",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 16.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Daily Trend ($latestDate)",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 16.dp)
+            )
+            IconButton(onClick = { isFullScreen = true }) {
+                Icon(
+                    imageVector = Icons.Default.Fullscreen,
+                    contentDescription = "Full Screen",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
         TemperatureChart(
             readings = readings,
             modifier = Modifier.fillMaxWidth().height(260.dp)
