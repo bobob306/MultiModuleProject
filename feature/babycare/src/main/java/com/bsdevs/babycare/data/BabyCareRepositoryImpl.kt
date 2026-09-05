@@ -142,11 +142,13 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     private fun parseUnifiedEvent(eventMap: Map<String, Any?>): UnifiedEventDto {
+        val dateTimeString = eventMap["dateTimeString"] as? String ?: ""
+        val time = eventMap["time"] as? String ?: dateTimeString.split(" ").lastOrNull() ?: ""
         return UnifiedEventDto(
             id = eventMap["id"] as? String ?: "",
             type = eventMap["type"] as? String ?: "",
-            time = eventMap["time"] as? String ?: "",
-            dateTimeString = eventMap["dateTimeString"] as? String ?: "",
+            time = time,
+            dateTimeString = dateTimeString,
             comment = eventMap["comment"] as? String,
             nappyType = eventMap["nappyType"] as? String,
             mainFeedingSide = eventMap["mainFeedingSide"] as? String,

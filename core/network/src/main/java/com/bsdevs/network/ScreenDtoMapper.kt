@@ -120,6 +120,10 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "type" to "FEEDING_INSIGHT_CARD",
                     "index" to dto.index
                 )
+                is ScreenDto.ShoppingListDto -> mapOf(
+                    "type" to "SHOPPING_LIST",
+                    "index" to dto.index
+                )
                 else -> emptyMap<String, Any?>()
             }
         }
@@ -273,6 +277,12 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
 
                     "FEEDING_INSIGHT_CARD" -> {
                         ScreenDto.FeedingInsightCardDto(
+                            index = item["index"].toString().toInt()
+                        )
+                    }
+
+                    "SHOPPING_LIST" -> {
+                        ScreenDto.ShoppingListDto(
                             index = item["index"].toString().toInt()
                         )
                     }

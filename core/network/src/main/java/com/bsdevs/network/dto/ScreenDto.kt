@@ -156,6 +156,11 @@ sealed class ScreenDto(
         @SerialName("index") override val index: Int,
     ) : ScreenDto(index)
 
+    @SerialName("SHOPPING_LIST")
+    data class ShoppingListDto(
+        @SerialName("index") override val index: Int,
+    ) : ScreenDto(index)
+
     @Serializable
     data class TileDto(
         @SerialName("index") val index: Int,

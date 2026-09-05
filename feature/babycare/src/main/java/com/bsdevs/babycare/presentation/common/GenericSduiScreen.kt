@@ -37,7 +37,7 @@ import com.bsdevs.uicomponents.MMPScaffold
 fun GenericSduiScreen(
     screenId: String,
     title: String,
-    onNavigateBack: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     onAddNew: (() -> Unit)? = null,
     onDynamicClick: (String, String) -> Unit = { _, _ -> },
     lazyFeatureContent: LazyListScope.(NetworkScreenData) -> Boolean = { false },

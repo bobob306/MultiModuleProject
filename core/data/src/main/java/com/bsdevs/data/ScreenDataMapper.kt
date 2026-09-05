@@ -127,6 +127,10 @@ class ScreenDataMapperImpl @Inject constructor() : ScreenDataMapper {
                 is ScreenDto.FeedingInsightCardDto -> NetworkScreenData.FeedingInsightCardDataNetwork(
                     index = item.index
                 )
+
+                is ScreenDto.ShoppingListDto -> NetworkScreenData.ShoppingListDataNetwork(
+                    index = item.index
+                )
             }
         }
         return listOfData

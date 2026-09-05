@@ -148,6 +148,10 @@ sealed class NetworkScreenData(
         override val index: Int,
     ) : NetworkScreenData(index)
 
+    data class ShoppingListDataNetwork(
+        override val index: Int,
+    ) : NetworkScreenData(index)
+
     data class TileDataNetwork(
         val index: Int,
         val title: String,

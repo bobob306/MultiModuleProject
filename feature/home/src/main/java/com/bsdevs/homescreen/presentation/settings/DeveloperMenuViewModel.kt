@@ -52,6 +52,7 @@ class DeveloperMenuViewModel @Inject constructor(
                 seedVaccinationHistoryScreen()
                 seedTemperatureHistoryScreen()
                 seedAnalysisScreen()
+                seedShoppingListScreen()
 
                 _uiState.update { it.copy(isSeeding = false, seedSuccess = true) }
             } catch (e: Exception) {
@@ -151,5 +152,12 @@ class DeveloperMenuViewModel @Inject constructor(
             ScreenDto.FeedingInsightCardDto(index = 2)
         )
         screenRepository.updateScreen("analysis_screen", analysisScreen)
+    }
+
+    private suspend fun seedShoppingListScreen() {
+        val shoppingListScreen = listOf(
+            ScreenDto.ShoppingListDto(index = 0)
+        )
+        screenRepository.updateScreen("shopping_list", shoppingListScreen)
     }
 }
