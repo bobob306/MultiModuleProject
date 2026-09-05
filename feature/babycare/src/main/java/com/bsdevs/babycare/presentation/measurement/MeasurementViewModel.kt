@@ -81,7 +81,10 @@ class MeasurementViewModel @Inject constructor(
                 val user = userRepository.getUser(userId)
                 user?.babyId?.let { babyId ->
                     val baby = userRepository.getBaby(babyId)
-                    _localState.update { it.copy(birthDate = baby?.effectiveBirthDate) }
+                    _localState.update { it.copy(
+                        birthDate = baby?.effectiveBirthDate,
+                        babyGender = baby?.gender
+                    ) }
                 }
             }
         }.launchIn(viewModelScope)
@@ -90,7 +93,10 @@ class MeasurementViewModel @Inject constructor(
         userRepository.userProfile.onEach { user ->
             user?.babyId?.let { babyId ->
                 val baby = userRepository.getBaby(babyId)
-                _localState.update { it.copy(birthDate = baby?.effectiveBirthDate) }
+                _localState.update { it.copy(
+                    birthDate = baby?.effectiveBirthDate,
+                    babyGender = baby?.gender
+                ) }
             }
         }.launchIn(viewModelScope)
     }

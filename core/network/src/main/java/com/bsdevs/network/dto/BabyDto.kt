@@ -21,7 +21,8 @@ data class BabyDto(
     var birth_date: String? = null,
     @get:PropertyName("dateOfBirth")
     @set:PropertyName("dateOfBirth")
-    var dateOfBirth: String? = null
+    var dateOfBirth: String? = null,
+    val gender: String? = null // "male" or "female"
 ) {
     val effectiveBirthDate: String?
         get() = birthDate ?: birth_date ?: dateOfBirth

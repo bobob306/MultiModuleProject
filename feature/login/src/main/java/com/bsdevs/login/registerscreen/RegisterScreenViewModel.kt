@@ -61,6 +61,7 @@ class RegisterScreenViewModel @Inject constructor(
             is RegisterScreenIntent.UpdateBabyLastName -> handleUpdateBabyLastName(intent.babyLastName)
             is RegisterScreenIntent.UpdateBabyMiddleName -> handleUpdateBabyMiddleName(intent.babyMiddleName)
             is RegisterScreenIntent.UpdateBabyBirthDate -> handleUpdateBabyBirthDate(intent.babyBirthDate)
+            is RegisterScreenIntent.UpdateBabyGender -> handleUpdateBabyGender(intent.gender)
             is RegisterScreenIntent.SetBabyEntryMethod -> handleSetBabyEntryMethod(intent.method)
             is RegisterScreenIntent.SetDatePickerVisibility -> {
                 _viewData.update { currentResult ->
@@ -94,9 +95,9 @@ class RegisterScreenViewModel @Inject constructor(
                     }
 
                     BabyEntryMethod.BY_DETAILS -> {
-                        if (data.babyFirstName.isEmpty() || data.babyLastName.isEmpty() || data.babyBirthDate.isEmpty()) {
+                        if (data.babyFirstName.isEmpty() || data.babyLastName.isEmpty() || data.babyBirthDate.isEmpty() || data.babyGender.isEmpty()) {
                             _viewData.update { res ->
-                                if (res is Result.Success) Result.Success(res.data.copy(babyError = "Baby first name, last name and birth date are mandatory.")) else res
+                                if (res is Result.Success) Result.Success(res.data.copy(babyError = "Baby names, birth date and gender are mandatory.")) else res
                             }
                             return
                         }
@@ -156,7 +157,8 @@ class RegisterScreenViewModel @Inject constructor(
                                 firstName = data.babyFirstName,
                                 lastName = data.babyLastName,
                                 middleName = data.babyMiddleName.takeIf { it.isNotEmpty() },
-                                birthDate = data.babyBirthDate
+                                birthDate = data.babyBirthDate,
+                                gender = data.babyGender
                             )
                         )
                     }
@@ -301,6 +303,16 @@ class RegisterScreenViewModel @Inject constructor(
         }
     }
 
+    private fun handleUpdateBabyGender(gender: String) {
+        _viewData.update { currentResult ->
+            if (currentResult is Result.Success) {
+                Result.Success(currentResult.data.copy(babyGender = gender, babyError = null, generalError = null))
+            } else {
+                currentResult
+            }
+        }
+    }
+
     private fun handleSetBabyEntryMethod(method: BabyEntryMethod) {
         _viewData.update { currentResult ->
             if (currentResult is Result.Success) {
@@ -392,6 +404,7 @@ sealed class RegisterScreenIntent {
     data class UpdateBabyLastName(val babyLastName: String) : RegisterScreenIntent()
     data class UpdateBabyMiddleName(val babyMiddleName: String) : RegisterScreenIntent()
     data class UpdateBabyBirthDate(val babyBirthDate: String) : RegisterScreenIntent()
+    data class UpdateBabyGender(val gender: String) : RegisterScreenIntent()
     data class SetBabyEntryMethod(val method: BabyEntryMethod) : RegisterScreenIntent()
     data class SetDatePickerVisibility(val isVisible: Boolean) : RegisterScreenIntent()
     data object Register : RegisterScreenIntent()
@@ -426,6 +439,7 @@ data class RegisterScreenViewData(
     val babyLastName: String = "",
     val babyMiddleName: String = "",
     val babyBirthDate: String = "",
+    val babyGender: String = "",
     val isLoading: Boolean = false,
     val isEnabled: Boolean = false,
     val isPasswordVisible: Boolean = false,
