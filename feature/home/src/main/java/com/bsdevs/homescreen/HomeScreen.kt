@@ -144,7 +144,7 @@ internal fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(start = horizontalPadding, end = horizontalPadding, bottom = 16.dp),
+                .padding(start = horizontalPadding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             item {

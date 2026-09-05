@@ -5,6 +5,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -14,8 +15,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.ChildCare
@@ -61,8 +65,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -299,8 +307,16 @@ fun ActivityFeedItem(
     val title = when (item) {
         is BabyActivity.Nappy -> "Nappy Change: ${item.dto.type}"
         is BabyActivity.Feeding -> {
-            if (item.dto.mainFeedingSide == "Bottle") "Feeding: Bottle (${item.dto.bottleAmountMl}ml)"
-            else "Feeding: ${item.dto.mainFeedingSide ?: "Both"} (${formatDuration(item.dto.totalDuration)})"
+            val side = when (item.dto.mainFeedingSide) {
+                "Left" -> "L"
+                "Right" -> "R"
+                "Both" -> "L/R"
+                "Bottle" -> "Bottle"
+                else -> "L/R"
+            }
+            val minutes = item.dto.totalDuration / 60
+            val seconds = item.dto.totalDuration % 60
+            "Feed ($side) %02d:%02d".format(minutes, seconds)
         }
         is BabyActivity.Temperature -> "Temperature: ${item.dto.temperature}°C"
         is BabyActivity.Measurement -> {
@@ -352,14 +368,21 @@ fun ActivityFeedItem(
                 modifier = Modifier.fillMaxWidth().sharedElement(rememberSharedContentState(key = "activity_card_${item.id}"), animatedVisibilityScope).combinedClickable(onClick = onEdit, onLongClick = onEdit),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(modifier = Modifier.padding(12.dp).fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(40.dp).background(color, CircleShape).clip(CircleShape).clickable { onIconClick() }, contentAlignment = Alignment.Center) {
                         Icon(icon, contentDescription = "Filter", modifier = Modifier.size(24.dp), tint = onColor)
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        Text(text = title, style = MaterialTheme.typography.bodyMedium)
                         item.comment?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+
+                    if (item is BabyActivity.Feeding) {
+                        FeedingBar(
+                            durationSeconds = item.dto.totalDuration,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                     }
 
                     if (item is BabyActivity.Feeding && item.showVitaminDToggle) {
@@ -381,6 +404,68 @@ fun ActivityFeedItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
+    val durationMinutes = durationSeconds / 60f
+    // Target 1.0 for a full 20 min green feed, and 1.2 to represent the transition to gold
+    val targetProgress = when {
+        durationMinutes > 20f -> 1.2f
+        else -> (durationMinutes / 20f).coerceIn(0f, 1f)
+    }
+    
+    var startAnimation by remember { mutableStateOf(false) }
+    val animatedProgress by animateFloatAsState(
+        targetValue = if (startAnimation) targetProgress else 0f,
+        animationSpec = tween(
+            durationMillis = if (durationMinutes > 20f) 2500 else 2000,
+            delayMillis = 500,
+            easing = LinearOutSlowInEasing
+        ),
+        label = "FeedingFillAnimation"
+    )
+
+    LaunchedEffect(durationSeconds) {
+        startAnimation = true
+    }
+    
+    val brush = when {
+        animatedProgress <= 0.5f -> SolidColor(Color.Red)
+        animatedProgress <= 1.0f -> {
+            val fraction = (animatedProgress - 0.5f) / 0.5f
+            val topColor = lerp(Color.Red, Color.Green, fraction)
+            Brush.verticalGradient(
+                colors = listOf(topColor, Color.Red)
+            )
+        }
+        else -> {
+            val goldColor = Color(0xFFFFD700)
+            val fraction = ((animatedProgress - 1.0f) / 0.2f).coerceIn(0f, 1f)
+            val blendedColor = lerp(Color.Green, goldColor, fraction)
+            SolidColor(blendedColor)
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .width(8.dp)
+            .fillMaxHeight()
+            .padding(vertical = 4.dp)
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(4.dp))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .graphicsLayer {
+                    scaleY = animatedProgress.coerceAtMost(1f)
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                }
+                .background(brush)
+        )
     }
 }
 
@@ -412,12 +497,6 @@ fun BabyCareTile(
             }
         }
     }
-}
-
-private fun formatDuration(seconds: Long): String {
-    val minutes = seconds / 60
-    val remainingSeconds = seconds % 60
-    return "%02d:%02d".format(minutes, remainingSeconds)
 }
 
 private fun mapIconNameToVector(iconName: String): ImageVector {
