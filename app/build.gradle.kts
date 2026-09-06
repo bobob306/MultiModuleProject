@@ -13,8 +13,8 @@ android {
 
     defaultConfig {
         applicationId = "com.bsdevs.multimoduleproject"
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (project.findProperty("versionCode") as String? )?.toInt() ?: 77
+        versionName = (project.findProperty("versionName") as String? ) ?: "0.0.77"
     }
 
     signingConfigs {

@@ -111,6 +111,7 @@ class UserRepositoryImpl @Inject constructor(
                     return@addSnapshotListener
                 }
                 val baby = snapshot?.toObject(BabyDto::class.java)
+                baby?.let { babyCache[babyId] = it }
                 trySend(baby)
             }
         awaitClose { listener.remove() }
