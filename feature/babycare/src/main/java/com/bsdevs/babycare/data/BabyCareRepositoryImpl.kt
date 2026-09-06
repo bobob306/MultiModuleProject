@@ -150,8 +150,8 @@ class BabyCareRepositoryImpl @Inject constructor(
                     .atZoneSameInstant(java.time.ZoneId.systemDefault())
                     .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
             } catch (_: Exception) {
-                // Fallback to legacy split logic
-                dateTimeString.split(" ").lastOrNull() ?: ""
+                // Fallback to legacy extraction logic (handles "YYYY-MM-DD HH:mm" or ISO)
+                dateTimeString.substringAfter("T", dateTimeString.substringAfter(" ", "")).take(5)
             }
         }
         return UnifiedEventDto(
@@ -318,7 +318,7 @@ class BabyCareRepositoryImpl @Inject constructor(
         userId: String
     ) {
         // 1. Group measurements and vaccinations by date (YYYY-MM-DD)
-        val extraEventsByDate = (measurements + vaccinations).groupBy { it.dateTimeString.split(" ").first() }
+        val extraEventsByDate = (measurements + vaccinations).groupBy { it.dateTimeString.substringBefore("T").substringBefore(" ") }
 
         // 2. Take monthly days and merge extra events into them
         val mergedDays = monthlyDays.toMutableList()

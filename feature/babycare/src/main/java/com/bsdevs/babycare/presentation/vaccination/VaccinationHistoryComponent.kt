@@ -73,7 +73,7 @@ class VaccinationDataViewModel @Inject constructor(
             allVaccinations.map { event ->
                 VaccinationDto(
                     id = event.id,
-                    date = event.dateTimeString.split(" ").first(),
+                    date = event.dateTimeString.substringBefore("T").substringBefore(" "),
                     time = event.time,
                     dateTime = event.dateTimeString,
                     vaccinationNames = event.vaccinationNames ?: emptyList(),

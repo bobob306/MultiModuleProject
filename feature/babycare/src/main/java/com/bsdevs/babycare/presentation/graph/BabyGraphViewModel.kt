@@ -78,7 +78,7 @@ class BabyGraphViewModel @Inject constructor(
             val gapMinutes = nextMinutes - currentMinutes
 
             if (gapMinutes in 15..720) {
-                val targetDate = nextFeed.dateTimeString.split(" ").getOrNull(0) ?: continue
+                val targetDate = nextFeed.dateTimeString.substringBefore("T").substringBefore(" ")
                 gapMeasurements.add(DatedGap(targetDate, gapMinutes))
             }
         }
@@ -220,12 +220,15 @@ class BabyGraphViewModel @Inject constructor(
      */
     private fun parseToTotalMinutes(dateTimeString: String): Long {
         return try {
-            // Split "2026-08-16 22:31" into ["2026-08-16", "22:31"]
-            val spaceParts = dateTimeString.split(" ")
-            if (spaceParts.size < 2) return -1L
+            val dateStr = dateTimeString.substringBefore("T").substringBefore(" ")
+            val timeStr = if (dateTimeString.contains("T")) {
+                dateTimeString.substringAfter("T").substringBefore("Z").substringBefore("+").substringBefore(".")
+            } else {
+                dateTimeString.substringAfter(" ", "")
+            }
 
-            val dateParts = spaceParts[0].split("-") // ["2026", "08", "16"]
-            val timeParts = spaceParts[1].split(":") // ["22", "31"]
+            val dateParts = dateStr.split("-") // ["2026", "08", "16"]
+            val timeParts = timeStr.split(":") // ["22", "31"]
 
             if (dateParts.size < 3 || timeParts.size < 2) return -1L
 

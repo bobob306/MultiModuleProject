@@ -111,7 +111,7 @@ class FeedingViewModel @Inject constructor(
                 val feedingEvent = repository.getFeedingEventById(userId, id)
 
                 if (feedingEvent != null) {
-                    val extractedDate = feedingEvent.dateTimeString.split(" ").firstOrNull() ?: _localState.value.date
+                    val extractedDate = feedingEvent.dateTimeString.substringBefore("T").substringBefore(" ")
 
                     _localState.update {
                         it.copy(
@@ -254,11 +254,12 @@ class FeedingViewModel @Inject constructor(
                                 .toLocalDateTime()
                         } catch (_: Exception) {
                             try {
-                                LocalDateTime.parse(predTimeStr)
+                                java.time.LocalDateTime.parse(predTimeStr)
                             } catch (_: Exception) {
                                 // Fallback to original HH:mm logic
                                 val predLocalTime = LocalTime.parse(predTimeStr)
-                                LocalDateTime.of(LocalDate.parse(currentState.date), predLocalTime)
+                                val cleanDate = currentState.date.substringBefore("T").substringBefore(" ")
+                                LocalDateTime.of(LocalDate.parse(cleanDate), predLocalTime)
                             }
                         }
                         Duration.between(predDateTime, localDateTime).toMinutes()
