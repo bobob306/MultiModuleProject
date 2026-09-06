@@ -22,6 +22,7 @@ import java.util.Locale
 import java.util.UUID
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.Duration
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -238,7 +239,12 @@ class FeedingViewModel @Inject constructor(
                 val baby = babyId?.let { userRepository.getBaby(it) }
                 
                 val serverPrediction = baby?.nextFeedingTime
-                val actualDateTimeStr = "${currentState.date} ${currentState.startTime}"
+                
+                val localDateTime = LocalDateTime.of(
+                    LocalDate.parse(currentState.date), 
+                    LocalTime.parse(currentState.startTime)
+                )
+                val utcDateTimeString = localDateTime.atZone(ZoneId.systemDefault()).toInstant().toString()
                 
                 val gapMinutes = try {
                     serverPrediction?.let { predTimeStr ->
@@ -251,12 +257,11 @@ class FeedingViewModel @Inject constructor(
                                 LocalDateTime.parse(predTimeStr)
                             } catch (_: Exception) {
                                 // Fallback to original HH:mm logic
-                                val predLocalTime = java.time.LocalTime.parse(predTimeStr)
+                                val predLocalTime = LocalTime.parse(predTimeStr)
                                 LocalDateTime.of(LocalDate.parse(currentState.date), predLocalTime)
                             }
                         }
-                        val actual = LocalDateTime.parse(actualDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                        Duration.between(predDateTime, actual).toMinutes()
+                        Duration.between(predDateTime, localDateTime).toMinutes()
                     }
                 } catch (_: Exception) {
                     null
@@ -267,7 +272,7 @@ class FeedingViewModel @Inject constructor(
                     id = feedingId,
                     type = "FEEDING",
                     time = currentState.startTime,
-                    dateTimeString = actualDateTimeStr,
+                    dateTimeString = utcDateTimeString,
 
                     // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
                     comment = currentState.comment.trim().takeIf { it.isNotEmpty() },

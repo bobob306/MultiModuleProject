@@ -143,7 +143,17 @@ class BabyCareRepositoryImpl @Inject constructor(
 
     private fun parseUnifiedEvent(eventMap: Map<String, Any?>): UnifiedEventDto {
         val dateTimeString = eventMap["dateTimeString"] as? String ?: ""
-        val time = eventMap["time"] as? String ?: dateTimeString.split(" ").lastOrNull() ?: ""
+        val time = eventMap["time"] as? String ?: run {
+            try {
+                // Try parsing as UTC ISO 8601 first
+                java.time.OffsetDateTime.parse(dateTimeString)
+                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+            } catch (_: Exception) {
+                // Fallback to legacy split logic
+                dateTimeString.split(" ").lastOrNull() ?: ""
+            }
+        }
         return UnifiedEventDto(
             id = eventMap["id"] as? String ?: "",
             type = eventMap["type"] as? String ?: "",

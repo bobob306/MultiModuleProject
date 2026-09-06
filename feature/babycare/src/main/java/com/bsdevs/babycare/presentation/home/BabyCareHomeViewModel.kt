@@ -261,22 +261,23 @@ class BabyCareHomeViewModel @Inject constructor(
         val baby = babyId?.let { userRepository.getBaby(it) }
 
         // Use server-side prediction from Firebase
-        val feedingPrediction = baby?.nextFeedingTime?.let { _ ->
-            val zone = ZoneId.systemDefault()
-            
-            fun formatIso(iso: String?): String? = try {
-                java.time.OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
-            } catch (_: Exception) {
-                try { java.time.LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
-            }
+        val zone = ZoneId.systemDefault()
+        fun formatIso(iso: String?): String? = try {
+            java.time.OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
+        } catch (_: Exception) {
+            try { java.time.LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
+        }
 
-            if (baby.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null) {
+        val feedingPrediction = when {
+            baby?.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null -> {
                 val min = formatIso(baby.nextFeedingTimeMin)
                 val max = formatIso(baby.nextFeedingTimeMax)
                 "Next: $min - $max"
-            } else {
+            }
+            baby?.nextFeedingTime != null -> {
                 "Next: ${formatIso(baby.nextFeedingTime)}"
             }
+            else -> null
         }
 
         val lastTempEvent = allEventsFlattened.firstOrNull {
