@@ -269,13 +269,13 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         val feedingPrediction = when {
-            baby?.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null -> {
-                val min = formatIso(baby.nextFeedingTimeMin)
-                val max = formatIso(baby.nextFeedingTimeMax)
+            baby?.effectiveNextFeedingTimeMin != null && baby.effectiveNextFeedingTimeMax != null -> {
+                val min = formatIso(baby.effectiveNextFeedingTimeMin)
+                val max = formatIso(baby.effectiveNextFeedingTimeMax)
                 "Next: $min - $max"
             }
-            baby?.nextFeedingTime != null -> {
-                "Next: ${formatIso(baby.nextFeedingTime)}"
+            baby?.effectiveNextFeedingTime != null -> {
+                "Next: ${formatIso(baby.effectiveNextFeedingTime)}"
             }
             else -> null
         }
