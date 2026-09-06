@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
+import com.bsdevs.babycare.domain.FeedingPredictionEngine
+import com.bsdevs.babycare.domain.PredictionResult
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
@@ -32,6 +34,8 @@ class FeedingViewModelTest {
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
+    private lateinit var userRepository: UserRepository
+    private lateinit var predictionEngine: FeedingPredictionEngine
     private lateinit var timerManager: FeedingTimerManager
     private lateinit var viewModel: FeedingViewModel
     private lateinit var dispatchers: DispatcherProvider
@@ -50,11 +54,13 @@ class FeedingViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        val userRepository = mockk<UserRepository>(relaxed = true)
+        userRepository = mockk<UserRepository>(relaxed = true)
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
         accountService = FakeAccountService(userId)
+        
+        predictionEngine = mockk(relaxed = true)
         
         // 🚀 INSTANT TESTS: Mock the manager so we don't run real timer loops in VM tests
         timerManager = mockk(relaxed = true)
@@ -79,7 +85,15 @@ class FeedingViewModelTest {
         // Populate cache to ensure repository updates work
         repository.loadInitialData(userId, 1)
         
-        viewModel = FeedingViewModel(accountService, repository, timerManager, context, savedStateHandle)
+        viewModel = FeedingViewModel(
+            accountService, 
+            repository, 
+            predictionEngine,
+            userRepository,
+            timerManager, 
+            context, 
+            savedStateHandle
+        )
     }
 
     @Test
@@ -319,5 +333,30 @@ class FeedingViewModelTest {
         viewModel.uiState.filter { it.isPlayingSplodge }.test {
             assertTrue(awaitItem().isPlayingSplodge)
         }
+    }
+
+    @Test
+    fun `submitFeeding calculates and saves prediction gap`() = runTest {
+        // Given
+        val predictedTime = java.time.LocalDateTime.of(2026, 9, 1, 14, 0)
+        every { predictionEngine.predictNextFeeding(any(), any()) } returns PredictionResult(predictedTime, 0)
+        
+        createViewModel()
+        
+        // Actual start time is 14:30 (30 mins late)
+        viewModel.onStartTimeSelected(14, 30)
+        
+        // When
+        viewModel.submitFeeding()
+
+        // Then
+        val today = viewModel.uiState.value.date
+        val monthId = today.substring(0, 7)
+        val savedMonth = fakeService.fetchMonthDocument(userId, monthId)
+        val days = savedMonth!!["days"] as Map<*, *>
+        val dayEvents = days[today] as List<Map<String, Any?>>
+        
+        val savedEvent = dayEvents.first()
+        assertEquals(30L, savedEvent["predictionGapMinutes"])
     }
 }

@@ -4,5 +4,7 @@ import com.bsdevs.babycare.network.UnifiedEventDto
 
 data class BabyContext(
     val birthDate: String? = null,
-    val measurements: List<UnifiedEventDto> = emptyList()
+    val gender: String? = null,
+    val measurements: List<UnifiedEventDto> = emptyList(),
+    val nappyEvents: List<UnifiedEventDto> = emptyList()
 )

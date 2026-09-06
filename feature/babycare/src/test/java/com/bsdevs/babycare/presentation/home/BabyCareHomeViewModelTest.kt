@@ -3,6 +3,8 @@ package com.bsdevs.babycare.presentation.home
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
+import com.bsdevs.babycare.domain.FeedingPredictionEngine
+import com.bsdevs.babycare.domain.PredictionResult
 import java.time.LocalDate
 
 import com.bsdevs.babycare.network.BabyCareFirestoreService
@@ -41,6 +43,8 @@ class BabyCareHomeViewModelTest {
     private lateinit var accountService: FakeAccountService
     private lateinit var screenRepository: ScreenRepository
     private lateinit var mapper: ScreenDataMapper
+    private lateinit var userRepo: UserRepository
+    private lateinit var predictionEngine: FeedingPredictionEngine
     private lateinit var viewModel: BabyCareHomeViewModel
     private lateinit var dispatchers: DispatcherProvider
 
@@ -57,7 +61,7 @@ class BabyCareHomeViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        val userRepo = mockk<UserRepository>(relaxed = true)
+        userRepo = mockk<UserRepository>(relaxed = true)
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
@@ -65,12 +69,13 @@ class BabyCareHomeViewModelTest {
         
         screenRepository = mockk(relaxed = true)
         mapper = mockk(relaxed = true)
+        predictionEngine = mockk(relaxed = true)
         
         coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(emptyList()))
         every { mapper.mapToData(any()) } returns emptyList()
         
         // viewModel init triggers initialLoad which uses repository
-        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
+        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, userRepo, mapper, dispatchers, predictionEngine)
     }
 
     @After
@@ -118,7 +123,15 @@ class BabyCareHomeViewModelTest {
         coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(listOf(mockk())))
         
         // When recreating VM to trigger init
-        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
+        val vm = BabyCareHomeViewModel(
+            repository, 
+            accountService, 
+            screenRepository, 
+            userRepo, 
+            mapper, 
+            dispatchers, 
+            predictionEngine
+        )
         
         // Then
         vm.viewData.test {
@@ -129,7 +142,7 @@ class BabyCareHomeViewModelTest {
                 result = awaitItem()
             }
             
-            assertEquals(dynamicUi, (result).data.dynamicUi)
+            assertEquals(dynamicUi, (result as Result.Success).data.dynamicUi)
         }
     }
 
@@ -344,7 +357,15 @@ class BabyCareHomeViewModelTest {
         val errorRepo = BabyCareRepositoryImpl(crashingService, userRepo, dispatchers, timeProvider)
         
         // We need to wait for the viewModelScope to finish the initialLoad call
-        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper, dispatchers)
+        val errorViewModel = BabyCareHomeViewModel(
+            errorRepo, 
+            accountService, 
+            screenRepository, 
+            userRepo, 
+            mapper, 
+            dispatchers, 
+            predictionEngine
+        )
 
         // Then
         errorViewModel.viewData.test {
@@ -354,6 +375,31 @@ class BabyCareHomeViewModelTest {
                 lastResult = awaitItem()
             }
             assertTrue("Expected Result.Error but got $lastResult", lastResult is Result.Error)
+        }
+    }
+
+    @Test
+    fun `processFeed includes next feeding prediction range`() = runTest {
+        // Given
+        val date = "2026-08-26"
+        val event = mapOf("id" to "e1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(event))))
+        
+        val predictedTime = java.time.LocalDateTime.of(2026, 8, 26, 13, 0)
+        // Set a confidence range of 40 mins
+        every { predictionEngine.predictNextFeeding(any(), any()) } returns PredictionResult(predictedTime, 40)
+
+        // When
+        viewModel.refreshData()
+
+        // Then
+        viewModel.viewData.test {
+            var result = awaitItem()
+            while (result !is Result.Success) { result = awaitItem() }
+            val data = (result as Result.Success).data
+            
+            // Range: 13:00 +/- 20 mins = 12:40 - 13:20
+            assertEquals("Next: 12:40 - 13:20", data.nextFeedingPrediction)
         }
     }
 }

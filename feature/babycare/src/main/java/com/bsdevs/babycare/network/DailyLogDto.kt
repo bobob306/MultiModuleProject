@@ -42,5 +42,8 @@ data class UnifiedEventDto(
     val seriesId: String? = null,
 
     // Vitamin D
-    val hasVitaminD: Boolean? = null
+    val hasVitaminD: Boolean? = null,
+
+    // Prediction Gap
+    val predictionGapMinutes: Long? = null
 )

@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.domain.BabyContext
+import com.bsdevs.babycare.domain.FeedingPredictionEngine
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.MeasurementDto
@@ -18,6 +20,7 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
@@ -34,11 +38,14 @@ class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val accountService: AccountService,
     private val screenRepository: ScreenRepository,
+    private val userRepository: UserRepository,
     private val mapper: ScreenDataMapper,
     private val dispatchers: DispatcherProvider,
+    private val predictionEngine: FeedingPredictionEngine
 ) : ViewModel() {
 
     private val pageSize = 20
+    private val predictionFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
@@ -60,8 +67,19 @@ class BabyCareHomeViewModel @Inject constructor(
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {
+        // 🌟 1. Observe the baby profile for server-side predictions
+        viewModelScope.launch {
+            userRepository.userProfile.collect { user ->
+                user?.babyId?.let { babyId ->
+                    userRepository.getBabyFlow(babyId).collect {
+                        // Trigger UI update when baby profile (including predictions) changes
+                        updateDisplayFeed(repository.cachedDays.value)
+                    }
+                }
+            }
+        }
+
         // 🌟 2. Observe the repository cache in the background to handle instant updates
-        // without letting empty states lock up our initialization pipeline
         viewModelScope.launch {
             repository.cachedDays.collect { dailyLogs ->
                 // Only map to Success if we aren't currently waiting on a full initial pull
@@ -225,6 +243,51 @@ class BabyCareHomeViewModel @Inject constructor(
             it.type == "FEEDING"
         }?.let { "Last feed: ${it.time}" }
 
+        val babyId = userRepository.userProfile.value?.babyId
+        val baby = babyId?.let { userRepository.getBaby(it) }
+
+        // Use server-side prediction if available, otherwise fallback to local calculation
+        val feedingPrediction = if (baby?.nextFeedingTime != null) {
+            val time = baby.nextFeedingTime
+            val range = baby.predictionConfidenceRange ?: 0
+            if (range > 15) {
+                // If the server provides a range, we could format it here or the server could provide the string
+                // For now, let's assume the server provides the base time and we apply the range
+                try {
+                    val localTime = java.time.LocalTime.parse(time)
+                    val startTime = localTime.minusMinutes(range / 2L).format(predictionFormatter)
+                    val endTime = localTime.plusMinutes(range / 2L).format(predictionFormatter)
+                    "Next: $startTime - $endTime"
+                } catch (_: Exception) {
+                    "Next: $time"
+                }
+            } else {
+                "Next: $time"
+            }
+        } else {
+            val nappyEvents = allEventsFlattened.filter { 
+                it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" 
+            }
+            val babyContext = BabyContext(
+                birthDate = baby?.effectiveBirthDate,
+                gender = baby?.gender,
+                measurements = repository.measurements.value,
+                nappyEvents = nappyEvents
+            )
+
+            val predictionResult = predictionEngine.predictNextFeeding(allEventsFlattened, babyContext)
+            predictionResult?.let { result ->
+                val time = result.predictedTime.format(predictionFormatter)
+                if (result.confidenceRangeMinutes > 15) {
+                    val startTime = result.predictedTime.minusMinutes(result.confidenceRangeMinutes / 2L).format(predictionFormatter)
+                    val endTime = result.predictedTime.plusMinutes(result.confidenceRangeMinutes / 2L).format(predictionFormatter)
+                    "Next: $startTime - $endTime"
+                } else {
+                    "Next: $time"
+                }
+            }
+        }
+
         val lastTempEvent = allEventsFlattened.firstOrNull {
             it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
         }
@@ -299,6 +362,7 @@ class BabyCareHomeViewModel @Inject constructor(
         BabyCareHomeViewData(
             lastNappyChange = absoluteLastNappy,
             lastFeeding = absoluteLastFeeding,
+            nextFeedingPrediction = feedingPrediction,
             lastTemperature = absoluteLastTemperature,
             lastMeasurement = absoluteLastMeasurement,
             lastVaccination = absoluteLastVaccination,
