@@ -43,7 +43,7 @@ class MeasurementViewModel @Inject constructor(
         val mapped = allMeasurements.map { event ->
             com.bsdevs.babycare.network.MeasurementDto(
                 id = event.id,
-                date = event.dateTimeString.split(" ").first(),
+                date = event.dateTimeString.substringBefore("T").substringBefore(" "),
                 time = event.time,
                 dateTime = event.dateTimeString,
                 height = event.height,
@@ -112,7 +112,7 @@ class MeasurementViewModel @Inject constructor(
                     _localState.update {
                         it.copy(
                             id = event.id,
-                            date = event.dateTimeString.split(" ").firstOrNull() ?: it.date,
+                            date = event.dateTimeString.substringBefore("T").substringBefore(" "),
                             time = event.time,
                             height = event.height,
                             weight = event.weight,

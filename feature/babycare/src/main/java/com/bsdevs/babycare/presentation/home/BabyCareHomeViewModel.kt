@@ -375,7 +375,7 @@ class BabyCareHomeViewModel @Inject constructor(
         val extractedTime = if (event.time.isNotEmpty()) {
             event.time
         } else {
-            event.dateTimeString.split(" ").getOrNull(1) ?: ""
+            event.dateTimeString.substringAfter("T", event.dateTimeString.substringAfter(" ", "")).take(5)
         }
 
         // 🔄 Fix 2: If the type field was corrupted (e.g., set to "Wet"), recognize it as a nappy activity
@@ -463,8 +463,8 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private fun formatHeaderDate(dateString: String): String {
         return try {
-            // Safe check: extract just the YYYY-MM-DD segment if it contains time info
-            val cleanDateStr = dateString.split(" ").firstOrNull() ?: dateString
+            // Safe check: extract just the YYYY-MM-DD segment if it contains time info (handles space or T)
+            val cleanDateStr = dateString.substringBefore("T").substringBefore(" ")
             val targetDate = LocalDate.parse(cleanDateStr)
             val today = LocalDate.now()
 
