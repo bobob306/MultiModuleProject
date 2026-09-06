@@ -8,6 +8,7 @@ import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -19,6 +20,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.Duration
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,6 +34,7 @@ import kotlinx.coroutines.flow.stateIn
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
+    private val userRepository: UserRepository,
     private val timerManager: FeedingTimerManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     savedStateHandle: SavedStateHandle
@@ -224,27 +230,54 @@ class FeedingViewModel @Inject constructor(
         }
         val feedingId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
 
-        // ➕ 1. Map your UI state values directly into a clean UnifiedEventDto payload instance
-        val unifiedFeedingEvent = UnifiedEventDto(
-            id = feedingId,
-            type = "FEEDING",
-            time = currentState.startTime,
-            dateTimeString = "${currentState.date} ${currentState.startTime}",
-
-            // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
-            comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
-
-            mainFeedingSide = mainFeedingSide,
-            leftDuration = currentState.leftDuration,
-            rightDuration = currentState.rightDuration,
-            totalDuration = currentState.leftDuration + currentState.rightDuration,
-            bottleAmountMl = currentState.bottleAmountMl,
-            hasVitaminD = currentState.hasVitaminD
-        )
-
         viewModelScope.launch {
             _localState.update { it.copy(isLoading = true, error = null) }
             try {
+                val babyId = userRepository.userProfile.value?.babyId
+                val baby = babyId?.let { userRepository.getBaby(it) }
+                
+                val serverPrediction = baby?.nextFeedingTime
+                val actualDateTimeStr = "${currentState.date} ${currentState.startTime}"
+                
+                val gapMinutes = try {
+                    serverPrediction?.let { predTimeStr ->
+                        val predDateTime = try {
+                            java.time.OffsetDateTime.parse(predTimeStr).toLocalDateTime()
+                        } catch (_: Exception) {
+                            try {
+                                LocalDateTime.parse(predTimeStr)
+                            } catch (_: Exception) {
+                                // Fallback to original HH:mm logic
+                                val predLocalTime = java.time.LocalTime.parse(predTimeStr)
+                                LocalDateTime.of(LocalDate.parse(currentState.date), predLocalTime)
+                            }
+                        }
+                        val actual = LocalDateTime.parse(actualDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                        Duration.between(predDateTime, actual).toMinutes()
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+
+                // ➕ 1. Map your UI state values directly into a clean UnifiedEventDto payload instance
+                val unifiedFeedingEvent = UnifiedEventDto(
+                    id = feedingId,
+                    type = "FEEDING",
+                    time = currentState.startTime,
+                    dateTimeString = actualDateTimeStr,
+
+                    // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
+                    comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
+
+                    mainFeedingSide = mainFeedingSide,
+                    leftDuration = currentState.leftDuration,
+                    rightDuration = currentState.rightDuration,
+                    totalDuration = currentState.leftDuration + currentState.rightDuration,
+                    bottleAmountMl = currentState.bottleAmountMl,
+                    hasVitaminD = currentState.hasVitaminD,
+                    predictionGapMinutes = gapMinutes
+                )
+
                 // Check if an entry ID already existed inside your state layer
                 val isEditingExistingItem = !currentState.id.isNullOrEmpty()
 

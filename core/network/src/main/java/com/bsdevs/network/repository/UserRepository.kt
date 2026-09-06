@@ -5,9 +5,12 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
@@ -25,6 +28,7 @@ interface UserRepository {
     suspend fun babyExists(babyId: String): Boolean
     suspend fun getUser(userId: String, forceRefresh: Boolean = false): UserDto?
     suspend fun getBaby(babyId: String, forceRefresh: Boolean = false): BabyDto?
+    fun getBabyFlow(babyId: String): Flow<BabyDto?>
     suspend fun deleteUserData(userId: String)
     suspend fun clearCache()
     fun registerClearable(clearable: Clearable)
@@ -96,6 +100,20 @@ class UserRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+
+    override fun getBabyFlow(babyId: String): Flow<BabyDto?> = callbackFlow {
+        Log.d("FIREBASE_CALL", "Listen Baby: $babyId")
+        val listener = firestore.collection("babies").document(babyId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                val baby = snapshot?.toObject(BabyDto::class.java)
+                trySend(baby)
+            }
+        awaitClose { listener.remove() }
     }
 
     override suspend fun deleteUserData(userId: String): Unit = withContext(dispatchers.io) {

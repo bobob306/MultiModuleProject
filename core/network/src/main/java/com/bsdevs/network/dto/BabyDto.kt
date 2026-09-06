@@ -22,7 +22,12 @@ data class BabyDto(
     @get:PropertyName("dateOfBirth")
     @set:PropertyName("dateOfBirth")
     var dateOfBirth: String? = null,
-    val gender: String? = null // "male" or "female"
+    val gender: String? = null, // "male" or "female"
+    val nextFeedingTime: String? = null,
+    val nextFeedingTimeMin: String? = null,
+    val nextFeedingTimeMax: String? = null,
+    val predictionConfidenceRange: String? = null, // "low", "medium", "high"
+    val lastPredictionSync: String? = null
 ) {
     val effectiveBirthDate: String?
         get() = birthDate ?: birth_date ?: dateOfBirth

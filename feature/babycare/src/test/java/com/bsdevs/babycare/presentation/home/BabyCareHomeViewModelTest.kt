@@ -25,7 +25,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -41,6 +40,7 @@ class BabyCareHomeViewModelTest {
     private lateinit var accountService: FakeAccountService
     private lateinit var screenRepository: ScreenRepository
     private lateinit var mapper: ScreenDataMapper
+    private lateinit var userRepo: UserRepository
     private lateinit var viewModel: BabyCareHomeViewModel
     private lateinit var dispatchers: DispatcherProvider
 
@@ -57,7 +57,7 @@ class BabyCareHomeViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        val userRepo = mockk<UserRepository>(relaxed = true)
+        userRepo = mockk<UserRepository>(relaxed = true)
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
@@ -70,7 +70,7 @@ class BabyCareHomeViewModelTest {
         every { mapper.mapToData(any()) } returns emptyList()
         
         // viewModel init triggers initialLoad which uses repository
-        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
+        viewModel = BabyCareHomeViewModel(repository, accountService, screenRepository, userRepo, mapper, dispatchers)
     }
 
     @After
@@ -118,7 +118,7 @@ class BabyCareHomeViewModelTest {
         coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(listOf(mockk())))
         
         // When recreating VM to trigger init
-        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, mapper, dispatchers)
+        val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, userRepo, mapper, dispatchers)
         
         // Then
         vm.viewData.test {
@@ -129,7 +129,7 @@ class BabyCareHomeViewModelTest {
                 result = awaitItem()
             }
             
-            assertEquals(dynamicUi, (result).data.dynamicUi)
+            assertEquals(dynamicUi, result.data.dynamicUi)
         }
     }
 
@@ -344,7 +344,14 @@ class BabyCareHomeViewModelTest {
         val errorRepo = BabyCareRepositoryImpl(crashingService, userRepo, dispatchers, timeProvider)
         
         // We need to wait for the viewModelScope to finish the initialLoad call
-        val errorViewModel = BabyCareHomeViewModel(errorRepo, accountService, screenRepository, mapper, dispatchers)
+        val errorViewModel = BabyCareHomeViewModel(
+            errorRepo, 
+            accountService, 
+            screenRepository, 
+            userRepo, 
+            mapper, 
+            dispatchers
+        )
 
         // Then
         errorViewModel.viewData.test {
@@ -354,6 +361,37 @@ class BabyCareHomeViewModelTest {
                 lastResult = awaitItem()
             }
             assertTrue("Expected Result.Error but got $lastResult", lastResult is Result.Error)
+        }
+    }
+
+    @Test
+    fun `processFeed includes next feeding prediction range from baby profile`() = runTest {
+        // Given
+        val date = "2026-08-26"
+        val event = mapOf("id" to "e1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$date 10:00")
+        fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(event))))
+        
+        // Mock the baby profile with a prediction range
+        val baby = com.bsdevs.network.dto.BabyDto(
+            id = "baby1",
+            nextFeedingTimeMin = "2026-08-26T12:40:00",
+            nextFeedingTimeMax = "2026-08-26T13:20:00",
+            predictionConfidenceRange = "medium"
+        )
+        coEvery { userRepo.getBaby(any(), any()) } returns baby
+        every { userRepo.userProfile.value } returns com.bsdevs.network.dto.UserDto(babyId = "baby1")
+
+        // When
+        viewModel.refreshData()
+
+        // Then
+        viewModel.viewData.test {
+            var result = awaitItem()
+            while (result !is Result.Success) { result = awaitItem() }
+            val data = (result as Result.Success).data
+            
+            // Range: 13:00 +/- 20 mins = 12:40 - 13:20
+            assertEquals("Next: 12:40 - 13:20", data.nextFeedingPrediction)
         }
     }
 }

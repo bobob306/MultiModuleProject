@@ -18,6 +18,7 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
@@ -34,11 +36,13 @@ class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val accountService: AccountService,
     private val screenRepository: ScreenRepository,
+    private val userRepository: UserRepository,
     private val mapper: ScreenDataMapper,
     private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     private val pageSize = 20
+    private val predictionFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
@@ -60,8 +64,19 @@ class BabyCareHomeViewModel @Inject constructor(
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {
+        // 🌟 1. Observe the baby profile for server-side predictions
+        viewModelScope.launch {
+            userRepository.userProfile.collect { user ->
+                user?.babyId?.let { babyId ->
+                    userRepository.getBabyFlow(babyId).collect {
+                        // Trigger UI update when baby profile (including predictions) changes
+                        updateDisplayFeed(repository.cachedDays.value)
+                    }
+                }
+            }
+        }
+
         // 🌟 2. Observe the repository cache in the background to handle instant updates
-        // without letting empty states lock up our initialization pipeline
         viewModelScope.launch {
             repository.cachedDays.collect { dailyLogs ->
                 // Only map to Success if we aren't currently waiting on a full initial pull
@@ -225,6 +240,33 @@ class BabyCareHomeViewModel @Inject constructor(
             it.type == "FEEDING"
         }?.let { "Last feed: ${it.time}" }
 
+        val babyId = userRepository.userProfile.value?.babyId
+        val baby = babyId?.let { userRepository.getBaby(it) }
+
+        // Use server-side prediction from Firebase
+        val feedingPrediction = if (baby?.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null) {
+            val minTime = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMin }
+            }
+            val maxTime = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMax }
+            }
+            "Next: $minTime - $maxTime"
+        } else if (baby?.nextFeedingTime != null) {
+            val time = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTime }
+            }
+            "Next: $time"
+        } else {
+            null
+        }
+
         val lastTempEvent = allEventsFlattened.firstOrNull {
             it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
         }
@@ -299,6 +341,7 @@ class BabyCareHomeViewModel @Inject constructor(
         BabyCareHomeViewData(
             lastNappyChange = absoluteLastNappy,
             lastFeeding = absoluteLastFeeding,
+            nextFeedingPrediction = feedingPrediction,
             lastTemperature = absoluteLastTemperature,
             lastMeasurement = absoluteLastMeasurement,
             lastVaccination = absoluteLastVaccination,

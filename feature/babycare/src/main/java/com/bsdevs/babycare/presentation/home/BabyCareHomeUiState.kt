@@ -19,6 +19,7 @@ sealed class HomeFeedItem {
 data class BabyCareHomeViewData(
     val lastNappyChange: String? = null,
     val lastFeeding: String? = null,
+    val nextFeedingPrediction: String? = null,
     val lastTemperature: String? = null,
     val lastMeasurement: String? = null,
     val lastVaccination: String? = null,

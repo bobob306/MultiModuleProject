@@ -26,6 +26,9 @@ jobs:
       - name: Decode Keystore
         run: echo -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > /tmp/release.keystore
 
+      - name: Create google-services.json
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
       # Build signed release APK with env vars safely wrapped in single quotes
       - name: Build Signed Release APK
         env:

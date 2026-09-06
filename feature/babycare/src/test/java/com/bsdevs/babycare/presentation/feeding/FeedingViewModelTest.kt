@@ -5,7 +5,6 @@ import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.home.FakeAccountService
-import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.babycare.presentation.common.TimeProvider
@@ -32,6 +31,7 @@ class FeedingViewModelTest {
     private lateinit var fakeService: FakeBabyCareFirestoreService
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
+    private lateinit var userRepository: UserRepository
     private lateinit var timerManager: FeedingTimerManager
     private lateinit var viewModel: FeedingViewModel
     private lateinit var dispatchers: DispatcherProvider
@@ -50,7 +50,7 @@ class FeedingViewModelTest {
         }
 
         fakeService = FakeBabyCareFirestoreService()
-        val userRepository = mockk<UserRepository>(relaxed = true)
+        userRepository = mockk<UserRepository>(relaxed = true)
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
@@ -79,7 +79,14 @@ class FeedingViewModelTest {
         // Populate cache to ensure repository updates work
         repository.loadInitialData(userId, 1)
         
-        viewModel = FeedingViewModel(accountService, repository, timerManager, context, savedStateHandle)
+        viewModel = FeedingViewModel(
+            accountService, 
+            repository, 
+            userRepository,
+            timerManager, 
+            context, 
+            savedStateHandle
+        )
     }
 
     @Test
@@ -105,7 +112,7 @@ class FeedingViewModelTest {
         createViewModel(activityId = eventId)
 
         // Then
-        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
+        viewModel.uiState.filter { (it.id == eventId && !it.isLoading) }.test {
             val finalState = awaitItem()
             assertEquals(eventId, finalState.id)
             assertEquals(120, finalState.bottleAmountMl)
@@ -293,7 +300,7 @@ class FeedingViewModelTest {
         
         // Then: Manager should be synced with historical metadata
         // We use a reactive wait and then verify the interaction
-        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
+        viewModel.uiState.filter { (it.id == eventId && !it.isLoading) }.test {
             awaitItem()
             verify(timeout = 2000) { timerManager.setSessionMetadata(historicalTime, historicalDate) }
         }
@@ -319,5 +326,34 @@ class FeedingViewModelTest {
         viewModel.uiState.filter { it.isPlayingSplodge }.test {
             assertTrue(awaitItem().isPlayingSplodge)
         }
+    }
+
+    @Test
+    fun `submitFeeding calculates and saves prediction gap from baby profile`() = runTest {
+        // Given
+        val baby = com.bsdevs.network.dto.BabyDto(
+            id = "baby1",
+            nextFeedingTime = "2026-09-01T14:00:00"
+        )
+        coEvery { userRepository.getBaby(any(), any()) } returns baby
+        every { userRepository.userProfile.value } returns com.bsdevs.network.dto.UserDto(babyId = "baby1")
+        
+        createViewModel()
+        
+        // Actual start time is 14:30 (30 mins late)
+        viewModel.onStartTimeSelected(14, 30)
+        
+        // When
+        viewModel.submitFeeding()
+
+        // Then
+        val today = viewModel.uiState.value.date
+        val monthId = today.substring(0, 7)
+        val savedMonth = fakeService.fetchMonthDocument(userId, monthId)
+        val days = savedMonth!!["days"] as Map<*, *>
+        val dayEvents = days[today] as List<Map<String, Any?>>
+        
+        val savedEvent = dayEvents.first()
+        assertEquals(30L, savedEvent["predictionGapMinutes"])
     }
 }

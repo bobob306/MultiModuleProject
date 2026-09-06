@@ -18,4 +18,5 @@ data class FeedingDto(
     val bottleAmountMl: Int? = null,
     val comment: String? = null,
     val hasVitaminD: Boolean = false,
+    val predictionGapMinutes: Long? = null
 )

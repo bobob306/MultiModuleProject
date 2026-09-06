@@ -106,7 +106,11 @@ fun BabyCareTileRowComponent(
         tiles.forEach { tile ->
             val subtitle = when (tile.subtitleType) {
                 "NAPPY" -> viewData?.lastNappyChange
-                "FEEDING" -> viewData?.lastFeeding
+                "FEEDING" -> {
+                    val last = viewData?.lastFeeding
+                    val next = viewData?.nextFeedingPrediction
+                    if (last != null && next != null) "$last\n$next" else last ?: next
+                }
                 "TEMPERATURE" -> viewData?.lastTemperature
                 "MEASUREMENT" -> viewData?.lastMeasurement
                 "VACCINATION" -> viewData?.lastVaccination
@@ -492,7 +496,7 @@ fun BabyCareTile(
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.padding(8.dp)) {
                     Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
                     Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

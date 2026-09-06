@@ -40,3 +40,5 @@ output-metadata.json
 # Optional: Ignore log files
 *.log
 /.artifacts/
+google-services.json
+**/google-services.json
