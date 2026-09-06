@@ -4,10 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
-import com.bsdevs.babycare.domain.FeedingPredictionEngine
-import com.bsdevs.babycare.domain.PredictionResult
 import com.bsdevs.babycare.presentation.home.FakeAccountService
-import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.babycare.presentation.common.TimeProvider
@@ -35,7 +32,6 @@ class FeedingViewModelTest {
     private lateinit var repository: BabyCareRepositoryImpl
     private lateinit var accountService: FakeAccountService
     private lateinit var userRepository: UserRepository
-    private lateinit var predictionEngine: FeedingPredictionEngine
     private lateinit var timerManager: FeedingTimerManager
     private lateinit var viewModel: FeedingViewModel
     private lateinit var dispatchers: DispatcherProvider
@@ -59,8 +55,6 @@ class FeedingViewModelTest {
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
         accountService = FakeAccountService(userId)
-        
-        predictionEngine = mockk(relaxed = true)
         
         // 🚀 INSTANT TESTS: Mock the manager so we don't run real timer loops in VM tests
         timerManager = mockk(relaxed = true)
@@ -88,7 +82,6 @@ class FeedingViewModelTest {
         viewModel = FeedingViewModel(
             accountService, 
             repository, 
-            predictionEngine,
             userRepository,
             timerManager, 
             context, 
@@ -119,7 +112,7 @@ class FeedingViewModelTest {
         createViewModel(activityId = eventId)
 
         // Then
-        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
+        viewModel.uiState.filter { (it.id == eventId && !it.isLoading) }.test {
             val finalState = awaitItem()
             assertEquals(eventId, finalState.id)
             assertEquals(120, finalState.bottleAmountMl)
@@ -307,7 +300,7 @@ class FeedingViewModelTest {
         
         // Then: Manager should be synced with historical metadata
         // We use a reactive wait and then verify the interaction
-        viewModel.uiState.filter { it.id == eventId && !it.isLoading }.test {
+        viewModel.uiState.filter { (it.id == eventId && !it.isLoading) }.test {
             awaitItem()
             verify(timeout = 2000) { timerManager.setSessionMetadata(historicalTime, historicalDate) }
         }
@@ -336,10 +329,14 @@ class FeedingViewModelTest {
     }
 
     @Test
-    fun `submitFeeding calculates and saves prediction gap`() = runTest {
+    fun `submitFeeding calculates and saves prediction gap from baby profile`() = runTest {
         // Given
-        val predictedTime = java.time.LocalDateTime.of(2026, 9, 1, 14, 0)
-        every { predictionEngine.predictNextFeeding(any(), any()) } returns PredictionResult(predictedTime, 0)
+        val baby = com.bsdevs.network.dto.BabyDto(
+            id = "baby1",
+            nextFeedingTime = "2026-09-01T14:00:00"
+        )
+        coEvery { userRepository.getBaby(any(), any()) } returns baby
+        every { userRepository.userProfile.value } returns com.bsdevs.network.dto.UserDto(babyId = "baby1")
         
         createViewModel()
         

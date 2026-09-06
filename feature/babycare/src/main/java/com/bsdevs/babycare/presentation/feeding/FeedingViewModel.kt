@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.domain.BabyContext
-import com.bsdevs.babycare.domain.FeedingPredictionEngine
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
 import com.bsdevs.babycare.network.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
@@ -22,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Duration
 import java.time.format.DateTimeFormatter
@@ -35,7 +34,6 @@ import kotlinx.coroutines.flow.stateIn
 class FeedingViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
-    private val predictionEngine: FeedingPredictionEngine,
     private val userRepository: UserRepository,
     private val timerManager: FeedingTimerManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
@@ -235,30 +233,29 @@ class FeedingViewModel @Inject constructor(
         viewModelScope.launch {
             _localState.update { it.copy(isLoading = true, error = null) }
             try {
-                val allEvents = repository.cachedDays.value.flatMap { it.events }
-                
                 val babyId = userRepository.userProfile.value?.babyId
                 val baby = babyId?.let { userRepository.getBaby(it) }
-                val nappyEvents = allEvents.filter { 
-                    it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" 
-                }
-                val babyContext = BabyContext(
-                    birthDate = baby?.effectiveBirthDate,
-                    gender = baby?.gender,
-                    measurements = repository.measurements.value,
-                    nappyEvents = nappyEvents
-                )
                 
-                val predictionResult = predictionEngine.predictNextFeeding(allEvents, babyContext)
-                val prediction = predictionResult?.predictedTime
+                val serverPrediction = baby?.nextFeedingTime
                 val actualDateTimeStr = "${currentState.date} ${currentState.startTime}"
                 
                 val gapMinutes = try {
-                    prediction?.let { pred ->
+                    serverPrediction?.let { predTimeStr ->
+                        val predDateTime = try {
+                            java.time.OffsetDateTime.parse(predTimeStr).toLocalDateTime()
+                        } catch (_: Exception) {
+                            try {
+                                LocalDateTime.parse(predTimeStr)
+                            } catch (_: Exception) {
+                                // Fallback to original HH:mm logic
+                                val predLocalTime = java.time.LocalTime.parse(predTimeStr)
+                                LocalDateTime.of(LocalDate.parse(currentState.date), predLocalTime)
+                            }
+                        }
                         val actual = LocalDateTime.parse(actualDateTimeStr, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                        Duration.between(pred, actual).toMinutes()
+                        Duration.between(predDateTime, actual).toMinutes()
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
 

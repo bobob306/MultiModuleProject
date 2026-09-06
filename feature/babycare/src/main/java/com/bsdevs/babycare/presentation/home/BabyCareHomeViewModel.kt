@@ -5,8 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.domain.BabyContext
-import com.bsdevs.babycare.domain.FeedingPredictionEngine
 import com.bsdevs.babycare.network.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.MeasurementDto
@@ -41,7 +39,6 @@ class BabyCareHomeViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val mapper: ScreenDataMapper,
     private val dispatchers: DispatcherProvider,
-    private val predictionEngine: FeedingPredictionEngine
 ) : ViewModel() {
 
     private val pageSize = 20
@@ -246,46 +243,28 @@ class BabyCareHomeViewModel @Inject constructor(
         val babyId = userRepository.userProfile.value?.babyId
         val baby = babyId?.let { userRepository.getBaby(it) }
 
-        // Use server-side prediction if available, otherwise fallback to local calculation
-        val feedingPrediction = if (baby?.nextFeedingTime != null) {
-            val time = baby.nextFeedingTime
-            val range = baby.predictionConfidenceRange ?: 0
-            if (range > 15) {
-                // If the server provides a range, we could format it here or the server could provide the string
-                // For now, let's assume the server provides the base time and we apply the range
-                try {
-                    val localTime = java.time.LocalTime.parse(time)
-                    val startTime = localTime.minusMinutes(range / 2L).format(predictionFormatter)
-                    val endTime = localTime.plusMinutes(range / 2L).format(predictionFormatter)
-                    "Next: $startTime - $endTime"
-                } catch (_: Exception) {
-                    "Next: $time"
-                }
-            } else {
-                "Next: $time"
+        // Use server-side prediction from Firebase
+        val feedingPrediction = if (baby?.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null) {
+            val minTime = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMin }
             }
+            val maxTime = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMax }
+            }
+            "Next: $minTime - $maxTime"
+        } else if (baby?.nextFeedingTime != null) {
+            val time = try { 
+                java.time.OffsetDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) 
+            } catch (_: Exception) { 
+                try { java.time.LocalDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTime }
+            }
+            "Next: $time"
         } else {
-            val nappyEvents = allEventsFlattened.filter { 
-                it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" 
-            }
-            val babyContext = BabyContext(
-                birthDate = baby?.effectiveBirthDate,
-                gender = baby?.gender,
-                measurements = repository.measurements.value,
-                nappyEvents = nappyEvents
-            )
-
-            val predictionResult = predictionEngine.predictNextFeeding(allEventsFlattened, babyContext)
-            predictionResult?.let { result ->
-                val time = result.predictedTime.format(predictionFormatter)
-                if (result.confidenceRangeMinutes > 15) {
-                    val startTime = result.predictedTime.minusMinutes(result.confidenceRangeMinutes / 2L).format(predictionFormatter)
-                    val endTime = result.predictedTime.plusMinutes(result.confidenceRangeMinutes / 2L).format(predictionFormatter)
-                    "Next: $startTime - $endTime"
-                } else {
-                    "Next: $time"
-                }
-            }
+            null
         }
 
         val lastTempEvent = allEventsFlattened.firstOrNull {
