@@ -20,9 +20,12 @@ import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
 import com.bsdevs.network.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +35,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
@@ -65,19 +69,24 @@ class BabyCareHomeViewModel @Inject constructor(
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {
-        // 🌟 1. Observe the baby profile for server-side predictions
+        // 🌟 1. Observe the baby profile for server-side predictions reactively
         viewModelScope.launch {
-            userRepository.userProfile.collect { user ->
-                user?.babyId?.let { babyId ->
-                    userRepository.getBabyFlow(babyId).collect {
-                        // Trigger UI update when baby profile (including predictions) changes
-                        updateDisplayFeed(repository.cachedDays.value)
+            userRepository.userProfile
+                .flatMapLatest { user ->
+                    val babyId = user?.babyId
+                    if (babyId != null) {
+                        userRepository.getBabyFlow(babyId)
+                    } else {
+                        flowOf(null)
                     }
                 }
-            }
+                .collect {
+                    // Trigger UI update when baby profile (including predictions) changes
+                    updateDisplayFeed(repository.cachedDays.value)
+                }
         }
 
-        // 🌟 2. Observe the repository cache in the background to handle instant updates
+        // 🌟 2. Observe the repository cache in the background
         viewModelScope.launch {
             repository.cachedDays.collect { dailyLogs ->
                 // Only map to Success if we aren't currently waiting on a full initial pull
@@ -172,6 +181,13 @@ class BabyCareHomeViewModel @Inject constructor(
             }
 
             try {
+                // Force re-fetch the baby profile to bypass local cache
+                accountService.currentUserId.takeIf { it.isNotEmpty() }?.let { userId ->
+                    userRepository.getUser(userId, forceRefresh = true)?.babyId?.let { babyId ->
+                        userRepository.getBaby(babyId, forceRefresh = true)
+                    }
+                }
+
                 val refreshResult = repository.refreshData(accountService.currentUserId, pageSize)
                 updateDisplayFeed(
                     dailyLogs = repository.cachedDays.value,
