@@ -14,7 +14,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -68,8 +70,12 @@ abstract class MMPAppFunctions : AppFunctionService() {
             return NappyChangeResult(false, "Please sign in to the MMP app to record activities.")
         }
 
-        val date = LocalDate.now().toString()
-        val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+        val date = LocalDate.now()
+        val time = LocalTime.now()
+        val utcDateTimeString = LocalDateTime.of(date, time)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
 
         val normalizedType = type.lowercase()
         val internalNappyType = when {
@@ -80,15 +86,15 @@ abstract class MMPAppFunctions : AppFunctionService() {
 
         val event = UnifiedEventDto(
             id = UUID.randomUUID().toString(),
-            time = time,
-            dateTimeString = "$date $time",
+            time = time.format(DateTimeFormatter.ofPattern("HH:mm")),
+            dateTimeString = utcDateTimeString,
             type = "NAPPY",
             nappyType = internalNappyType
         )
 
         return try {
-            repository.saveActivityEvent(userId, date, event)
-            NappyChangeResult(true, "Logged a $internalNappyType nappy change at $time.")
+            repository.saveActivityEvent(userId, date.toString(), event)
+            NappyChangeResult(true, "Logged a $internalNappyType nappy change at ${event.time}.")
         } catch (e: Exception) {
             NappyChangeResult(false, "Failed to log nappy change: ${e.message}")
         }
