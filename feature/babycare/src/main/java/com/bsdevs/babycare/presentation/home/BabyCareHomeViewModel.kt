@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
@@ -244,27 +245,22 @@ class BabyCareHomeViewModel @Inject constructor(
         val baby = babyId?.let { userRepository.getBaby(it) }
 
         // Use server-side prediction from Firebase
-        val feedingPrediction = if (baby?.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null) {
-            val minTime = try { 
-                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) 
-            } catch (_: Exception) { 
-                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMin).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMin }
+        val feedingPrediction = baby?.nextFeedingTime?.let { _ ->
+            val zone = ZoneId.systemDefault()
+            
+            fun formatIso(iso: String?): String? = try {
+                java.time.OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
+            } catch (_: Exception) {
+                try { java.time.LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
             }
-            val maxTime = try { 
-                java.time.OffsetDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) 
-            } catch (_: Exception) { 
-                try { java.time.LocalDateTime.parse(baby.nextFeedingTimeMax).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTimeMax }
+
+            if (baby.nextFeedingTimeMin != null && baby.nextFeedingTimeMax != null) {
+                val min = formatIso(baby.nextFeedingTimeMin)
+                val max = formatIso(baby.nextFeedingTimeMax)
+                "Next: $min - $max"
+            } else {
+                "Next: ${formatIso(baby.nextFeedingTime)}"
             }
-            "Next: $minTime - $maxTime"
-        } else if (baby?.nextFeedingTime != null) {
-            val time = try { 
-                java.time.OffsetDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) 
-            } catch (_: Exception) { 
-                try { java.time.LocalDateTime.parse(baby.nextFeedingTime).format(predictionFormatter) } catch(_: Exception) { baby.nextFeedingTime }
-            }
-            "Next: $time"
-        } else {
-            null
         }
 
         val lastTempEvent = allEventsFlattened.firstOrNull {

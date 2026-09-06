@@ -23,6 +23,7 @@ import java.util.UUID
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Duration
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
@@ -242,7 +243,9 @@ class FeedingViewModel @Inject constructor(
                 val gapMinutes = try {
                     serverPrediction?.let { predTimeStr ->
                         val predDateTime = try {
-                            java.time.OffsetDateTime.parse(predTimeStr).toLocalDateTime()
+                            java.time.OffsetDateTime.parse(predTimeStr)
+                                .atZoneSameInstant(ZoneId.systemDefault())
+                                .toLocalDateTime()
                         } catch (_: Exception) {
                             try {
                                 LocalDateTime.parse(predTimeStr)
