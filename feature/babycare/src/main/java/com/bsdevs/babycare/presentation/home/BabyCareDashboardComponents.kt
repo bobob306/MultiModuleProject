@@ -104,7 +104,7 @@ fun BabyCareTileRowComponent(
                 "FEEDING" -> {
                     val last = viewData?.lastFeeding
                     val next = viewData?.nextFeedingPrediction
-                    if (last != null && next != null) "$last\n$next" else last ?: next
+                    if ((last != null) && (next != null)) "$last\n$next" else last ?: next
                 }
 
                 "TEMPERATURE" -> viewData?.lastTemperature
@@ -133,7 +133,7 @@ fun BabyCareTileRowComponent(
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
-fun LazyListScope.ActivityFeedItems(
+fun LazyListScope.activityFeedItems(
     viewData: BabyCareHomeViewData?,
     onToggleHeaderCollapse: (String) -> Unit,
     onToggleActivityFilter: (ActivityFilter) -> Unit,
@@ -423,7 +423,7 @@ fun ActivityFeedItem(
             } ?: ""
             val typeStr = if (item.dto.isMedical) " (Medical)" else " (Self)"
             "Measurement: ${
-                listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", ")
+                listOf(weightStr, heightStr, headStr).asSequence().filter { it.isNotEmpty() }.joinToString(", ")
             }$typeStr"
         }
 
@@ -454,7 +454,7 @@ fun ActivityFeedItem(
                     alpha = 0.5f
                 )
 
-                else -> Color.Transparent
+                SwipeToDismissBoxValue.Settled -> Color.Transparent
             }
             Box(
                 modifier = Modifier
@@ -519,12 +519,12 @@ fun ActivityFeedItem(
                         }
                     }
 
-                    if (item is BabyActivity.Feeding) {
-                        FeedingBar(
-                            durationSeconds = item.dto.totalDuration,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
+    if (item is BabyActivity.Feeding) {
+        FeedingBar(
+            durationSeconds = item.dto.totalDuration,
+            modifier = Modifier.padding(horizontal = 8.dp),
+        )
+    }
 
                     if (item is BabyActivity.Feeding && item.showVitaminDToggle) {
                         IconButton(
@@ -563,15 +563,15 @@ private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
         else -> (durationMinutes / 20f).coerceIn(0f, 1f)
     }
 
-    var startAnimation by remember { mutableStateOf(false) }
+    var startAnimation by remember { mutableStateOf(value = false) }
     val animatedProgress by animateFloatAsState(
         targetValue = if (startAnimation) targetProgress else 0f,
         animationSpec = tween(
             durationMillis = if (durationMinutes > 20f) 2500 else 2000,
             delayMillis = 500,
-            easing = LinearOutSlowInEasing
+            easing = LinearOutSlowInEasing,
         ),
-        label = "FeedingFillAnimation"
+        label = "FeedingFillAnimation",
     )
 
     LaunchedEffect(durationSeconds) {
@@ -641,7 +641,7 @@ fun BabyCareTile(
                 animatedVisibilityScope
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(

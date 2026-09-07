@@ -15,7 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 
 @Composable
 internal fun CoffeeDetailsFirstHalf(coffeeDto: CoffeeDto, isLandscape: Boolean) {

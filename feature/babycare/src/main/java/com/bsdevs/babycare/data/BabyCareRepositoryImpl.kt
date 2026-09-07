@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.data.repository
+package com.bsdevs.babycare.data
 
 import android.util.Log
 import com.bsdevs.babycare.domain.BabyCareRepository
@@ -14,12 +14,7 @@ import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.local.entities.BabyEventEntity
 import com.bsdevs.data.repository.Clearable
 import com.bsdevs.data.repository.UserRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
@@ -34,10 +29,8 @@ class BabyCareRepositoryImpl @Inject constructor(
     private val dispatchers: DispatcherProvider,
     private val timeProvider: TimeProvider,
     private val babyEventDao: BabyEventDao,
-    private val syncManager: SyncManager
+    syncManager: SyncManager
 ) : BabyCareRepository, Clearable, Syncable {
-
-    private val repositoryScope = CoroutineScope(dispatchers.io + SupervisorJob())
 
     init {
         userRepository.registerClearable(this)
@@ -69,8 +62,8 @@ class BabyCareRepositoryImpl @Inject constructor(
                     saveActivityEvent(userId, entity.date, entity.event)
                 }
                 babyEventDao.insertEvents(listOf(entity.copy(isPendingSync = false)))
-            } catch (e: Exception) {
-                Log.e("BABYCARE_REPO", "Sync failed for event ${entity.id}", e)
+            } catch (_: Exception) {
+                Log.e("BABYCARE_REPO", "Sync failed for event ${entity.id}")
             }
         }
     }
@@ -79,12 +72,12 @@ class BabyCareRepositoryImpl @Inject constructor(
         val babyId = getAuthorizedBabyId(userId)
         
         // Load from DB first
-        if (!forceRefresh && _cachedDays.value.isEmpty() && babyId != null) {
+        if (!forceRefresh && _cachedDays.value.isEmpty() && (babyId != null)) {
             val localEvents = babyEventDao.getEvents(babyId).first()
             if (localEvents.isNotEmpty()) {
-                val dailyLogs = localEvents.groupBy { it.date }.map { (date, events) ->
+                val dailyLogs = localEvents.groupBy { it.date }.asSequence().map { (date, events) ->
                     DailyLogDto(date, userId, events.map { it.event })
-                }.sortedByDescending { it.date }
+                }.sortedByDescending { it.date }.toList()
                 _cachedDays.value = dailyLogs
             }
         }
@@ -121,7 +114,7 @@ class BabyCareRepositoryImpl @Inject constructor(
 
             // 🚀 Special Case: In the first 8 days of a month, if we have data for the current month,
             // also pull the previous month to avoid an empty-looking screen.
-            if (today.dayOfMonth <= 8 && latestMonthId == currentMonthId) {
+            if ((today.dayOfMonth <= 8) && (latestMonthId == currentMonthId)) {
                 apiService.getMonthIdBefore(userId, latestMonthId)?.let { prevMonthId ->
                     monthsToFetch.add(prevMonthId)
                 }
@@ -165,31 +158,34 @@ class BabyCareRepositoryImpl @Inject constructor(
 
             RepositoryFetchResult(
                 nextAnchorMonth = currentAnchorMonth,
-                hasMoreData = currentAnchorMonth != null
+                hasMoreData = currentAnchorMonth != null,
             )
-        } catch (e: Exception) {
-            Log.e("BABYCARE_REPO", "Error loading initial data", e)
+        } catch (_: Exception) {
+            Log.e("BABYCARE_REPO", "Error loading initial data")
             if (forceRefresh) {
                 // Return current state instead of throwing if we are just refreshing
                 RepositoryFetchResult(
                     nextAnchorMonth = currentAnchorMonth,
-                    hasMoreData = currentAnchorMonth != null
+                    hasMoreData = currentAnchorMonth != null,
                 )
             } else {
-                throw e
+                throw Exception("Error loading initial data")
             }
         }
     }
 
     private suspend fun fetchMonthFromService(userId: String, monthId: String, forceRefresh: Boolean = false): List<DailyLogDto> {
         val data = apiService.fetchMonthDocument(userId, monthId, forceRefresh) ?: return emptyList()
-        val daysMap = data["days"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
+        val daysMap = (data["days"] as? Map<*, *>) ?: emptyMap<Any?, Any?>()
 
         return daysMap.map { (dateString, eventsArray) ->
             DailyLogDto(
                 date = dateString as String,
                 userId = userId,
-                events = (eventsArray as List<*>).map { parseUnifiedEvent(it as Map<String, Any?>) }
+                events = (eventsArray as List<*>).map { item ->
+                    @Suppress("UNCHECKED_CAST")
+                    parseUnifiedEvent(item as Map<String, Any?>)
+                }
             )
         }
     }
@@ -208,7 +204,7 @@ class BabyCareRepositoryImpl @Inject constructor(
             rawDateTime
         }
 
-        val time = eventMap["time"] as? String ?: run {
+        val time = (eventMap["time"] as? String) ?: run {
             try {
                 // Try parsing as UTC ISO 8601 first
                 java.time.OffsetDateTime.parse(dateTimeString)
@@ -261,7 +257,7 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun loadMoreData(userId: String, pageSize: Int): RepositoryFetchResult = withContext(dispatchers.io) {
-        val anchor = currentAnchorMonth ?: return@withContext RepositoryFetchResult(null, false)
+        val anchor = currentAnchorMonth ?: return@withContext RepositoryFetchResult(nextAnchorMonth = null, hasMoreData = false)
         val monthId = formatYearMonth(anchor)
 
         val newMonthlyDays = fetchMonthFromService(userId, monthId)
@@ -290,15 +286,19 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
 
         try {
-            if (event.type == "MEASUREMENT") {
-                apiService.saveMeasurement(userId, event.id, toMap(event))
-                _measurements.value = (_measurements.value + event).sortedByDescending { it.dateTimeString }
-            } else if (event.type == "VACCINATION") {
-                apiService.saveVaccination(userId, event.id, toMap(event))
-                _vaccinations.value = (_vaccinations.value + event).sortedByDescending { it.dateTimeString }
-            } else {
-                val monthId = extractMonthString(date)
-                apiService.saveEvent(userId, monthId, date, toMap(event))
+            when (event.type) {
+                "MEASUREMENT" -> {
+                    apiService.saveMeasurement(userId, event.id, toMap(event))
+                    _measurements.value = (_measurements.value + event).sortedByDescending { it.dateTimeString }
+                }
+                "VACCINATION" -> {
+                    apiService.saveVaccination(userId, event.id, toMap(event))
+                    _vaccinations.value = (_vaccinations.value + event).sortedByDescending { it.dateTimeString }
+                }
+                else -> {
+                    val monthId = extractMonthString(date)
+                    apiService.saveEvent(userId, monthId, date, toMap(event))
+                }
             }
             if (babyId != null) {
                 babyEventDao.insertEvents(listOf(BabyEventEntity(event.id, babyId, date, event, isPendingSync = false)))
@@ -316,23 +316,19 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
 
         try {
-            val specializedTarget = when (updatedEvent.type) {
-                "MEASUREMENT" -> "MEASUREMENT"
-                "VACCINATION" -> "VACCINATION"
-                else -> null
-            }
-
-            if (specializedTarget != null) {
-                if (specializedTarget == "MEASUREMENT") {
+            when (updatedEvent.type) {
+                "MEASUREMENT" -> {
                     apiService.updateMeasurement(userId, eventId, toMap(updatedEvent))
                     _measurements.value = _measurements.value.map { if (it.id == eventId) updatedEvent else it }
-                } else {
+                }
+                "VACCINATION" -> {
                     apiService.updateVaccination(userId, eventId, toMap(updatedEvent))
                     _vaccinations.value = _vaccinations.value.map { if (it.id == eventId) updatedEvent else it }
                 }
-            } else {
-                val monthId = extractMonthString(date)
-                apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
+                else -> {
+                    val monthId = extractMonthString(date)
+                    apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
+                }
             }
 
             if (babyId != null) {
@@ -348,19 +344,23 @@ class BabyCareRepositoryImpl @Inject constructor(
         babyEventDao.markDeleted(eventId)
 
         try {
-            val cachedEvent = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == eventId }
+            val cachedEvent = _cachedDays.value.asSequence().flatMap { it.events }.firstOrNull { it.id == eventId }
                 ?: _measurements.value.firstOrNull { it.id == eventId }
                 ?: _vaccinations.value.firstOrNull { it.id == eventId }
 
-            if (cachedEvent?.type == "MEASUREMENT") {
-                apiService.deleteMeasurement(userId, eventId)
-                _measurements.value = _measurements.value.filterNot { it.id == eventId }
-            } else if (cachedEvent?.type == "VACCINATION") {
-                apiService.deleteVaccination(userId, eventId)
-                _vaccinations.value = _vaccinations.value.filterNot { it.id == eventId }
-            } else {
-                val monthId = extractMonthString(date)
-                apiService.deleteEvent(userId, monthId, date, eventId)
+            when (cachedEvent?.type) {
+                "MEASUREMENT" -> {
+                    apiService.deleteMeasurement(userId, eventId)
+                    _measurements.value = _measurements.value.filterNot { it.id == eventId }
+                }
+                "VACCINATION" -> {
+                    apiService.deleteVaccination(userId, eventId)
+                    _vaccinations.value = _vaccinations.value.filterNot { it.id == eventId }
+                }
+                else -> {
+                    val monthId = extractMonthString(date)
+                    apiService.deleteEvent(userId, monthId, date, eventId)
+                }
             }
             babyEventDao.deleteById(eventId)
         } catch (e: Exception) {
@@ -372,11 +372,11 @@ class BabyCareRepositoryImpl @Inject constructor(
     override fun getCurrentDate(): LocalDate = timeProvider.currentLocalDate()
 
     override suspend fun getFeedingEventById(userId: String, activityId: String): UnifiedEventDto? = withContext(dispatchers.io) {
-        val cached = _cachedDays.value.flatMap { it.events }.firstOrNull { it.id == activityId }
-        if (cached != null) return@withContext cached
+        val cached = _cachedDays.value.asSequence().flatMap { it.events }.firstOrNull { it.id == activityId }
+        cached?.let { return@withContext it }
         
-        apiService.getAllMonthIds(userId).firstNotNullOfOrNull { monthId ->
-            fetchMonthFromService(userId, monthId).flatMap { it.events }.firstOrNull { it.id == activityId }
+        apiService.getAllMonthIds(userId).asSequence().firstNotNullOfOrNull { monthId ->
+            fetchMonthFromService(userId, monthId).asSequence().flatMap { it.events }.firstOrNull { it.id == activityId }
         }
     }
 
@@ -485,17 +485,4 @@ class BabyCareRepositoryImpl @Inject constructor(
         currentAnchorMonth = null
     }
 }
-
-private fun formatYearMonth(ym: YearMonth) = String.format(Locale.ROOT, "%04d-%02d", ym.year, ym.monthValue)
-private fun extractMonthString(date: String) = date.substring(0, 7)
-
-private fun toMap(e: UnifiedEventDto) = mapOf(
-    "id" to e.id, "type" to e.type, "time" to e.time, "dateTimeString" to e.dateTimeString,
-    "comment" to e.comment, "nappyType" to e.nappyType, "mainFeedingSide" to e.mainFeedingSide,
-    "leftDuration" to e.leftDuration, "rightDuration" to e.rightDuration, "totalDuration" to e.totalDuration,
-    "bottleAmountMl" to e.bottleAmountMl, "temperature" to e.temperature,
-    "height" to e.height, "weight" to e.weight, "headCircumference" to e.headCircumference, "isMedical" to e.isMedical,
-    "vaccinationNames" to e.vaccinationNames, "location" to e.location, "seriesId" to e.seriesId,
-    "hasVitaminD" to e.hasVitaminD, "predictionGapMinutes" to e.predictionGapMinutes
-)
 

@@ -1,6 +1,7 @@
 package com.bsdevs.coffeescreen.network
 
-import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
+import com.bsdevs.network.dto.CoffeeDto
+import com.bsdevs.network.dto.ShotDto
 import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.*
 import io.mockk.*

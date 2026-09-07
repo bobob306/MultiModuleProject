@@ -12,7 +12,9 @@ import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.FormDtoMapper
 import com.bsdevs.network.dto.FormSchemaDto
 import com.bsdevs.network.dto.FormSubmissionDto
+import com.google.android.gms.tasks.Task
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.flow.*
@@ -36,7 +38,7 @@ class FormRepositoryImpl @Inject constructor(
     private val mapper: FormDtoMapper,
     private val dispatchers: DispatcherProvider,
     private val formDao: FormDao,
-    private val syncManager: SyncManager
+    syncManager: SyncManager,
 ) : FormRepository, Syncable {
 
     private val firestore get() = firestoreHolder.firestore
@@ -53,12 +55,12 @@ class FormRepositoryImpl @Inject constructor(
             try {
                 val values = entity.submission.values.mapValues { (_, value) ->
                     jsonToAny(value)
-                }.filterValues { it != null }.mapValues { it.value!! }
+                }
                 
                 submitFormToFirestore(entity.userId, entity.formId, values)
                 formDao.insertSubmission(entity.copy(isPendingSync = false))
-            } catch (e: Exception) {
-                Log.e("FORM_REPO", "Sync failed for submission ${entity.id}", e)
+            } catch (_: Exception) {
+                Log.e("FORM_REPO", "Sync failed for submission ${entity.id}")
             }
         }
     }
@@ -73,7 +75,8 @@ class FormRepositoryImpl @Inject constructor(
 
         try {
             Log.d("FIREBASE_CALL", "Read Form Schema: $formId")
-            val document = schemas.document(formId).get().await().data
+            val snapshot = schemas.document(formId).get().await()
+            val document = snapshot.data
             if (document != null) {
                 val dto = mapper.mapToDto(document as Map<*, *>)
                 formDao.insertSchema(FormSchemaEntity(formId, dto))
@@ -115,18 +118,17 @@ class FormRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto? = withContext(dispatchers.io) {
-        val cached = formDao.getSubmission(userId, formId)
-        if (cached != null) return@withContext cached.submission
+        formDao.getSubmission(userId, formId)?.let { return@withContext it.submission }
 
         try {
             val document = firestore.collection("users").document(userId).collection("formSubmissions").document(formId).get().await()
             val dto = document.toObject<FormSubmissionDto>()
-            if (dto != null) {
+            dto?.let {
                 val entityId = "${userId}_$formId"
-                formDao.insertSubmission(FormSubmissionEntity(entityId, userId, formId, dto))
+                formDao.insertSubmission(FormSubmissionEntity(entityId, userId, formId, it))
             }
             dto
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -183,7 +185,7 @@ class FormRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun jsonToAny(element: JsonElement): Any? {
+    private fun jsonToAny(element: JsonElement): Any {
         if (element is JsonPrimitive) {
             if (element.isString) return element.content
             return element.booleanOrNull ?: element.intOrNull ?: element.longOrNull ?: element.doubleOrNull ?: element.content

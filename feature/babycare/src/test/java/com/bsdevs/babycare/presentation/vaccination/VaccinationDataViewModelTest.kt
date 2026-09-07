@@ -1,7 +1,7 @@
 package com.bsdevs.babycare.presentation.vaccination
 
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.babycare.presentation.home.FakeAccountService
@@ -10,6 +10,7 @@ import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.UserDto
+import com.bsdevs.network.dto.VaccinationDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import io.mockk.*

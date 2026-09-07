@@ -75,7 +75,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bsdevs.babycare.network.MeasurementDto
+import com.bsdevs.network.dto.MeasurementDto
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -982,9 +982,10 @@ fun MeasurementHistoryItem(
                         fontWeight = FontWeight.Medium
                     )
 
-                    if (!measurement.comment.isNullOrEmpty()) {
+                    val comment = measurement.comment
+                    if (!comment.isNullOrEmpty()) {
                         Text(
-                            text = measurement.comment,
+                            text = comment,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

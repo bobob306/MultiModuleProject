@@ -40,7 +40,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
-import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
+import com.bsdevs.network.dto.ShotDto
 
 @Composable
 internal fun SecondHalfContent(onAddShotClicked: () -> Unit, shotList: List<ShotDto>?) {

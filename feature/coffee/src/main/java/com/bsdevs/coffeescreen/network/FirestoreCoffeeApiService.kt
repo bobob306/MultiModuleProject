@@ -1,9 +1,10 @@
 package com.bsdevs.coffeescreen.network
 
 import android.util.Log
-import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
-import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenDto
+import com.bsdevs.network.dto.CoffeeInputScreenDto
 import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.network.dto.CoffeeDto
+import com.bsdevs.network.dto.ShotDto
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import javax.inject.Inject

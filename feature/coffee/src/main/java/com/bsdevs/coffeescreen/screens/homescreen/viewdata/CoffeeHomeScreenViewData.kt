@@ -1,6 +1,6 @@
 package com.bsdevs.coffeescreen.screens.homescreen.viewdata
 
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 
 data class CoffeeHomeScreenViewData(
     val viewData: List<CoffeeHomeScreenViewDatas>,

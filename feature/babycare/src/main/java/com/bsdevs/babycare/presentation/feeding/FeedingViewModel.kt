@@ -7,6 +7,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
+import com.bsdevs.common.DateTimeUtils
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
@@ -24,6 +25,7 @@ import java.util.UUID
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.Duration
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -256,12 +258,12 @@ class FeedingViewModel @Inject constructor(
                 val gapMinutes = try {
                     serverPrediction?.let { predTimeStr ->
                         val predDateTime = try {
-                            java.time.OffsetDateTime.parse(predTimeStr)
+                            OffsetDateTime.parse(predTimeStr)
                                 .atZoneSameInstant(ZoneId.systemDefault())
                                 .toLocalDateTime()
                         } catch (_: Exception) {
                             try {
-                                java.time.LocalDateTime.parse(predTimeStr)
+                                LocalDateTime.parse(predTimeStr)
                             } catch (_: Exception) {
                                 // Fallback to original HH:mm logic
                                 val predLocalTime = LocalTime.parse(predTimeStr)

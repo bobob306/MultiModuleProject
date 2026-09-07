@@ -36,7 +36,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.VaccinationDto
+import com.bsdevs.network.dto.VaccinationDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import dagger.hilt.android.lifecycle.HiltViewModel

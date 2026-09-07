@@ -16,8 +16,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import com.bsdevs.babycare.network.MeasurementDto
-import com.bsdevs.babycare.network.VaccinationDto
+import com.bsdevs.network.dto.MeasurementDto
+import com.bsdevs.network.dto.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.babycare.presentation.common.GenericSduiScreen
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
@@ -25,7 +25,7 @@ import com.bsdevs.babycare.presentation.graph.BabyGraphViewModel
 import com.bsdevs.babycare.presentation.graph.FeedingFrequencyChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingGapChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingInsightComponent
-import com.bsdevs.babycare.presentation.home.ActivityFeedItems
+import com.bsdevs.babycare.presentation.home.activityFeedItems
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewData
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
 import com.bsdevs.babycare.presentation.home.BabyCareTileRowComponent
@@ -174,7 +174,7 @@ fun NavGraphBuilder.babyCareSection(
 
                         is NetworkScreenData.ActivityFeedDataNetwork -> {
                             val data = (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data
-                            ActivityFeedItems(
+                            activityFeedItems(
                                 viewData = data,
                                 onToggleHeaderCollapse = homeViewModel::toggleHeaderCollapse,
                                 onToggleActivityFilter = homeViewModel::toggleActivityFilter,

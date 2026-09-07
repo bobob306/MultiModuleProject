@@ -3,7 +3,7 @@ package com.bsdevs.forms.impl
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.common.result.Result
 import io.mockk.coEvery
 import io.mockk.coVerify

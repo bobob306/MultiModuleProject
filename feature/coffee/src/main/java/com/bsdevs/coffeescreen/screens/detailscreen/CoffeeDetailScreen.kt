@@ -42,7 +42,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import androidx.window.core.layout.WindowSizeClass
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.components.CoffeeDetailsFirstHalf
 import com.bsdevs.coffeescreen.screens.detailscreen.components.EspressoShotInputSheetContent
 import com.bsdevs.coffeescreen.screens.detailscreen.components.SecondHalfContent

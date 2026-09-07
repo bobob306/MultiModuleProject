@@ -11,6 +11,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.dto.CoffeeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +56,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun updateDisplay(coffeeList: List<com.bsdevs.coffeescreen.network.CoffeeDto>) {
+    private fun updateDisplay(coffeeList: List<CoffeeDto>) {
         _viewData.update { currentResult ->
             val currentData = (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
             val updatedViewData = currentData.viewData.map {

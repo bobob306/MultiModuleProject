@@ -1,6 +1,6 @@
 package com.bsdevs.babycare.di
 
-import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.ShoppingListRepositoryImpl
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.domain.ShoppingListRepository

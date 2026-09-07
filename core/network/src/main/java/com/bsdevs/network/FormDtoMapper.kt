@@ -16,11 +16,11 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
     override fun mapToDto(map: Map<*, *>): FormSchemaDto {
         val rawFields = (map["fields"] as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
         return FormSchemaDto(
-            title = map["title"] as? String ?: "",
+            title = (map["title"] as? String) ?: "",
             submitTarget = map["submitTarget"] as? String ?: "",
             submitDestination = map["submitDestination"] as? String ?: "",
             deletable = map["deletable"] as? Boolean ?: false,
-            fields = rawFields.mapIndexed { idx, field ->
+            fields = rawFields.asSequence().mapIndexed { idx, field ->
                 val showWhenMap = field["showWhen"] as? Map<*, *>
                 FormFieldDto(
                     fieldKey = field["fieldKey"] as? String ?: "",
@@ -29,7 +29,7 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
                     required = field["required"] as? Boolean ?: false,
                     index = (field["index"] as? Number)?.toInt() ?: idx,
                     placeholder = field["placeholder"] as? String,
-                    defaultValue = field["defaultValue"]?.let { anyToJson(it) },
+                    defaultValue = field["defaultValue"]?.let { value -> anyToJson(value) },
                     options = (field["options"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                     multiSelect = field["multiSelect"] as? Boolean ?: false,
                     editable = field["editable"] as? Boolean ?: false,
@@ -37,14 +37,14 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
                     startNumber = (field["startNumber"] as? Number)?.toInt() ?: 0,
                     endNumber = (field["endNumber"] as? Number)?.toInt() ?: 100,
                     decimalPlaces = (field["decimalPlaces"] as? Number)?.toInt() ?: 0,
-                    showWhen = showWhenMap?.let {
+                    showWhen = showWhenMap?.let { condition ->
                         FormFieldConditionDto(
-                            fieldKey = it["fieldKey"] as? String ?: "",
-                            equals = it["equals"]?.let { anyToJson(it) },
+                            fieldKey = condition["fieldKey"] as? String ?: "",
+                            equals = condition["equals"]?.let { value -> anyToJson(value) },
                         )
                     },
                 )
-            }.sortedBy { it.index }
+            }.sortedBy { it.index }.toList()
         )
     }
 

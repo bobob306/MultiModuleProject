@@ -1,6 +1,6 @@
 package com.bsdevs.coffeescreen.screens.inputscreen.viewdata
 
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputRadioVD
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
 import java.time.LocalDate

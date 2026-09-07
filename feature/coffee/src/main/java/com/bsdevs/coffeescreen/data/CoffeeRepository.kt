@@ -1,9 +1,9 @@
 package com.bsdevs.coffeescreen.data
 
 import com.bsdevs.coffeescreen.network.CoffeeApiService
-import com.bsdevs.coffeescreen.network.CoffeeDto
-import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
-import com.bsdevs.coffeescreen.screens.inputscreen.CoffeeInputScreenDto
+import com.bsdevs.network.dto.CoffeeDto
+import com.bsdevs.network.dto.ShotDto
+import com.bsdevs.network.dto.CoffeeInputScreenDto
 import com.bsdevs.common.DispatcherProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

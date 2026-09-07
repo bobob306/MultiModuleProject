@@ -11,7 +11,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainAppViewModel @Inject constructor(
-    private val userRepository: UserRepository
+    userRepository: UserRepository,
 ) : ViewModel() {
     val userRoles = userRepository.userProfile
         .map { it?.roles ?: emptyList() }

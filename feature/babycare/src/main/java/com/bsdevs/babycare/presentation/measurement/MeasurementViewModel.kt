@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.network.dto.MeasurementDto
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
@@ -45,7 +46,7 @@ class MeasurementViewModel @Inject constructor(
         repository.measurements
     ) { local, allMeasurements ->
         val mapped = allMeasurements.map { event ->
-            com.bsdevs.babycare.network.MeasurementDto(
+            MeasurementDto(
                 id = event.id,
                 date = event.dateTimeString.substringBefore("T").substringBefore(" "),
                 time = event.time,
