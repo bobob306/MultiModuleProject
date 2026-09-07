@@ -16,6 +16,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.TimeZone
 
 class FormSubmitRouterTest {
 
@@ -25,6 +26,7 @@ class FormSubmitRouterTest {
 
     @Before
     fun setUp() {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
         router = FormSubmitRouter(coffeeRepository, babyCareRepository)
     }
 
@@ -106,7 +108,8 @@ class FormSubmitRouterTest {
         assertTrue(result is Result.Success)
         assertEquals("NAPPY", eventSlot.captured.type)
         assertEquals("10:30", eventSlot.captured.time)
-        assertEquals("2026-08-31 10:30", eventSlot.captured.dateTimeString)
+        assertTrue(eventSlot.captured.dateTimeString.contains("2026-08-31T10:30"))
+        assertTrue(eventSlot.captured.dateTimeString.endsWith("Z"))
         assertEquals("Wet", eventSlot.captured.nappyType)
         assertEquals("All good", eventSlot.captured.comment)
     }
@@ -143,7 +146,8 @@ class FormSubmitRouterTest {
         assertTrue(result is Result.Success)
         assertEquals("FEEDING", eventSlot.captured.type)
         assertEquals("08:00", eventSlot.captured.time)
-        assertEquals("2026-08-31 08:00", eventSlot.captured.dateTimeString)
+        assertTrue(eventSlot.captured.dateTimeString.contains("2026-08-31T08:00"))
+        assertTrue(eventSlot.captured.dateTimeString.endsWith("Z"))
         assertEquals("Left", eventSlot.captured.mainFeedingSide)
         assertEquals(120, eventSlot.captured.bottleAmountMl)
     }
@@ -208,8 +212,11 @@ class FormSubmitRouterTest {
         router.submit("u", "measurementLog", null, mapOf(
             "date" to "2026-08-31",
             "time" to "10:00",
+            "record_height" to true,
             "height_value" to 650,
+            "record_weight" to true,
             "weight_value" to 750,
+            "record_head_circumference" to true,
             "head_circumference_value" to 425,
             "is_medical" to true,
         ))
@@ -225,7 +232,11 @@ class FormSubmitRouterTest {
     fun `measurementLog saves with only head circumference when others absent`() = runTest {
         val eventSlot = slot<UnifiedEventDto>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
-        router.submit("u", "measurementLog", null, mapOf("date" to "2026-08-31", "head_circumference_value" to 400))
+        router.submit("u", "measurementLog", null, mapOf(
+            "date" to "2026-08-31", 
+            "record_head_circumference" to true,
+            "head_circumference_value" to 400
+        ))
         assertEquals(40.0, eventSlot.captured.headCircumference!!, 0.001)
         assertNull(eventSlot.captured.height)
         assertNull(eventSlot.captured.weight)
@@ -234,7 +245,11 @@ class FormSubmitRouterTest {
     @Test
     fun `measurementLog edit calls updateActivityEvent`() = runTest {
         coEvery { babyCareRepository.updateActivityEvent(any(), any(), any(), any()) } returns Unit
-        router.submit("u", "measurementLog", "m1", mapOf("date" to "2026-08-31", "height_value" to 650))
+        router.submit("u", "measurementLog", "m1", mapOf(
+            "date" to "2026-08-31", 
+            "record_height" to true,
+            "height_value" to 650
+        ))
         coVerify { babyCareRepository.updateActivityEvent("u", "2026-08-31", "m1", any()) }
         coVerify(exactly = 0) { babyCareRepository.saveActivityEvent(any(), any(), any()) }
     }

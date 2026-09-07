@@ -141,8 +141,8 @@ class UserRepositoryImplTest {
         assertEquals(true, exists)
     }
 
-    @Test
-    fun `getUser returns null on failure`() = runTest {
+    @Test(expected = Exception::class)
+    fun `getUser rethrows exception on failure`() = runTest {
         val userId = "user1"
         val collection = mockk<CollectionReference>(relaxed = true)
         val document = mockk<DocumentReference>(relaxed = true)
@@ -151,9 +151,7 @@ class UserRepositoryImplTest {
         every { collection.document(userId) } returns document
         coEvery { document.get(any<com.google.firebase.firestore.Source>()).await() } throws Exception("Network error")
         
-        val result = userRepository.getUser(userId, forceRefresh = false)
-        
-        assertNull(result)
+        userRepository.getUser(userId, forceRefresh = false)
     }
 
     @Test
@@ -202,6 +200,13 @@ class UserRepositoryImplTest {
         every { firestore.collection("coffeeUploads") } returns coffeeCollection
         coEvery { coffeeCollection.whereEqualTo("userId", userId).get().await() } returns coffeeQueryResult
         every { coffeeQueryResult.documents } returns emptyList()
+
+        // Mock shopping lists deletion
+        val shoppingCollection = mockk<CollectionReference>(relaxed = true)
+        val shoppingDoc = mockk<DocumentReference>(relaxed = true)
+        every { firestore.collection("shoppingLists") } returns shoppingCollection
+        every { shoppingCollection.document(any()) } returns shoppingDoc
+        coEvery { shoppingDoc.delete().await() } returns mockk()
 
         coEvery { userDoc.delete().await() } returns mockk()
         coEvery { babyDoc.delete().await() } returns mockk()

@@ -29,7 +29,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -244,10 +246,32 @@ class BabyCareHomeViewModel @Inject constructor(
     ): BabyCareHomeViewData = withContext(dispatchers.default) {
         val finalizedFeed = mutableListOf<HomeFeedItem>()
 
-        // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
-        val allEventsFlattened = dailyLogs.flatMap { day ->
-            day.events.sortedByDescending { it.dateTimeString }
+        // 🛡️ Robust parsing for inconsistent date formats
+        fun parseToInstant(dateTimeStr: String): Instant {
+            return try {
+                Instant.parse(dateTimeStr)
+            } catch (_: Exception) {
+                try {
+                    val normalized = if (dateTimeStr.contains(" ") && !dateTimeStr.contains("T")) {
+                        dateTimeStr.replace(" ", "T")
+                    } else {
+                        dateTimeStr
+                    }
+                    LocalDateTime.parse(normalized).atZone(ZoneId.systemDefault()).toInstant()
+                } catch (_: Exception) {
+                    Instant.EPOCH
+                }
+            }
         }
+
+        val eventComparator = Comparator<UnifiedEventDto> { a, b ->
+            val instantA = parseToInstant(a.dateTimeString)
+            val instantB = parseToInstant(b.dateTimeString)
+            instantB.compareTo(instantA) // Newest first
+        }
+
+        // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
+        val allEventsFlattened = dailyLogs.flatMap { it.events }.sortedWith(eventComparator)
 
         val absoluteLastNappy = allEventsFlattened.firstOrNull {
             it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both"
@@ -306,7 +330,7 @@ class BabyCareHomeViewModel @Inject constructor(
         dailyLogs.forEach { dayLog ->
 
             // 🌟 FIXED: Force all nested events for this calendar day to sort by time (newest first)
-            val sortedDayEvents = dayLog.events.sortedByDescending { it.dateTimeString }
+            val sortedDayEvents = dayLog.events.sortedWith(eventComparator)
 
             // 🔄 Apply active filter rules onto the cleanly sorted list array instead of the raw one
             val visibleEvents = sortedDayEvents.filter { event ->

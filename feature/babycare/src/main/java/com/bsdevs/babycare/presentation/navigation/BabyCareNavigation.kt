@@ -3,7 +3,6 @@ package com.bsdevs.babycare.presentation.navigation
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +29,6 @@ import com.bsdevs.babycare.presentation.home.ActivityFeedItems
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewData
 import com.bsdevs.babycare.presentation.home.BabyCareHomeViewModel
 import com.bsdevs.babycare.presentation.home.BabyCareTileRowComponent
-import com.bsdevs.babycare.presentation.home.HomeFeedItem
 import com.bsdevs.babycare.presentation.measurement.GrowthChartComponent
 import com.bsdevs.babycare.presentation.measurement.MeasurementHistoryItems
 import com.bsdevs.babycare.presentation.measurement.MeasurementViewModel
@@ -120,10 +118,10 @@ fun NavGraphBuilder.babyCareSection(
         composable<BabyCareHomeRoute> {
             val homeViewModel: BabyCareHomeViewModel = hiltViewModel()
             val homeViewState by homeViewModel.viewData.collectAsStateWithLifecycle()
-            
+
             val listState = rememberLazyListState()
             var activityToDelete by remember { mutableStateOf<BabyActivity?>(null) }
-            
+
             if (activityToDelete != null) {
                 DeleteConfirmationDialog(
                     onConfirm = {
@@ -152,7 +150,8 @@ fun NavGraphBuilder.babyCareSection(
                     when (component) {
                         is NetworkScreenData.TileRowDataNetwork -> {
                             item(key = "tiles_${component.index}") {
-                                val data = (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data
+                                val data =
+                                    (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data
                                 BabyCareTileRowComponent(
                                     viewData = data,
                                     tiles = component.tiles,
@@ -172,6 +171,7 @@ fun NavGraphBuilder.babyCareSection(
                             }
                             true
                         }
+
                         is NetworkScreenData.ActivityFeedDataNetwork -> {
                             (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data?.let { data ->
                                 ActivityFeedItems(
@@ -181,17 +181,42 @@ fun NavGraphBuilder.babyCareSection(
                                     onDeleteActivity = { activityToDelete = it },
                                     onToggleVitaminD = homeViewModel::toggleVitaminD,
                                     onLoadMore = homeViewModel::loadMore,
-                                    onNavigateToEditNappyChange = { id -> navigateToForm("nappyLog", id) },
-                                    onNavigateToEditFeeding = { id -> navController.navigateToFeeding(id) },
-                                    onNavigateToEditTemperature = { id -> navigateToForm("temperatureLog", id) },
-                                    onNavigateToEditMeasurement = { id -> navigateToForm("measurementLog", id) },
-                                    onNavigateToEditVaccination = { id -> navigateToForm("vaccinationLog", id) },
+                                    onNavigateToEditNappyChange = { id ->
+                                        navigateToForm(
+                                            "nappyLog",
+                                            id
+                                        )
+                                    },
+                                    onNavigateToEditFeeding = { id ->
+                                        navController.navigateToFeeding(
+                                            id
+                                        )
+                                    },
+                                    onNavigateToEditTemperature = { id ->
+                                        navigateToForm(
+                                            "temperatureLog",
+                                            id
+                                        )
+                                    },
+                                    onNavigateToEditMeasurement = { id ->
+                                        navigateToForm(
+                                            "measurementLog",
+                                            id
+                                        )
+                                    },
+                                    onNavigateToEditVaccination = { id ->
+                                        navigateToForm(
+                                            "vaccinationLog",
+                                            id
+                                        )
+                                    },
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = this@composable
                                 )
                             }
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -235,14 +260,17 @@ fun NavGraphBuilder.babyCareSection(
                             item { FeedingFrequencyChartComponent(uiState = graphUiState) }
                             true
                         }
+
                         is NetworkScreenData.FeedingGapChartDataNetwork -> {
                             item { FeedingGapChartComponent(uiState = graphUiState) }
                             true
                         }
+
                         is NetworkScreenData.FeedingInsightCardDataNetwork -> {
                             item { FeedingInsightComponent(uiState = graphUiState) }
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -268,17 +296,24 @@ fun NavGraphBuilder.babyCareSection(
                                 TemperatureHistoryComponent(
                                     uiData = tempUiState,
                                     onEdit = { id -> navigateToForm("temperatureLog", id) },
-                                    onDelete = { id, date -> tempViewModel.deleteTemperature(id, date) }
+                                    onDelete = { id, date ->
+                                        tempViewModel.deleteTemperature(
+                                            id,
+                                            date
+                                        )
+                                    }
                                 )
                             }
                             true
                         }
+
                         is NetworkScreenData.TemperatureChartDataNetwork -> {
                             item {
                                 TemperatureChartComponent(uiData = tempUiState)
                             }
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -331,6 +366,7 @@ fun NavGraphBuilder.babyCareSection(
                             }
                             true
                         }
+
                         is NetworkScreenData.MeasurementHistoryDataNetwork -> {
                             MeasurementHistoryItems(
                                 measurements = measureUiState.allMeasurements,
@@ -344,6 +380,7 @@ fun NavGraphBuilder.babyCareSection(
                             )
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -390,6 +427,7 @@ fun NavGraphBuilder.babyCareSection(
                             )
                             true
                         }
+
                         else -> false
                     }
                 }
@@ -408,6 +446,7 @@ fun NavGraphBuilder.babyCareSection(
                             ShoppingListItems(viewModel = shoppingViewModel)
                             true
                         }
+
                         else -> false
                     }
                 }

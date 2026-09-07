@@ -46,7 +46,7 @@ fun GenericSduiScreen(
 ) {
     val uiState by remember(screenId) { viewModel.getUiState(screenId) }.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     MMPScaffold(
         title = title,

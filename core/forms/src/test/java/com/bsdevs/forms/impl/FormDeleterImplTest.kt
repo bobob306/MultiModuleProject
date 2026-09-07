@@ -64,7 +64,7 @@ class FormDeleterImplTest {
 
     @Test
     fun `temperatureLog extracts date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "t1") } returns UnifiedEventDto(
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
             id = "t1", type = "TEMPERATURE", time = "09:30",
             dateTimeString = "2026-09-01 09:30",
         )
@@ -76,8 +76,21 @@ class FormDeleterImplTest {
     }
 
     @Test
+    fun `temperatureLog extracts date from ISO dateTimeString`() = runTest {
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
+            id = "t1", type = "TEMPERATURE", time = "09:30",
+            dateTimeString = "2026-09-01T09:30:00Z",
+        )
+
+        val result = deleter.delete("u", "temperatureLog", "t1")
+
+        assertTrue(result is Result.Success)
+        coVerify { babyCareRepository.deleteActivityEvent("u", "2026-09-01", "t1") }
+    }
+
+    @Test
     fun `temperatureLog returns Error when entity not found`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "missing") } returns null
+        coEvery { babyCareRepository.getTemperatureEventById("u", "missing") } returns null
         assertTrue(deleter.delete("u", "temperatureLog", "missing") is Result.Error)
     }
 

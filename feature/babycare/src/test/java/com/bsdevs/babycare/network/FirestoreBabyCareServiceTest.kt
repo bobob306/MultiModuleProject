@@ -183,4 +183,20 @@ class FirestoreBabyCareServiceTest {
         assertEquals(2, result.size)
         assertEquals("v2", result[0]["id"]) // Sorted by dateTimeString desc
     }
+
+    @Test(expected = RuntimeException::class)
+    fun `getLatestMonthId rethrows exception on firestore failure`() = runTest {
+        val user = UserDto(id = userId, babyId = babyId)
+        every { userRepository.userProfile } returns MutableStateFlow(user)
+        
+        val collection = mockk<CollectionReference>(relaxed = true)
+        every { firestore.collection("babyLogs").document(babyId).collection("months") } returns collection
+        
+        // Mock query to throw
+        val query = mockk<Query>(relaxed = true)
+        every { collection.orderBy(any<FieldPath>(), any()) } returns query
+        coEvery { query.limit(1).get(any<Source>()).await() } throws RuntimeException("Firestore Error")
+
+        service.getLatestMonthId(userId, forceRefresh = false)
+    }
 }

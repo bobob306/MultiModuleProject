@@ -412,6 +412,20 @@ class BabyCareRepositoryImplTest {
         assertEquals(38.2, cachedEvents.first { it.id == "temp3" }.temperature!!, 0.01)
     }
 
+    @Test
+    fun `parseUnifiedEvent normalizes space-separated dateTimeString`() = runTest {
+        val date = "2026-09-06"
+        val rawData = mapOf("days" to mapOf(date to listOf(
+            mapOf("id" to "e1", "type" to "FEEDING", "dateTimeString" to "2026-09-06 21:23")
+        )))
+        fakeService.injectMonth(userId, "2026-09", rawData)
+
+        repository.loadInitialData(userId, 2)
+
+        val cachedEvents = repository.cachedDays.value.first().events
+        assertEquals("2026-09-06T21:23", cachedEvents.first { it.id == "e1" }.dateTimeString)
+    }
+
     // --- LOOKUP TESTS ---
 
     @Test

@@ -92,7 +92,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `temperatureLog maps time, temperature and date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "t1") } returns UnifiedEventDto(
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
             type = "TEMPERATURE",
             time = "09:30",
             dateTimeString = "2026-08-31 09:30",
@@ -107,14 +107,26 @@ class FormPrefillerImplTest {
     }
 
     @Test
+    fun `temperatureLog maps from ISO dateTimeString`() = runTest {
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
+            type = "TEMPERATURE",
+            time = "09:30",
+            dateTimeString = "2026-08-31T09:30:00Z",
+            temperature = 37.2,
+        )
+        val result = prefiller.loadExistingValues("u", "temperatureLog", "t1")!!
+        assertEquals("2026-08-31", result["date"])
+    }
+
+    @Test
     fun `temperatureLog returns null when event type is not TEMPERATURE`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "t1") } returns UnifiedEventDto(type = "NAPPY")
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(type = "NAPPY")
         assertNull(prefiller.loadExistingValues("u", "temperatureLog", "t1"))
     }
 
     @Test
     fun `temperatureLog returns null when entity not found`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "missing") } returns null
+        coEvery { babyCareRepository.getTemperatureEventById("u", "missing") } returns null
         assertNull(prefiller.loadExistingValues("u", "temperatureLog", "missing"))
     }
 

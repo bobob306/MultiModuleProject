@@ -5,6 +5,7 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,30 +77,22 @@ class UserRepositoryImpl @Inject constructor(
     override suspend fun getUser(userId: String, forceRefresh: Boolean): UserDto? = withContext(dispatchers.io) {
         if (!forceRefresh && _userProfile.value?.id == userId) return@withContext _userProfile.value
 
-        try {
-            Log.d("FIREBASE_CALL", "Read User: $userId (Force: $forceRefresh)")
-            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-            val user = firestore.collection("users").document(userId).get(source).await()
-                .toObject(UserDto::class.java)
-            _userProfile.value = user
-            user
-        } catch (e: Exception) {
-            null
-        }
+        Log.d("FIREBASE_CALL", "Read User: $userId (Force: $forceRefresh)")
+        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        val user = firestore.collection("users").document(userId).get(source).await()
+            .toObject(UserDto::class.java)
+        _userProfile.value = user
+        user
     }
 
     override suspend fun getBaby(babyId: String, forceRefresh: Boolean): BabyDto? = withContext(dispatchers.io) {
         if (!forceRefresh) babyCache[babyId]?.let { return@withContext it }
-        try {
-            Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
-            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-            val baby = firestore.collection("babies").document(babyId).get(source).await()
-                .toObject(BabyDto::class.java)
-            baby?.let { babyCache[babyId] = it }
-            baby
-        } catch (e: Exception) {
-            null
-        }
+        Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
+        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        val baby = firestore.collection("babies").document(babyId).get(source).await()
+            .toObject(BabyDto::class.java)
+        baby?.let { babyCache[babyId] = it }
+        baby
     }
 
     override fun getBabyFlow(babyId: String): Flow<BabyDto?> = callbackFlow {

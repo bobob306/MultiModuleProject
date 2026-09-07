@@ -22,14 +22,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.outlined.WaterDrop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,7 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,10 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.bsdevs.babycare.presentation.common.BabyActivity
-import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -111,6 +105,7 @@ fun BabyCareTileRowComponent(
                     val next = viewData?.nextFeedingPrediction
                     if (last != null && next != null) "$last\n$next" else last ?: next
                 }
+
                 "TEMPERATURE" -> viewData?.lastTemperature
                 "MEASUREMENT" -> viewData?.lastMeasurement
                 "VACCINATION" -> viewData?.lastVaccination
@@ -186,11 +181,26 @@ fun LazyListScope.ActivityFeedItems(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (feedItem.feedingCount > 0) Text(text = "🍼 ${feedItem.feedingCount}", style = MaterialTheme.typography.labelMedium)
-                            if (feedItem.nappyCount > 0) Text(text = "🍃 ${feedItem.nappyCount}", style = MaterialTheme.typography.labelMedium)
-                            if (feedItem.temperatureCount > 0) Text(text = "🌡️ ${feedItem.temperatureCount}", style = MaterialTheme.typography.labelMedium)
-                            if (feedItem.measurementCount > 0) Text(text = "⚖️ ${feedItem.measurementCount}", style = MaterialTheme.typography.labelMedium)
-                            if (feedItem.vaccinationCount > 0) Text(text = "💉 ${feedItem.vaccinationCount}", style = MaterialTheme.typography.labelMedium)
+                            if (feedItem.feedingCount > 0) Text(
+                                text = "🍼 ${feedItem.feedingCount}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            if (feedItem.nappyCount > 0) Text(
+                                text = "🍃 ${feedItem.nappyCount}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            if (feedItem.temperatureCount > 0) Text(
+                                text = "🌡️ ${feedItem.temperatureCount}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            if (feedItem.measurementCount > 0) Text(
+                                text = "⚖️ ${feedItem.measurementCount}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                            if (feedItem.vaccinationCount > 0) Text(
+                                text = "💉 ${feedItem.vaccinationCount}",
+                                style = MaterialTheme.typography.labelMedium
+                            )
                         }
                     }
                 }
@@ -214,7 +224,10 @@ fun LazyListScope.ActivityFeedItems(
 
                         LaunchedEffect(key1 = true) {
                             delay(((index % 10) * 50L).milliseconds)
-                            animatedOffset.animateTo(0f, tween(durationMillis = 400, easing = LinearOutSlowInEasing))
+                            animatedOffset.animateTo(
+                                0f,
+                                tween(durationMillis = 400, easing = LinearOutSlowInEasing)
+                            )
                         }
                         LaunchedEffect(key1 = true) {
                             delay(((index % 10) * 50L).milliseconds)
@@ -231,11 +244,25 @@ fun LazyListScope.ActivityFeedItems(
                                     val activityId = currentActivity.id
                                     activityId?.let {
                                         when (currentActivity) {
-                                            is BabyActivity.Nappy -> onNavigateToEditNappyChange(activityId)
-                                            is BabyActivity.Feeding -> onNavigateToEditFeeding(activityId)
-                                            is BabyActivity.Temperature -> onNavigateToEditTemperature(activityId)
-                                            is BabyActivity.Measurement -> onNavigateToEditMeasurement(activityId)
-                                            is BabyActivity.Vaccination -> onNavigateToEditVaccination(activityId)
+                                            is BabyActivity.Nappy -> onNavigateToEditNappyChange(
+                                                activityId
+                                            )
+
+                                            is BabyActivity.Feeding -> onNavigateToEditFeeding(
+                                                activityId
+                                            )
+
+                                            is BabyActivity.Temperature -> onNavigateToEditTemperature(
+                                                activityId
+                                            )
+
+                                            is BabyActivity.Measurement -> onNavigateToEditMeasurement(
+                                                activityId
+                                            )
+
+                                            is BabyActivity.Vaccination -> onNavigateToEditVaccination(
+                                                activityId
+                                            )
                                         }
                                     }
                                 },
@@ -260,10 +287,15 @@ fun LazyListScope.ActivityFeedItems(
             }
         }
     }
-    
+
     if (viewData.isLoadingMore) {
         item {
-            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp))
             }
         }
@@ -283,7 +315,11 @@ fun LazyListScope.ActivityFeedItems(
 
 // --- Dashboard Components ---
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
+@OptIn(
+    ExperimentalFoundationApi::class,
+    ExperimentalSharedTransitionApi::class,
+    ExperimentalMaterial3Api::class
+)
 @Composable
 fun ActivityFeedItem(
     item: BabyActivity,
@@ -295,9 +331,24 @@ fun ActivityFeedItem(
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val (icon, color, onColor) = when (item) {
-        is BabyActivity.Nappy -> Triple(Icons.Default.ChildCare, Color(0xFFE8F5E9), Color(0xFF2E7D32))
-        is BabyActivity.Feeding -> Triple(Icons.Default.Restaurant, Color(0xFFE3F2FD), Color(0xFF1565C0))
-        is BabyActivity.Temperature -> Triple(Icons.Default.Thermostat, Color(0xFFFFF3E0), Color(0xFFE65100))
+        is BabyActivity.Nappy -> Triple(
+            Icons.Default.ChildCare,
+            Color(0xFFE8F5E9),
+            Color(0xFF2E7D32)
+        )
+
+        is BabyActivity.Feeding -> Triple(
+            Icons.Default.Restaurant,
+            Color(0xFFE3F2FD),
+            Color(0xFF1565C0)
+        )
+
+        is BabyActivity.Temperature -> Triple(
+            Icons.Default.Thermostat,
+            Color(0xFFFFF3E0),
+            Color(0xFFE65100)
+        )
+
         is BabyActivity.Measurement -> {
             if (item.dto.isMedical) {
                 Triple(Icons.Default.MedicalServices, Color(0xFFFFEBEE), Color(0xFFEF5350))
@@ -305,7 +356,12 @@ fun ActivityFeedItem(
                 Triple(Icons.Default.AutoGraph, Color(0xFFE3F2FD), Color(0xFF42A5F5))
             }
         }
-        is BabyActivity.Vaccination -> Triple(Icons.Default.MedicalServices, Color(0xFFFCE4EC), Color(0xFFC2185B))
+
+        is BabyActivity.Vaccination -> Triple(
+            Icons.Default.MedicalServices,
+            Color(0xFFFCE4EC),
+            Color(0xFFC2185B)
+        )
     }
 
     val title = when (item) {
@@ -322,22 +378,47 @@ fun ActivityFeedItem(
             val seconds = item.dto.totalDuration % 60
             "Feed ($side) %02d:%02d".format(minutes, seconds)
         }
+
         is BabyActivity.Temperature -> "Temperature: ${item.dto.temperature}°C"
         is BabyActivity.Measurement -> {
-            val weightStr = item.dto.weight?.let { "Weight: " + String.format(Locale.getDefault(), "%.2fkg", it) } ?: ""
-            val heightStr = item.dto.height?.let { "Height: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
-            val headStr = item.dto.headCircumference?.let { "Head Circ.: " + String.format(Locale.getDefault(), "%.1fcm", it) } ?: ""
+            val weightStr = item.dto.weight?.let {
+                "Weight: " + String.format(
+                    Locale.getDefault(),
+                    "%.2fkg",
+                    it
+                )
+            } ?: ""
+            val heightStr = item.dto.height?.let {
+                "Height: " + String.format(
+                    Locale.getDefault(),
+                    "%.1fcm",
+                    it
+                )
+            } ?: ""
+            val headStr = item.dto.headCircumference?.let {
+                "Head Circ.: " + String.format(
+                    Locale.getDefault(),
+                    "%.1fcm",
+                    it
+                )
+            } ?: ""
             val typeStr = if (item.dto.isMedical) " (Medical)" else " (Self)"
-            "Measurement: ${listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", ")}$typeStr"
+            "Measurement: ${
+                listOf(weightStr, heightStr, headStr).filter { it.isNotEmpty() }.joinToString(", ")
+            }$typeStr"
         }
+
         is BabyActivity.Vaccination -> "Vaccination: ${item.dto.vaccinationNames.joinToString(", ")}"
     }
 
     val dismissState = rememberSwipeToDismissBoxState()
 
     LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) { onDelete(); dismissState.snapTo(SwipeToDismissBoxValue.Settled) }
-        else if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) { onEdit(); dismissState.snapTo(SwipeToDismissBoxValue.Settled) }
+        if (dismissState.currentValue == SwipeToDismissBoxValue.StartToEnd) {
+            onDelete(); dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        } else if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+            onEdit(); dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+        }
     }
 
     SwipeToDismissBox(
@@ -346,8 +427,14 @@ fun ActivityFeedItem(
             val direction = dismissState.dismissDirection
             if (direction == SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
             val bgColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(
+                    alpha = 0.5f
+                )
+
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(
+                    alpha = 0.5f
+                )
+
                 else -> Color.Transparent
             }
             Box(
@@ -358,7 +445,8 @@ fun ActivityFeedItem(
                     .padding(horizontal = 24.dp),
                 contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
             ) {
-                val swipeIcon = if (direction == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Delete else Icons.Default.Edit
+                val swipeIcon =
+                    if (direction == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Delete else Icons.Default.Edit
                 Icon(
                     swipeIcon,
                     contentDescription = null,
@@ -369,17 +457,47 @@ fun ActivityFeedItem(
     ) {
         with(sharedTransitionScope) {
             Card(
-                modifier = Modifier.fillMaxWidth().sharedElement(rememberSharedContentState(key = "activity_card_${item.id}"), animatedVisibilityScope).combinedClickable(onClick = onEdit, onLongClick = onEdit),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sharedElement(
+                        rememberSharedContentState(key = "activity_card_${item.id}"),
+                        animatedVisibilityScope
+                    )
+                    .combinedClickable(onClick = onEdit, onLongClick = onEdit),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Row(modifier = Modifier.padding(12.dp).fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(40.dp).background(color, CircleShape).clip(CircleShape).clickable { onIconClick() }, contentAlignment = Alignment.Center) {
-                        Icon(icon, contentDescription = "Filter", modifier = Modifier.size(24.dp), tint = onColor)
+                Row(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(color, CircleShape)
+                            .clip(CircleShape)
+                            .clickable { onIconClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = "Filter",
+                            modifier = Modifier.size(24.dp),
+                            tint = onColor
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = title, style = MaterialTheme.typography.bodyMedium)
-                        item.comment?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item.comment?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     if (item is BabyActivity.Feeding) {
@@ -397,14 +515,20 @@ fun ActivityFeedItem(
                             Icon(
                                 imageVector = if (item.hasVitaminD) Icons.Default.WaterDrop else Icons.Outlined.WaterDrop,
                                 contentDescription = "Vitamin D Drops",
-                                tint = if (item.hasVitaminD) Color(0xFFFBC02D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = if (item.hasVitaminD) Color(0xFFFBC02D) else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.5f
+                                ),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
 
-                    Text(text = item.time ?: "", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = item.time ?: "",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -419,7 +543,7 @@ private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
         durationMinutes > 20f -> 1.2f
         else -> (durationMinutes / 20f).coerceIn(0f, 1f)
     }
-    
+
     var startAnimation by remember { mutableStateOf(false) }
     val animatedProgress by animateFloatAsState(
         targetValue = if (startAnimation) targetProgress else 0f,
@@ -434,7 +558,7 @@ private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
     LaunchedEffect(durationSeconds) {
         startAnimation = true
     }
-    
+
     val brush = when {
         animatedProgress <= 0.5f -> SolidColor(Color.Red)
         animatedProgress <= 1.0f -> {
@@ -444,6 +568,7 @@ private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
                 colors = listOf(topColor, Color.Red)
             )
         }
+
         else -> {
             val goldColor = Color(0xFFFFD700)
             val fraction = ((animatedProgress - 1.0f) / 0.2f).coerceIn(0f, 1f)
@@ -457,7 +582,10 @@ private fun FeedingBar(durationSeconds: Long, modifier: Modifier = Modifier) {
             .width(8.dp)
             .fillMaxHeight()
             .padding(vertical = 4.dp)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
+            .background(
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                RoundedCornerShape(4.dp)
+            )
             .clip(RoundedCornerShape(4.dp))
     ) {
         Box(
@@ -488,15 +616,42 @@ fun BabyCareTile(
     with(sharedTransitionScope) {
         Card(
             onClick = onClick,
-            modifier = modifier.sharedElement(rememberSharedContentState(key = "tile_$id"), animatedVisibilityScope),
+            modifier = modifier.sharedElement(
+                rememberSharedContentState(key = "tile_$id"),
+                animatedVisibilityScope
+            ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.padding(8.dp)) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text(text = title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 4.dp),
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (subtitle != null) Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 2.dp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }

@@ -14,8 +14,10 @@ import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.network.repository.ScreenRepository
 import io.mockk.*
 import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.network.dto.UserDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -29,6 +31,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.util.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BabyCareHomeViewModelTest {
@@ -48,6 +51,7 @@ class BabyCareHomeViewModelTest {
 
     @Before
     fun setUp() {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
         Dispatchers.setMain(testDispatcher)
         
         dispatchers = object : DispatcherProvider {
@@ -58,6 +62,9 @@ class BabyCareHomeViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         userRepo = mockk<UserRepository>(relaxed = true)
+        val userProfileFlow = MutableStateFlow<UserDto?>(UserDto(id = userId))
+        every { userRepo.userProfile } returns userProfileFlow
+        
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
@@ -393,5 +400,38 @@ class BabyCareHomeViewModelTest {
             // Range: 13:00 +/- 20 mins = 12:40 - 13:20
             assertEquals("Next: 12:40 - 13:20", data.nextFeedingPrediction)
         }
+    }
+
+    @Test
+    fun `activity feed sorts mixed date formats correctly`() = runTest {
+        // Given: Mixed formats (ISO with T/Z, and legacy space-separated)
+        // We use UTC hours that will sort correctly regardless of local timezone parsing
+        val date = "2026-09-06"
+        val events = listOf(
+            // 20:37 UTC
+            mapOf("id" to "e1", "type" to "FEEDING", "dateTimeString" to "2026-09-06T20:37:00Z"),
+            // 21:23 (local) -> will be normalized to 2026-09-06T21:23
+            mapOf("id" to "e2", "type" to "FEEDING", "dateTimeString" to "2026-09-06 21:23"),
+            // 22:00 UTC
+            mapOf("id" to "e3", "type" to "FEEDING", "dateTimeString" to "2026-09-06T22:00:00Z")
+        )
+        fakeService.injectMonth(userId, "2026-09", mapOf("days" to mapOf(date to events)))
+
+        // When
+        viewModel.refreshData()
+
+        // Then
+        val result = viewModel.viewData.value as Result.Success
+        val rows = result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>()
+        
+        // Expected order: newest first. 
+        // With TimeZone=UTC, e2 (21:23) is between e3 (22:00) and e1 (20:37)
+        assertEquals(3, rows.size)
+        assertEquals("e3", (rows[0].activity as BabyActivity.Feeding).dto.id)
+        assertEquals("e2", (rows[1].activity as BabyActivity.Feeding).dto.id)
+        assertEquals("e1", (rows[2].activity as BabyActivity.Feeding).dto.id)
+        
+        // Verify normalization for e2
+        assertEquals("2026-09-06T21:23", (rows[1].activity as BabyActivity.Feeding).dto.dateTime)
     }
 }

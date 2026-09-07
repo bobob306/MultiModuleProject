@@ -21,7 +21,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteNappy(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getNappyEventById(userId, entityId)
             ?: return Result.Error(Exception("Nappy record not found"))
-        val date = event.dateTimeString.substringBefore(" ")
+        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
@@ -31,7 +31,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteTemperature(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getTemperatureEventById(userId, entityId)
             ?: return Result.Error(Exception("Temperature record not found"))
-        val date = event.dateTimeString.substringBefore(" ")
+        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
@@ -41,7 +41,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteMeasurement(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getMeasurementEventById(userId, entityId)
             ?: return Result.Error(Exception("Measurement record not found"))
-        val date = event.dateTimeString.substringBefore(" ")
+        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
@@ -51,7 +51,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteFeeding(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getFeedingEventById(userId, entityId)
             ?: return Result.Error(Exception("Feeding record not found"))
-        val date = event.dateTimeString.substringBefore(" ")
+        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
@@ -61,7 +61,7 @@ class FormDeleterImpl @Inject constructor(
     private suspend fun deleteVaccination(userId: String, entityId: String): Result<Unit> = try {
         val event = babyCareRepository.getVaccinationEventById(userId, entityId)
             ?: return Result.Error(Exception("Vaccination record not found"))
-        val date = event.dateTimeString.substringBefore(" ")
+        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
         babyCareRepository.deleteActivityEvent(userId, date, entityId)
         Result.Success(Unit)
     } catch (e: Exception) {
