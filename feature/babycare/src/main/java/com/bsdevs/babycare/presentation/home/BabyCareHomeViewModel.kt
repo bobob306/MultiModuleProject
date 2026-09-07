@@ -5,20 +5,20 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.DailyLogDto
+import com.bsdevs.network.dto.DailyLogDto
 import com.bsdevs.babycare.network.FeedingDto
 import com.bsdevs.babycare.network.MeasurementDto
 import com.bsdevs.babycare.network.NappyChangeDto
 import com.bsdevs.babycare.network.TemperatureDto
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
-import com.bsdevs.network.repository.ScreenRepository
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.ScreenRepository
+import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -56,18 +57,7 @@ class BabyCareHomeViewModel @Inject constructor(
     private val _collapsedHeaders = MutableStateFlow<Set<String>>(emptySet())
     private val _dynamicUi = MutableStateFlow<List<NetworkScreenData>>(emptyList())
 
-    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(
-        repository.cachedDays.value.let { cached ->
-            if (cached.isNotEmpty()) {
-                // We can't easily compute processFeed here because it's suspend and complex.
-                // But we can at least start with a "Success" flag if we have data?
-                // Actually, let's keep it Loading but make the collector faster.
-                Result.Loading
-            } else {
-                Result.Loading
-            }
-        }
-    )
+    private val _viewData = MutableStateFlow<Result<BabyCareHomeViewData>>(Result.Loading)
     val viewData: StateFlow<Result<BabyCareHomeViewData>> = _viewData.asStateFlow()
 
     init {
@@ -91,8 +81,8 @@ class BabyCareHomeViewModel @Inject constructor(
         // 🌟 2. Observe the repository cache in the background
         viewModelScope.launch {
             repository.cachedDays.collect { dailyLogs ->
-                // Only map to Success if we aren't currently waiting on a full initial pull
-                if (_viewData.value !is Result.Loading || dailyLogs.isNotEmpty()) {
+                // Transition to success if we have data to show (Offline-first)
+                if (dailyLogs.isNotEmpty() || _viewData.value !is Result.Loading) {
                     updateDisplayFeed(dailyLogs)
                 }
             }
@@ -128,11 +118,17 @@ class BabyCareHomeViewModel @Inject constructor(
                 updateDisplayFeed(
                     dailyLogs = repository.cachedDays.value,
                     canLoadMore = fetchResult.hasMoreData,
-                    isRefreshing = false
+                    isRefreshing = false,
+                    forceSuccess = true
                 )
             } catch (e: Exception) {
                 Log.e("HOME_INIT_ERROR", "Failed initial data block fetch", e)
-                _viewData.value = Result.Error(e)
+                // If we have cached data, don't show error screen, just stop loading
+                if (repository.cachedDays.value.isNotEmpty()) {
+                    updateDisplayFeed(repository.cachedDays.value, isRefreshing = false, forceSuccess = true)
+                } else {
+                    _viewData.value = Result.Error(e)
+                }
             }
         }
     }
@@ -141,9 +137,18 @@ class BabyCareHomeViewModel @Inject constructor(
         dailyLogs: List<DailyLogDto>,
         canLoadMore: Boolean? = null,
         isRefreshing: Boolean? = null,
-        isLoadingMore: Boolean? = null
+        isLoadingMore: Boolean? = null,
+        forceSuccess: Boolean = false
     ) {
-        val currentState = (_viewData.value as? Result.Success)?.data
+        val currentResult = _viewData.value
+        
+        // 🛡️ Optimization: If we are in Loading state and have no data yet, 
+        // don't switch to Success with empty data UNLESS forceSuccess is true (initial load complete)
+        if (currentResult is Result.Loading && dailyLogs.isEmpty() && !forceSuccess) {
+            return
+        }
+
+        val currentState = (currentResult as? Result.Success)?.data
         val processedFeed = processFeed(
             dailyLogs = dailyLogs,
             filter = _currentFilter.value,
@@ -170,19 +175,23 @@ class BabyCareHomeViewModel @Inject constructor(
             // Turn on pull-to-refresh spinner indicator
             _viewData.value = Result.Success(current.copy(isRefreshing = true))
 
-            // Refresh Screen Config too
-            launch {
-                screenRepository.getScreenFlow("baby_home", forceRefresh = true).collect { result ->
-                    if (result is Result.Success) {
-                        val mappedData = withContext(dispatchers.default) {
-                            mapper.mapToData(result.data)
+            try {
+                // Refresh Screen Config too
+                launch {
+                    try {
+                        screenRepository.getScreenFlow("baby_home", forceRefresh = true).collect { result ->
+                            if (result is Result.Success) {
+                                val mappedData = withContext(dispatchers.default) {
+                                    mapper.mapToData(result.data)
+                                }
+                                _dynamicUi.value = mappedData
+                            }
                         }
-                        _dynamicUi.value = mappedData
+                    } catch (e: Exception) {
+                        Log.e("REFRESH_ERROR", "Failed to refresh screen config", e)
                     }
                 }
-            }
 
-            try {
                 // Force re-fetch the baby profile to bypass local cache
                 accountService.currentUserId.takeIf { it.isNotEmpty() }?.let { userId ->
                     userRepository.getUser(userId, forceRefresh = true)?.babyId?.let { babyId ->
@@ -194,11 +203,13 @@ class BabyCareHomeViewModel @Inject constructor(
                 updateDisplayFeed(
                     dailyLogs = repository.cachedDays.value,
                     canLoadMore = refreshResult.hasMoreData,
-                    isRefreshing = false
+                    isRefreshing = false,
+                    forceSuccess = true
                 )
             } catch (exception: Exception) {
-                Log.e("REFRESH_ERROR", "Failed to clear refresh cycle", exception)
-                _viewData.value = Result.Success(current.copy(isRefreshing = false))
+                Log.e("REFRESH_ERROR", "Failed to complete refresh cycle", exception)
+                // Stop the spinner even on failure
+                updateDisplayFeed(repository.cachedDays.value, isRefreshing = false, forceSuccess = true)
             }
         }
     }
@@ -287,9 +298,9 @@ class BabyCareHomeViewModel @Inject constructor(
         // Use server-side prediction from Firebase
         val zone = ZoneId.systemDefault()
         fun formatIso(iso: String?): String? = try {
-            java.time.OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
+            OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
         } catch (_: Exception) {
-            try { java.time.LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
+            try { LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
         }
 
         val feedingPrediction = when {

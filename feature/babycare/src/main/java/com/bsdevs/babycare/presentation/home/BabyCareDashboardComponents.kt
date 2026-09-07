@@ -73,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.bsdevs.uicomponents.shimmer
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.data.NetworkScreenData
 import kotlinx.coroutines.delay
@@ -123,7 +124,8 @@ fun BabyCareTileRowComponent(
                 onClick = { onDynamicClick(tile.destination, tile.title) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
-                id = tile.sharedElementKey ?: "tile_${tile.index}"
+                id = tile.sharedElementKey ?: "tile_${tile.index}",
+                isLoading = viewData == null
             )
         }
         Spacer(modifier = Modifier.width(0.dp))
@@ -132,7 +134,7 @@ fun BabyCareTileRowComponent(
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 fun LazyListScope.ActivityFeedItems(
-    viewData: BabyCareHomeViewData,
+    viewData: BabyCareHomeViewData?,
     onToggleHeaderCollapse: (String) -> Unit,
     onToggleActivityFilter: (ActivityFilter) -> Unit,
     onDeleteActivity: (BabyActivity) -> Unit,
@@ -146,6 +148,23 @@ fun LazyListScope.ActivityFeedItems(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
+    if (viewData == null) {
+        // Show Shimmers
+        repeat(5) { i ->
+            item(key = "activity_shimmer_$i") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .padding(vertical = 4.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .shimmer()
+                )
+            }
+        }
+        return
+    }
+
     val activityItems = viewData.activityFeed
 
     activityItems.forEach { feedItem ->
@@ -611,7 +630,8 @@ fun BabyCareTile(
     onClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    id: String
+    id: String,
+    isLoading: Boolean = false
 ) {
     with(sharedTransitionScope) {
         Card(
@@ -643,15 +663,26 @@ fun BabyCareTile(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (subtitle != null) Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 2.dp),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (isLoading) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .width(60.dp)
+                                .height(12.dp)
+                                .clip(MaterialTheme.shapes.extraSmall)
+                                .shimmer()
+                        )
+                    } else if (subtitle != null) {
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 2.dp),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

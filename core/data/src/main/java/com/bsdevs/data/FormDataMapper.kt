@@ -3,6 +3,12 @@ package com.bsdevs.data
 import com.bsdevs.network.dto.FormFieldConditionDto
 import com.bsdevs.network.dto.FormFieldDto
 import com.bsdevs.network.dto.FormSchemaDto
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import javax.inject.Inject
 
 interface FormDataMapper {
@@ -21,22 +27,32 @@ class FormDataMapperImpl @Inject constructor() : FormDataMapper {
 
     private fun FormFieldDto.toFieldData(): FormFieldData {
         val condition = showWhen?.toCondition()
+        val defaultVal = defaultValue?.let { jsonToAny(it) }
+        
         return when (type) {
             "TEXT_INPUT" -> FormFieldData.TextInputData(fieldKey, label, required, index, placeholder, condition)
             "NUMBER_INPUT" -> FormFieldData.NumberInputData(fieldKey, label, required, index, placeholder, condition)
-            "SWITCH" -> FormFieldData.SwitchFieldData(fieldKey, label, required, index, defaultValue as? Boolean ?: false, condition)
+            "SWITCH" -> FormFieldData.SwitchFieldData(fieldKey, label, required, index, defaultVal as? Boolean ?: false, condition)
             "RADIO" -> FormFieldData.RadioFieldData(fieldKey, label, required, index, options, condition)
             "CHECKBOX_LIST" -> FormFieldData.CheckboxListFieldData(fieldKey, label, required, index, options, condition)
             "DROPDOWN" -> FormFieldData.DropdownFieldData(fieldKey, label, required, index, options, multiSelect, editable, dynamicOptions, condition)
             "DATE_INPUT" -> FormFieldData.DateInputData(fieldKey, label, required, index, condition)
             "TIME_INPUT" -> FormFieldData.TimeInputData(fieldKey, label, required, index, condition)
-            "WHEEL_INPUT" -> FormFieldData.WheelInputData(fieldKey, label, required, index, startNumber, endNumber, decimalPlaces, (defaultValue as? Number)?.toInt() ?: startNumber, condition)
+            "WHEEL_INPUT" -> FormFieldData.WheelInputData(fieldKey, label, required, index, startNumber, endNumber, decimalPlaces, (defaultVal as? Number)?.toInt() ?: startNumber, condition)
             else -> FormFieldData.Unknown(fieldKey, label, required, index, condition)
         }
     }
 
     private fun FormFieldConditionDto.toCondition(): FormFieldCondition? {
-        val value = equals ?: return null
+        val value = equals?.let { jsonToAny(it) } ?: return null
         return FormFieldCondition(fieldKey, value)
+    }
+
+    private fun jsonToAny(element: JsonElement): Any? {
+        if (element is JsonPrimitive) {
+            if (element.isString) return element.content
+            return element.booleanOrNull ?: element.intOrNull ?: element.longOrNull ?: element.doubleOrNull ?: element.content
+        }
+        return element.toString()
     }
 }

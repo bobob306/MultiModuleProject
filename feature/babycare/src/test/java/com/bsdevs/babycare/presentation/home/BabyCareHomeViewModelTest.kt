@@ -8,10 +8,12 @@ import java.time.LocalDate
 import com.bsdevs.babycare.network.BabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.SyncManager
+import com.bsdevs.data.local.dao.BabyEventDao
+import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.ScreenDataMapper
-import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.data.repository.ScreenRepository
 import io.mockk.*
 import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.network.dto.UserDto
@@ -67,7 +69,19 @@ class BabyCareHomeViewModelTest {
         
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
-        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
+        
+        val babyEventDao = mockk<BabyEventDao>(relaxed = true)
+        every { babyEventDao.getEvents(any()) } returns flowOf(emptyList())
+        val syncManager = mockk<SyncManager>(relaxed = true)
+        
+        repository = BabyCareRepositoryImpl(
+            apiService = fakeService, 
+            userRepository = userRepo, 
+            dispatchers = dispatchers, 
+            timeProvider = timeProvider,
+            babyEventDao = babyEventDao,
+            syncManager = syncManager
+        )
         accountService = FakeAccountService(userId)
         
         screenRepository = mockk(relaxed = true)
@@ -348,7 +362,19 @@ class BabyCareHomeViewModelTest {
         }
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
-        val errorRepo = BabyCareRepositoryImpl(crashingService, userRepo, dispatchers, timeProvider)
+        
+        val babyEventDao = mockk<BabyEventDao>(relaxed = true)
+        every { babyEventDao.getEvents(any()) } returns flowOf(emptyList())
+        val syncManager = mockk<SyncManager>(relaxed = true)
+        
+        val errorRepo = BabyCareRepositoryImpl(
+            apiService = crashingService, 
+            userRepository = userRepo, 
+            dispatchers = dispatchers, 
+            timeProvider = timeProvider,
+            babyEventDao = babyEventDao,
+            syncManager = syncManager
+        )
         
         // We need to wait for the viewModelScope to finish the initialLoad call
         val errorViewModel = BabyCareHomeViewModel(

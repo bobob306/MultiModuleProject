@@ -2,7 +2,7 @@ package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
-import com.bsdevs.network.repository.FormPrefiller
+import com.bsdevs.data.repository.FormPrefiller
 import javax.inject.Inject
 
 class FormPrefillerImpl @Inject constructor(

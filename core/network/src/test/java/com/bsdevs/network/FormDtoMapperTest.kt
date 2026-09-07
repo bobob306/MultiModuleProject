@@ -1,6 +1,8 @@
 package com.bsdevs.network
 
-import com.bsdevs.network.dto.FormSchemaDto
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -95,7 +97,7 @@ class FormDtoMapperTest {
         )
         val dto = mapper.mapToDto(rootMap(field)).fields[0]
         assertEquals("SWITCH", dto.type)
-        assertEquals(true, dto.defaultValue)
+        assertEquals(true, (dto.defaultValue as JsonPrimitive).booleanOrNull)
     }
 
     @Test
@@ -149,7 +151,7 @@ class FormDtoMapperTest {
         assertEquals(350, dto.startNumber)
         assertEquals(420, dto.endNumber)
         assertEquals(1, dto.decimalPlaces)
-        assertEquals(370, (dto.defaultValue as Number).toInt())
+        assertEquals(370, (dto.defaultValue as JsonPrimitive).intOrNull)
     }
 
     @Test
@@ -169,7 +171,7 @@ class FormDtoMapperTest {
         val dto = mapper.mapToDto(rootMap(field)).fields[0]
         assertNull(null) // showWhen is present
         assertEquals("record_height", dto.showWhen?.fieldKey)
-        assertEquals(true, dto.showWhen?.equals)
+        assertEquals(true, (dto.showWhen?.equals as JsonPrimitive).booleanOrNull)
     }
 
     @Test

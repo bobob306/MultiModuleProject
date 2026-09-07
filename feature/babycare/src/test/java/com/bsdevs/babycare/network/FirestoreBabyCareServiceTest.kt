@@ -2,7 +2,7 @@ package com.bsdevs.babycare.network
 
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.*
 import io.mockk.*
@@ -184,8 +184,8 @@ class FirestoreBabyCareServiceTest {
         assertEquals("v2", result[0]["id"]) // Sorted by dateTimeString desc
     }
 
-    @Test(expected = RuntimeException::class)
-    fun `getLatestMonthId rethrows exception on firestore failure`() = runTest {
+    @Test
+    fun `getLatestMonthId catches exception and returns null on firestore failure`() = runTest {
         val user = UserDto(id = userId, babyId = babyId)
         every { userRepository.userProfile } returns MutableStateFlow(user)
         
@@ -197,6 +197,7 @@ class FirestoreBabyCareServiceTest {
         every { collection.orderBy(any<FieldPath>(), any()) } returns query
         coEvery { query.limit(1).get(any<Source>()).await() } throws RuntimeException("Firestore Error")
 
-        service.getLatestMonthId(userId, forceRefresh = false)
+        val result = service.getLatestMonthId(userId, forceRefresh = false)
+        assertNull(result)
     }
 }

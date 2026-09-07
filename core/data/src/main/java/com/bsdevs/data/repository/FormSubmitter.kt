@@ -1,4 +1,4 @@
-package com.bsdevs.network.repository
+package com.bsdevs.data.repository
 
 import com.bsdevs.common.result.Result
 

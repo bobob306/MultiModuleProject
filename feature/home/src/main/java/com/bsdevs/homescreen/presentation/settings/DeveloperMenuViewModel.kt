@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.homescreen.FormSeeds
 import com.bsdevs.network.dto.ScreenDto
-import com.bsdevs.network.repository.FormRepository
-import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.data.repository.FormRepository
+import com.bsdevs.data.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -99,7 +99,7 @@ class FormSeedsTest {
     fun `nappyLog has correct top-level metadata`() {
         val seed = FormSeeds.nappyLog
         assertEquals("nappyLog", seed["submitTarget"])
-        assertEquals("baby_home", seed["submitDestination"])
+        assertEquals("back", seed["submitDestination"])
         assertTrue(seed["deletable"] as Boolean)
     }
 
@@ -126,7 +126,7 @@ class FormSeedsTest {
     fun `temperatureLog has correct top-level metadata`() {
         val seed = FormSeeds.temperatureLog
         assertEquals("temperatureLog", seed["submitTarget"])
-        assertEquals("baby_home", seed["submitDestination"])
+        assertEquals("back", seed["submitDestination"])
         assertTrue(seed["deletable"] as Boolean)
     }
 
@@ -146,7 +146,7 @@ class FormSeedsTest {
     fun `measurementLog has correct top-level metadata`() {
         val seed = FormSeeds.measurementLog
         assertEquals("measurementLog", seed["submitTarget"])
-        assertEquals("baby_home", seed["submitDestination"])
+        assertEquals("back", seed["submitDestination"])
         assertTrue(seed["deletable"] as Boolean)
     }
 
@@ -204,7 +204,7 @@ class FormSeedsTest {
     fun `vaccinationLog has correct top-level metadata`() {
         val seed = FormSeeds.vaccinationLog
         assertEquals("vaccinationLog", seed["submitTarget"])
-        assertEquals("baby_home", seed["submitDestination"])
+        assertEquals("back", seed["submitDestination"])
         assertTrue(seed["deletable"] as Boolean)
     }
 

@@ -2,7 +2,7 @@ package com.bsdevs.homescreen
 
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.dto.ScreenDto
-import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.data.repository.ScreenRepository
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +24,7 @@ class FakeScreenRepository : ScreenRepository {
     }
 
     override suspend fun getScreen(screen: String): Task<DocumentSnapshot> {
-        throw UnsupportedOperationException("Not used in ViewModel")
+        throw UnsupportedOperationException("Not used in tests")
     }
 
     override suspend fun getScreenFlow(screen: String, forceRefresh: Boolean): Flow<Result<List<ScreenDto>>> {
@@ -33,6 +33,10 @@ class FakeScreenRepository : ScreenRepository {
 
     override suspend fun updateScreen(screen: String, dtos: List<ScreenDto>) {
         emitScreenData(screen, dtos)
+    }
+
+    override suspend fun deleteScreen(screen: String) {
+        screenFlows.remove(screen)
     }
 
     override fun clearCache() {

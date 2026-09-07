@@ -1,12 +1,15 @@
 package com.bsdevs.network.dto
 
-import com.google.firebase.Timestamp
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
+@Serializable
 data class FormFieldConditionDto(
     val fieldKey: String = "",
-    val equals: Any? = null,
+    val equals: JsonElement? = null,
 )
 
+@Serializable
 data class FormFieldDto(
     val fieldKey: String = "",
     val type: String = "",
@@ -14,7 +17,7 @@ data class FormFieldDto(
     val required: Boolean = false,
     val index: Int = 0,
     val placeholder: String? = null,
-    val defaultValue: Any? = null,
+    val defaultValue: JsonElement? = null,
     val options: List<String> = emptyList(),
     val multiSelect: Boolean = false,
     val editable: Boolean = false,
@@ -25,6 +28,7 @@ data class FormFieldDto(
     val showWhen: FormFieldConditionDto? = null,
 )
 
+@Serializable
 data class FormSchemaDto(
     val title: String = "",
     val submitTarget: String = "",
@@ -33,7 +37,8 @@ data class FormSchemaDto(
     val fields: List<FormFieldDto> = emptyList(),
 )
 
+@Serializable
 data class FormSubmissionDto(
-    val submittedAt: Timestamp? = null,
-    val values: Map<String, Any> = emptyMap(),
+    val submittedAt: Long? = null,
+    val values: Map<String, JsonElement> = emptyMap(),
 )

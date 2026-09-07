@@ -12,8 +12,10 @@ dependencies {
     implementation(project(":core:common"))
     implementation(libs.kotlinx.serialization.json)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.firestore)
+    api(platform(libs.firebase.bom))
+    api(libs.firebase.firestore)
+    api(libs.firebase.auth)
+    api(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.converter.gson)
     implementation(libs.gson)

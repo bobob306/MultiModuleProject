@@ -2,7 +2,7 @@ package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.common.result.Result
-import com.bsdevs.network.repository.FormDeleter
+import com.bsdevs.data.repository.FormDeleter
 import javax.inject.Inject
 
 class FormDeleterImpl @Inject constructor(

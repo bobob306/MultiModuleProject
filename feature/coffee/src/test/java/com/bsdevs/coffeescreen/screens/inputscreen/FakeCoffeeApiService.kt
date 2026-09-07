@@ -7,6 +7,7 @@ import com.bsdevs.coffeescreen.screens.detailscreen.ShotDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.yield
 
 class FakeCoffeeApiService : CoffeeApiService, CoffeeRepository {
     var screenData: CoffeeInputScreenDto? = null
@@ -15,6 +16,7 @@ class FakeCoffeeApiService : CoffeeApiService, CoffeeRepository {
     override val allCoffee: StateFlow<List<CoffeeDto>> = _allCoffee.asStateFlow()
 
     override suspend fun loadInitialData(userId: String) {
+        yield()
         _allCoffee.value = uploadedCoffees.filter { it.userId == userId }
     }
 

@@ -27,6 +27,10 @@ dependencies {
     implementation(libs.androidx.appfunctions.common)
     ksp(libs.androidx.appfunctions.compiler)
 
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
     testImplementation(libs.mockk)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)

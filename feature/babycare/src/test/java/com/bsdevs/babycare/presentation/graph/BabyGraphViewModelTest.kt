@@ -4,10 +4,15 @@ import app.cash.turbine.test
 import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.data.SyncManager
+import com.bsdevs.data.local.dao.BabyEventDao
 import java.time.LocalDate
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.UserDto
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,9 +49,23 @@ class BabyGraphViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepository = mockk<UserRepository>(relaxed = true)
+        every { userRepository.userProfile } returns MutableStateFlow(UserDto(id = userId))
+        
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
-        repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
+        
+        val babyEventDao = mockk<BabyEventDao>(relaxed = true)
+        every { babyEventDao.getEvents(any()) } returns flowOf(emptyList())
+        val syncManager = mockk<SyncManager>(relaxed = true)
+        
+        repository = BabyCareRepositoryImpl(
+            apiService = fakeService, 
+            userRepository = userRepository, 
+            dispatchers = dispatchers, 
+            timeProvider = timeProvider,
+            babyEventDao = babyEventDao,
+            syncManager = syncManager
+        )
         viewModel = BabyGraphViewModel(repository, dispatchers)
     }
 

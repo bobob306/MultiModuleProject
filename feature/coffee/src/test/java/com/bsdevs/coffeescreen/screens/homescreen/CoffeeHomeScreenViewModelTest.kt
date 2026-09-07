@@ -10,7 +10,6 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -110,12 +109,10 @@ class CoffeeHomeScreenViewModelTest {
     fun `start failure navigates to login`() = runTest {
         accountService.signOut() // Clear user
         
-        val vm = CoffeeHomeScreenViewModel(accountService, fakeService)
-        vm.navigationEvent.test {
-             // start() is called in init. With UnconfinedTestDispatcher, 
-             // it should have sent the event already.
-             // If we missed it, we can call start() again to verify.
-             vm.start()
+        viewModel = CoffeeHomeScreenViewModel(accountService, fakeService)
+        viewModel.navigationEvent.test {
+             // The event was likely sent during init. Since it's a Channel, 
+             // it should be buffered and we can await it.
              assertEquals(NavigationEvent.NavigateToLogin, awaitItem())
         }
     }

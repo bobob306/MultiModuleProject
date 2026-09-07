@@ -3,7 +3,7 @@ package com.bsdevs.babycare.presentation.shopping
 import app.cash.turbine.test
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
