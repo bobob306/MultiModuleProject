@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation.measurement
 
+import com.bsdevs.network.dto.MeasurementDto
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -17,7 +18,7 @@ data class MeasurementUiState(
     val comment: String = "",
     
     // Growth Chart Data
-    val allMeasurements: List<com.bsdevs.babycare.network.MeasurementDto> = emptyList(),
+    val allMeasurements: List<MeasurementDto> = emptyList(),
     val showMedicalOnly: Boolean = false,
     val showWhoOverlay: Boolean = false,
     val birthDate: String? = null,

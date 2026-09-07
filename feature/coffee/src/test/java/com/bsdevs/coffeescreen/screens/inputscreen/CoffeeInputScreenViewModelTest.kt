@@ -1,6 +1,7 @@
 package com.bsdevs.coffeescreen.screens.inputscreen
 
 import app.cash.turbine.test
+import com.bsdevs.network.dto.CoffeeInputScreenDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputVD
 import com.bsdevs.common.DispatcherProvider

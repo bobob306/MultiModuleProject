@@ -42,13 +42,13 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavOptions
 import androidx.window.core.layout.WindowSizeClass
-import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.detailscreen.components.CoffeeDetailsFirstHalf
 import com.bsdevs.coffeescreen.screens.detailscreen.components.EspressoShotInputSheetContent
 import com.bsdevs.coffeescreen.screens.detailscreen.components.SecondHalfContent
 import com.bsdevs.coffeescreen.screens.inputscreen.ErrorScreen
 import com.bsdevs.coffeescreen.screens.inputscreen.LoadingScreen
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.uicomponents.MMPScaffold
 import java.time.LocalDate
 import java.util.UUID
@@ -252,14 +252,6 @@ private fun CoffeeDetailPortraitMode(
                 )
             }
         }
-    }
-}
-
-// Helper function to round doubles to a specific number of decimal places
-fun Double.roundTo(decimalPlaces: Int): Double {
-    val factor = Math.pow(10.0, decimalPlaces.toDouble())
-    return (this * factor).let {
-        kotlin.math.round(it) / factor
     }
 }
 

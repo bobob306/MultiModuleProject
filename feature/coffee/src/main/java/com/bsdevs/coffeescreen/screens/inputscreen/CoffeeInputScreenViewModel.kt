@@ -2,10 +2,8 @@ package com.bsdevs.coffeescreen.screens.inputscreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.annotation.Keep
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.coffeescreen.data.CoffeeRepository
-import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.CoffeeScreenViewData
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputType
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.InputViewData.InputRadioVD
@@ -19,7 +17,7 @@ import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.originCountries
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
-import com.google.firebase.firestore.PropertyName
+import com.bsdevs.network.dto.CoffeeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,7 +73,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
 
             // Check the date field
             val isDateValid = viewData.roastDate != null
-            
+
             _viewData.update {
                 Success(
                     data = viewData.copy(
@@ -164,8 +162,16 @@ class CoffeeInputScreenViewModel @Inject constructor(
             is CoffeeInputScreenIntent.UpdateRoastDate -> onUpdateRoastData(intent.date)
             is CoffeeInputScreenIntent.SetDecaf -> onToggleDecaf(intent.isDecaf)
             CoffeeInputScreenIntent.SubmitCoffee -> onEnterPress()
-            is CoffeeInputScreenIntent.ToggleDropdownSelection -> handleToggleDropdownSelection(intent.inputType, intent.selection)
-            is CoffeeInputScreenIntent.UpdateSearchText -> handleUpdateSearchText(intent.inputType, intent.searchText)
+            is CoffeeInputScreenIntent.ToggleDropdownSelection -> handleToggleDropdownSelection(
+                intent.inputType,
+                intent.selection
+            )
+
+            is CoffeeInputScreenIntent.UpdateSearchText -> handleUpdateSearchText(
+                intent.inputType,
+                intent.searchText
+            )
+
             is CoffeeInputScreenIntent.SetDatePickerVisibility -> {
                 _viewData.update { currentResult ->
                     if (currentResult is Success) {
@@ -173,6 +179,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
                     } else currentResult
                 }
             }
+
             is CoffeeInputScreenIntent.ToggleDropdown -> {
                 _viewData.update { currentResult ->
                     if (currentResult is Success) {
@@ -180,6 +187,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
                     } else currentResult
                 }
             }
+
             CoffeeInputScreenIntent.NavigateHome -> {
                 viewModelScope.launch {
                     _navigationEvent.send(NavigationEvent.NavigateToHome)
@@ -229,7 +237,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
         var originCountries = emptySet<String>()
         var tastingNotes = emptySet<String>()
         var beanPreparationMethod = emptySet<String>()
-        var roaster: String = ""
+        var roaster = ""
         var isDecaf: Boolean? = null
         val formattedRoastDate: String =
             viewData.roastDate?.format(DateTimeFormatter.ISO_LOCAL_DATE) ?: ""
@@ -246,6 +254,7 @@ class CoffeeInputScreenViewModel @Inject constructor(
                             input.selectedSet.firstOrNull() ?: "no roaster"
                     }
                 }
+
                 is InputRadioVD -> isDecaf = input.isDecaf
             }
         }
@@ -270,7 +279,9 @@ class CoffeeInputScreenViewModel @Inject constructor(
                 val updatedInputs = currentViewData.inputs.map { input ->
                     if (input is InputVD && input.inputType == inputType) {
                         val newSelectedSet = if (input.singleInput) {
-                            if (input.selectedSet.contains(selection)) emptySet() else setOf(selection)
+                            if (input.selectedSet.contains(selection)) emptySet() else setOf(
+                                selection
+                            )
                         } else {
                             if (input.selectedSet.contains(selection)) input.selectedSet - selection else input.selectedSet + selection
                         }
@@ -316,19 +327,13 @@ sealed class CoffeeInputScreenIntent {
     data class UpdateRoastDate(val date: LocalDate) : CoffeeInputScreenIntent()
     data class SetDecaf(val isDecaf: Boolean) : CoffeeInputScreenIntent()
     object SubmitCoffee : CoffeeInputScreenIntent()
-    data class ToggleDropdownSelection(val inputType: InputType, val selection: String) : CoffeeInputScreenIntent()
-    data class UpdateSearchText(val inputType: InputType, val searchText: String) : CoffeeInputScreenIntent()
+    data class ToggleDropdownSelection(val inputType: InputType, val selection: String) :
+        CoffeeInputScreenIntent()
+
+    data class UpdateSearchText(val inputType: InputType, val searchText: String) :
+        CoffeeInputScreenIntent()
+
     data class SetDatePickerVisibility(val isVisible: Boolean) : CoffeeInputScreenIntent()
     data class ToggleDropdown(val inputType: InputType?) : CoffeeInputScreenIntent()
     object NavigateHome : CoffeeInputScreenIntent()
 }
-
-@Keep
-data class CoffeeInputScreenDto(
-    @get:PropertyName("BEANS") val BEANS: List<String> = emptyList(),
-    @get:PropertyName("CAFFEINE") val CAFFEINE: List<String> = emptyList(),
-    @get:PropertyName("METHOD") val METHOD: List<String> = emptyList(),
-    @get:PropertyName("ORIGIN") val ORIGIN: List<String> = emptyList(),
-    @get:PropertyName("ROASTER") val ROASTER: List<String> = emptyList(),
-    @get:PropertyName("TASTE") val TASTE: List<String> = emptyList(),
-)

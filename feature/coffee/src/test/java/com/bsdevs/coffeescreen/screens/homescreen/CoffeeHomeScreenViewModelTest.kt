@@ -1,7 +1,7 @@
 package com.bsdevs.coffeescreen.screens.homescreen
 
 import app.cash.turbine.test
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.FakeAccountService
 import com.bsdevs.coffeescreen.screens.inputscreen.FakeCoffeeApiService

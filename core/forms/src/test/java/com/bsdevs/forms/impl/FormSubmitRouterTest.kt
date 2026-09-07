@@ -3,7 +3,7 @@ package com.bsdevs.forms.impl
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
-import com.bsdevs.coffeescreen.network.CoffeeDto
+import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.common.result.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -177,7 +177,7 @@ class FormSubmitRouterTest {
     }
 
     @Test
-    fun `temperatureLog converts wheel int to correct double (365 to 36·5)`() = runTest {
+    fun `temperatureLog converts wheel int to correct double (365 to 36,5)`() = runTest {
         val eventSlot = slot<UnifiedEventDto>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
         router.submit("u", "temperatureLog", null, mapOf("date" to "2026-08-31", "temperature_value" to 365))

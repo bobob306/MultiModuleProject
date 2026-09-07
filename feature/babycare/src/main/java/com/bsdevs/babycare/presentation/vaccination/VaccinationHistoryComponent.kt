@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -22,10 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,16 +31,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.uicomponents.DeleteConfirmationDialog
+import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 import javax.inject.Inject
 
 data class VaccinationGroup(
@@ -105,7 +98,12 @@ fun LazyListScope.VaccinationHistoryItems(
 ) {
     if (groupedVaccinations.isEmpty()) {
         item(key = "vacc_empty") {
-            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text("No vaccinations recorded.")
             }
         }
@@ -129,7 +127,9 @@ internal fun VaccinationGroupItem(
     onDelete: (VaccinationDto) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -141,7 +141,7 @@ internal fun VaccinationGroupItem(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-            
+
             group.vaccinations.forEachIndexed { index, vaccination ->
                 VaccinationRow(
                     vaccination = vaccination,
@@ -163,12 +163,17 @@ internal fun VaccinationRow(
     onDelete: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { onEdit() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onEdit() },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
-            modifier = Modifier.size(40.dp).background(Color(0xFFFCE4EC), CircleShape).clip(CircleShape),
+            modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFFFCE4EC), CircleShape)
+                .clip(CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -201,7 +206,9 @@ internal fun VaccinationRow(
         Icon(
             Icons.Default.Delete,
             contentDescription = "Delete",
-            modifier = Modifier.clickable { onDelete() }.size(24.dp),
+            modifier = Modifier
+                .clickable { onDelete() }
+                .size(24.dp),
             tint = MaterialTheme.colorScheme.error
         )
     }

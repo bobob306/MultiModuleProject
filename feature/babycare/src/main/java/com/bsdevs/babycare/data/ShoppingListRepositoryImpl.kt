@@ -41,7 +41,8 @@ class ShoppingListRepositoryImpl @Inject constructor(
     private val firestore get() = firestoreHolder.firestore
     
     private val repositoryScope = CoroutineScope(dispatchers.io + SupervisorJob())
-    private var listenerJob: Job? = null
+    private var networkListenerJob: Job? = null
+    private var localListenerJob: Job? = null
 
     private val _shoppingList = MutableStateFlow<List<ShoppingListDto>>(emptyList())
     override val shoppingList: StateFlow<List<ShoppingListDto>> = _shoppingList.asStateFlow()
@@ -71,14 +72,14 @@ class ShoppingListRepositoryImpl @Inject constructor(
         stopListening()
         
         // Listen to local DB
-        repositoryScope.launch {
+        localListenerJob = repositoryScope.launch {
             shoppingDao.getShoppingItems(babyId).collect { entities ->
                 _shoppingList.value = entities.map { it.item }
             }
         }
 
         // Sync from network
-        listenerJob = repositoryScope.launch {
+        networkListenerJob = repositoryScope.launch {
             firestore.collection("shoppingLists")
                 .document(babyId)
                 .snapshots()
@@ -92,8 +93,10 @@ class ShoppingListRepositoryImpl @Inject constructor(
     }
 
     override suspend fun stopListening() {
-        listenerJob?.cancel()
-        listenerJob = null
+        networkListenerJob?.cancel()
+        localListenerJob?.cancel()
+        networkListenerJob = null
+        localListenerJob = null
     }
 
     override suspend fun addShoppingItem(babyId: String, item: ShoppingListDto) {
@@ -160,8 +163,10 @@ class ShoppingListRepositoryImpl @Inject constructor(
     }
 
     override fun clearCache() {
-        listenerJob?.cancel()
-        listenerJob = null
+        networkListenerJob?.cancel()
+        localListenerJob?.cancel()
+        networkListenerJob = null
+        localListenerJob = null
         _shoppingList.value = emptyList()
     }
 }

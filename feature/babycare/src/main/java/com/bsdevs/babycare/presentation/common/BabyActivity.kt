@@ -1,10 +1,10 @@
 package com.bsdevs.babycare.presentation.common
 
-import com.bsdevs.babycare.network.FeedingDto
-import com.bsdevs.babycare.network.MeasurementDto
-import com.bsdevs.babycare.network.NappyChangeDto
-import com.bsdevs.babycare.network.TemperatureDto
-import com.bsdevs.babycare.network.VaccinationDto
+import com.bsdevs.network.dto.FeedingDto
+import com.bsdevs.network.dto.MeasurementDto
+import com.bsdevs.network.dto.NappyChangeDto
+import com.bsdevs.network.dto.TemperatureDto
+import com.bsdevs.network.dto.VaccinationDto
 
 sealed class BabyActivity {
     abstract val id: String?

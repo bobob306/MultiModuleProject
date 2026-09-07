@@ -6,32 +6,28 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.common.TimeProvider
-import com.bsdevs.babycare.presentation.navigation.FeedingRoute
-import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.UnifiedEventDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.Locale
-import java.util.UUID
+import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.Duration
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import java.util.UUID
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.milliseconds
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel
 class FeedingViewModel @Inject constructor(
@@ -53,7 +49,7 @@ class FeedingViewModel @Inject constructor(
             startTime = timeProvider.currentLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
         )
     )
-    
+
     val uiState: StateFlow<FeedingUiState> = combine(
         _localState,
         timerManager.timerState
@@ -94,20 +90,19 @@ class FeedingViewModel @Inject constructor(
                 timerManager.reset()
             }
         }
-        
+
         startSide?.let { sideStr ->
             val side = when (sideStr.lowercase()) {
                 "left" -> FeedingSide.LEFT
                 "right" -> FeedingSide.RIGHT
                 else -> null
             }
-            side?.let { 
+            side?.let {
                 timerManager.startTimer(it, activityIdArg)
                 FeedingTimerService.start(context)
             }
         }
     }
-
 
 
     private fun loadFeeding(id: String) {
@@ -118,7 +113,8 @@ class FeedingViewModel @Inject constructor(
                 val feedingEvent = repository.getFeedingEventById(userId, id)
 
                 if (feedingEvent != null) {
-                    val extractedDate = feedingEvent.dateTimeString.substringBefore("T").substringBefore(" ")
+                    val extractedDate =
+                        feedingEvent.dateTimeString.substringBefore("T").substringBefore(" ")
 
                     _localState.update {
                         it.copy(
@@ -133,9 +129,17 @@ class FeedingViewModel @Inject constructor(
                             hasVitaminD = feedingEvent.hasVitaminD ?: false
                         )
                     }
-                    timerManager.setDuration(FeedingSide.LEFT, feedingEvent.leftDuration, feedingEvent.id)
-                    timerManager.setDuration(FeedingSide.RIGHT, feedingEvent.rightDuration, feedingEvent.id)
-                    
+                    timerManager.setDuration(
+                        FeedingSide.LEFT,
+                        feedingEvent.leftDuration,
+                        feedingEvent.id
+                    )
+                    timerManager.setDuration(
+                        FeedingSide.RIGHT,
+                        feedingEvent.rightDuration,
+                        feedingEvent.id
+                    )
+
                     // 🌟 SYNC METADATA: When editing an existing feed, update the manager so notifications 
                     // and process restarts keep the correct historical start time.
                     timerManager.setSessionMetadata(feedingEvent.time, extractedDate)
@@ -183,7 +187,7 @@ class FeedingViewModel @Inject constructor(
     fun onStartTimeSelected(hour: Int, minute: Int) {
         val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
         _localState.update { it.copy(startTime = formattedTime) }
-        
+
         // 🌟 UPDATE PERSISTENT TIMER STATE: If a timer is already running, ensure manual time 
         // changes are also locked into the singleton manager for persistence.
         if (timerManager.isAnyTimerRunning()) {
@@ -244,28 +248,30 @@ class FeedingViewModel @Inject constructor(
             try {
                 val babyId = userRepository.userProfile.value?.babyId
                 val baby = babyId?.let { userRepository.getBaby(it) }
-                
+
                 val serverPrediction = baby?.nextFeedingTime
-                
+
                 val localDateTime = LocalDateTime.of(
-                    LocalDate.parse(currentState.date), 
+                    LocalDate.parse(currentState.date),
                     LocalTime.parse(currentState.startTime)
                 )
-                val utcDateTimeString = localDateTime.atZone(ZoneId.systemDefault()).toInstant().toString()
-                
+                val utcDateTimeString =
+                    localDateTime.atZone(ZoneId.systemDefault()).toInstant().toString()
+
                 val gapMinutes = try {
                     serverPrediction?.let { predTimeStr ->
                         val predDateTime = try {
-                            java.time.OffsetDateTime.parse(predTimeStr)
+                            OffsetDateTime.parse(predTimeStr)
                                 .atZoneSameInstant(ZoneId.systemDefault())
                                 .toLocalDateTime()
                         } catch (_: Exception) {
                             try {
-                                java.time.LocalDateTime.parse(predTimeStr)
+                                LocalDateTime.parse(predTimeStr)
                             } catch (_: Exception) {
                                 // Fallback to original HH:mm logic
                                 val predLocalTime = LocalTime.parse(predTimeStr)
-                                val cleanDate = currentState.date.substringBefore("T").substringBefore(" ")
+                                val cleanDate =
+                                    currentState.date.substringBefore("T").substringBefore(" ")
                                 LocalDateTime.of(LocalDate.parse(cleanDate), predLocalTime)
                             }
                         }

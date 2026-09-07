@@ -3,7 +3,7 @@ package com.bsdevs.babycare.presentation.feeding
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.babycare.presentation.home.FakeAccountService

@@ -5,20 +5,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.network.dto.DailyLogDto
-import com.bsdevs.babycare.network.FeedingDto
-import com.bsdevs.babycare.network.MeasurementDto
-import com.bsdevs.babycare.network.NappyChangeDto
-import com.bsdevs.babycare.network.TemperatureDto
-import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.babycare.network.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
+import com.bsdevs.common.DateTimeUtils
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.repository.ScreenRepository
 import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.DailyLogDto
+import com.bsdevs.network.dto.FeedingDto
+import com.bsdevs.network.dto.MeasurementDto
+import com.bsdevs.network.dto.NappyChangeDto
+import com.bsdevs.network.dto.TemperatureDto
+import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,12 +30,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 
@@ -50,7 +47,6 @@ class BabyCareHomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val pageSize = 20
-    private val predictionFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     // Internal trackers for configuration states
     private val _currentFilter = MutableStateFlow(ActivityFilter.NONE)
@@ -119,15 +115,19 @@ class BabyCareHomeViewModel @Inject constructor(
                     dailyLogs = repository.cachedDays.value,
                     canLoadMore = fetchResult.hasMoreData,
                     isRefreshing = false,
-                    forceSuccess = true
+                    forceSuccess = true,
                 )
-            } catch (e: Exception) {
-                Log.e("HOME_INIT_ERROR", "Failed initial data block fetch", e)
+            } catch (_: Exception) {
+                Log.e("HOME_INIT_ERROR", "Failed initial data block fetch")
                 // If we have cached data, don't show error screen, just stop loading
                 if (repository.cachedDays.value.isNotEmpty()) {
-                    updateDisplayFeed(repository.cachedDays.value, isRefreshing = false, forceSuccess = true)
+                    updateDisplayFeed(
+                        dailyLogs = repository.cachedDays.value,
+                        isRefreshing = false,
+                        forceSuccess = true,
+                    )
                 } else {
-                    _viewData.value = Result.Error(e)
+                    _viewData.value = Result.Error(Exception("Failed to fetch initial data"))
                 }
             }
         }
@@ -141,7 +141,7 @@ class BabyCareHomeViewModel @Inject constructor(
         forceSuccess: Boolean = false
     ) {
         val currentResult = _viewData.value
-        
+
         // 🛡️ Optimization: If we are in Loading state and have no data yet, 
         // don't switch to Success with empty data UNLESS forceSuccess is true (initial load complete)
         if (currentResult is Result.Loading && dailyLogs.isEmpty() && !forceSuccess) {
@@ -179,14 +179,15 @@ class BabyCareHomeViewModel @Inject constructor(
                 // Refresh Screen Config too
                 launch {
                     try {
-                        screenRepository.getScreenFlow("baby_home", forceRefresh = true).collect { result ->
-                            if (result is Result.Success) {
-                                val mappedData = withContext(dispatchers.default) {
-                                    mapper.mapToData(result.data)
+                        screenRepository.getScreenFlow("baby_home", forceRefresh = true)
+                            .collect { result ->
+                                if (result is Result.Success) {
+                                    val mappedData = withContext(dispatchers.default) {
+                                        mapper.mapToData(result.data)
+                                    }
+                                    _dynamicUi.value = mappedData
                                 }
-                                _dynamicUi.value = mappedData
                             }
-                        }
                     } catch (e: Exception) {
                         Log.e("REFRESH_ERROR", "Failed to refresh screen config", e)
                     }
@@ -204,12 +205,16 @@ class BabyCareHomeViewModel @Inject constructor(
                     dailyLogs = repository.cachedDays.value,
                     canLoadMore = refreshResult.hasMoreData,
                     isRefreshing = false,
-                    forceSuccess = true
+                    forceSuccess = true,
                 )
-            } catch (exception: Exception) {
-                Log.e("REFRESH_ERROR", "Failed to complete refresh cycle", exception)
+            } catch (_: Exception) {
+                Log.e("REFRESH_ERROR", "Failed to complete refresh cycle")
                 // Stop the spinner even on failure
-                updateDisplayFeed(repository.cachedDays.value, isRefreshing = false, forceSuccess = true)
+                updateDisplayFeed(
+                    dailyLogs = repository.cachedDays.value,
+                    isRefreshing = false,
+                    forceSuccess = true,
+                )
             }
         }
     }
@@ -226,7 +231,7 @@ class BabyCareHomeViewModel @Inject constructor(
         if (visibleRowsCount == 0) return
 
         viewModelScope.launch {
-            setLoadingMoreState(true)
+            setLoadingMoreState(isLoading = true)
             try {
                 // 🔄 Trigger your clean day-block repository pagination method
                 val result = repository.loadMoreData(accountService.currentUserId, pageSize)
@@ -244,8 +249,8 @@ class BabyCareHomeViewModel @Inject constructor(
                         current
                     }
                 }
-            } catch (e: Exception) {
-                setLoadingMoreState(false)
+            } catch (_: Exception) {
+                setLoadingMoreState(isLoading = false)
             }
         }
     }
@@ -257,32 +262,15 @@ class BabyCareHomeViewModel @Inject constructor(
     ): BabyCareHomeViewData = withContext(dispatchers.default) {
         val finalizedFeed = mutableListOf<HomeFeedItem>()
 
-        // 🛡️ Robust parsing for inconsistent date formats
-        fun parseToInstant(dateTimeStr: String): Instant {
-            return try {
-                Instant.parse(dateTimeStr)
-            } catch (_: Exception) {
-                try {
-                    val normalized = if (dateTimeStr.contains(" ") && !dateTimeStr.contains("T")) {
-                        dateTimeStr.replace(" ", "T")
-                    } else {
-                        dateTimeStr
-                    }
-                    LocalDateTime.parse(normalized).atZone(ZoneId.systemDefault()).toInstant()
-                } catch (_: Exception) {
-                    Instant.EPOCH
-                }
-            }
-        }
-
         val eventComparator = Comparator<UnifiedEventDto> { a, b ->
-            val instantA = parseToInstant(a.dateTimeString)
-            val instantB = parseToInstant(b.dateTimeString)
+            val instantA = DateTimeUtils.parseToInstant(a.dateTimeString)
+            val instantB = DateTimeUtils.parseToInstant(b.dateTimeString)
             instantB.compareTo(instantA) // Newest first
         }
 
         // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
-        val allEventsFlattened = dailyLogs.flatMap { it.events }.sortedWith(eventComparator)
+        val allEventsFlattened =
+            dailyLogs.asSequence().flatMap { it.events }.sortedWith(eventComparator).toList()
 
         val absoluteLastNappy = allEventsFlattened.firstOrNull {
             it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both"
@@ -297,26 +285,23 @@ class BabyCareHomeViewModel @Inject constructor(
 
         // Use server-side prediction from Firebase
         val zone = ZoneId.systemDefault()
-        fun formatIso(iso: String?): String? = try {
-            OffsetDateTime.parse(iso).atZoneSameInstant(zone).format(predictionFormatter)
-        } catch (_: Exception) {
-            try { LocalDateTime.parse(iso).format(predictionFormatter) } catch (_: Exception) { iso }
-        }
 
         val feedingPrediction = when {
             baby?.effectiveNextFeedingTimeMin != null && baby.effectiveNextFeedingTimeMax != null -> {
-                val min = formatIso(baby.effectiveNextFeedingTimeMin)
-                val max = formatIso(baby.effectiveNextFeedingTimeMax)
+                val min = DateTimeUtils.formatIsoToTime(baby.effectiveNextFeedingTimeMin, zone)
+                val max = DateTimeUtils.formatIsoToTime(baby.effectiveNextFeedingTimeMax, zone)
                 "Next: $min - $max"
             }
+
             baby?.effectiveNextFeedingTime != null -> {
-                "Next: ${formatIso(baby.effectiveNextFeedingTime)}"
+                "Next: ${DateTimeUtils.formatIsoToTime(baby.effectiveNextFeedingTime, zone)}"
             }
+
             else -> null
         }
 
         val lastTempEvent = allEventsFlattened.firstOrNull {
-            it.type == "TEMPERATURE" && it.temperature != null && it.temperature != 0.0
+            (it.type == "TEMPERATURE") && (it.temperature != null) && (it.temperature != 0.0)
         }
 
         val absoluteLastTemperature = lastTempEvent?.let {
@@ -328,9 +313,13 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         val absoluteLastMeasurement = lastMeasurementEvent?.let {
-            val weight = it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
-            val height = it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
-            val head = it.headCircumference?.let { hc -> String.format(Locale.getDefault(), "%.1fcm", hc) } ?: ""
+            val weight =
+                it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
+            val height =
+                it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
+            val head =
+                it.headCircumference?.let { hc -> String.format(Locale.getDefault(), "%.1fcm", hc) }
+                    ?: ""
             "Last: $weight $height $head".trim()
         }
 
@@ -407,11 +396,7 @@ class BabyCareHomeViewModel @Inject constructor(
         isVitaminDTakenForDay: Boolean
     ): BabyActivity {
         // 🔄 Fix 1: Extract the "HH:mm" time segment dynamically from the dateTimeString if the time field is blank
-        val extractedTime = if (event.time.isNotEmpty()) {
-            event.time
-        } else {
-            event.dateTimeString.substringAfter("T", event.dateTimeString.substringAfter(" ", "")).take(5)
-        }
+        val extractedTime = DateTimeUtils.extractTime(event.time, event.dateTimeString)
 
         // 🔄 Fix 2: If the type field was corrupted (e.g., set to "Wet"), recognize it as a nappy activity
         val isNappy =
@@ -538,11 +523,10 @@ class BabyCareHomeViewModel @Inject constructor(
         }
     }
 
-    private fun setLoadingMoreState(value: Boolean) {
-        val currentResult = _viewData.value
-        if (currentResult is Result.Success) {
+    private fun setLoadingMoreState(isLoading: Boolean) {
+        (_viewData.value as? Result.Success)?.data?.let { data ->
             _viewData.value = Result.Success(
-                currentResult.data.copy(isLoadingMore = value)
+                data.copy(isLoadingMore = isLoading),
             )
         }
     }

@@ -51,7 +51,7 @@ class HomeScreenViewModel @Inject constructor(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
-            initialValue = Result.Loading
+            initialValue = Result.Loading,
         )
 
     fun getScreen() {

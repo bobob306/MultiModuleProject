@@ -75,7 +75,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bsdevs.babycare.network.MeasurementDto
+import com.bsdevs.network.dto.MeasurementDto
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -442,9 +442,9 @@ fun GrowthChartSection(
                     if (scaleFactorX < minScale) scaleFactorX = minScale
                 }
 
-                val transformState = rememberTransformableState { zoomChange, _, _ ->
-                    scaleFactorX = (scaleFactorX * (1f + (zoomChange - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
-                    val yZoom = 1f + (zoomChange - 1f) * pinchWeights.y * 0.5f
+                val transformState = rememberTransformableState { _, zoom, _, _ ->
+                    scaleFactorX = (scaleFactorX * (1f + (zoom - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
+                    val yZoom = 1f + (zoom - 1f) * pinchWeights.y * 0.5f
                     scaleFactorY = (scaleFactorY * yZoom).coerceIn(1.0f, 4f)
                 }
 
@@ -982,9 +982,10 @@ fun MeasurementHistoryItem(
                         fontWeight = FontWeight.Medium
                     )
 
-                    if (!measurement.comment.isNullOrEmpty()) {
+                    val comment = measurement.comment
+                    if (!comment.isNullOrEmpty()) {
                         Text(
-                            text = measurement.comment,
+                            text = comment,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

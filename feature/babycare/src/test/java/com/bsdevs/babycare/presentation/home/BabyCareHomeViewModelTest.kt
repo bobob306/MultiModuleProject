@@ -1,7 +1,7 @@
 package com.bsdevs.babycare.presentation.home
 
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.repository.BabyCareRepositoryImpl
+import com.bsdevs.babycare.data.BabyCareRepositoryImpl
 import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import java.time.LocalDate
 
@@ -16,6 +16,7 @@ import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.repository.ScreenRepository
 import io.mockk.*
 import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -171,14 +172,14 @@ class BabyCareHomeViewModelTest {
         val result = viewModel.viewData.value as Result.Success
         val rows = result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>()
         assertEquals(1, rows.size)
-        assertTrue(rows.first().activity is com.bsdevs.babycare.presentation.common.BabyActivity.Nappy)
+        assertTrue(rows.first().activity is BabyActivity.Nappy)
         assertEquals(ActivityFilter.NAPPY, result.data.currentFilter)
     }
 
     @Test
     fun `toggling header collapse hides activity rows`() = runTest {
         // Given
-        val today = java.time.LocalDate.now().toString()
+        val today = LocalDate.now().toString()
         val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$today 10:00")
         fakeService.injectMonth(userId, today.substring(0, 7), mapOf("days" to mapOf(today to listOf(feeding))))
         
@@ -235,7 +236,7 @@ class BabyCareHomeViewModelTest {
         val result = viewModel.viewData.value as Result.Success
         val rows = result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>()
         assertEquals(1, rows.size)
-        assertEquals("e2", (rows.first().activity as com.bsdevs.babycare.presentation.common.BabyActivity.Feeding).dto.id)
+        assertEquals("e2", (rows.first().activity as BabyActivity.Feeding).dto.id)
     }
 
     @Test
@@ -280,7 +281,7 @@ class BabyCareHomeViewModelTest {
 
         // Then
         val result = viewModel.viewData.value as Result.Success
-        val nappyActivity = (result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().first().activity as com.bsdevs.babycare.presentation.common.BabyActivity.Nappy)
+        val nappyActivity = (result.data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().first().activity as BabyActivity.Nappy)
         assertEquals("Dirty", nappyActivity.dto.type)
     }
 
@@ -405,14 +406,14 @@ class BabyCareHomeViewModelTest {
         fakeService.injectMonth(userId, "2026-08", mapOf("days" to mapOf(date to listOf(event))))
         
         // Mock the baby profile with a prediction range
-        val baby = com.bsdevs.network.dto.BabyDto(
+        val baby = BabyDto(
             id = "baby1",
             nextFeedingTimeMin = "2026-08-26T12:40:00",
             nextFeedingTimeMax = "2026-08-26T13:20:00",
             predictionConfidenceRange = "medium"
         )
         coEvery { userRepo.getBaby(any(), any()) } returns baby
-        every { userRepo.userProfile.value } returns com.bsdevs.network.dto.UserDto(babyId = "baby1")
+        every { userRepo.userProfile.value } returns UserDto(babyId = "baby1")
 
         // When
         viewModel.refreshData()
@@ -421,7 +422,7 @@ class BabyCareHomeViewModelTest {
         viewModel.viewData.test {
             var result = awaitItem()
             while (result !is Result.Success) { result = awaitItem() }
-            val data = (result as Result.Success).data
+            val data = result.data
             
             // Range: 13:00 +/- 20 mins = 12:40 - 13:20
             assertEquals("Next: 12:40 - 13:20", data.nextFeedingPrediction)

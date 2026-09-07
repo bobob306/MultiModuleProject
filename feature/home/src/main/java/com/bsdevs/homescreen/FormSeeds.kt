@@ -165,7 +165,7 @@ internal object FormSeeds {
                 "options" to listOf(
                     "6-in-1 (DTaP/IPV/Hib/HepB)", "Rotavirus", "MenB", "Pneumococcal (PCV)",
                     "Hib/MenC", "MMR", "4-in-1 (DTaP/IPV)", "Children's flu vaccine",
-                    "HPV", "MenACWY", "3-in-1 (Td/IPV)"
+                    "HPV", "MenACWY", "3-in-1 (Td/IPV)",
                 ),
             ),
             mapOf("fieldKey" to "location", "type" to "TEXT_INPUT", "label" to "Location", "required" to false, "index" to 3),

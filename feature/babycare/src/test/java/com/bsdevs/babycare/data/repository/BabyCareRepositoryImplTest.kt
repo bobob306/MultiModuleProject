@@ -1,27 +1,28 @@
 package com.bsdevs.babycare.data.repository
 
-import app.cash.turbine.test
-import com.bsdevs.network.dto.DailyLogDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.babycare.data.BabyCareRepositoryImpl
 import com.bsdevs.babycare.presentation.common.TimeProvider
-import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.local.entities.BabyEventEntity
+import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.network.dto.UserDto
-import io.mockk.*
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
-import java.time.YearMonth
-import com.bsdevs.babycare.network.BabyCareFirestoreService
-import com.bsdevs.common.DispatcherProvider
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BabyCareRepositoryImplTest {
@@ -48,14 +49,19 @@ class BabyCareRepositoryImplTest {
         }
         fakeService = FakeBabyCareFirestoreService()
         userRepository = mockk(relaxed = true)
-        every { userRepository.userProfile } returns MutableStateFlow(UserDto(id = userId, babyId = babyId))
-        
+        every { userRepository.userProfile } returns MutableStateFlow(
+            UserDto(
+                id = userId,
+                babyId = babyId
+            )
+        )
+
         timeProvider = mockk {
             every { currentLocalDate() } answers { testDate }
         }
         babyEventDao = mockk(relaxed = true)
         syncManager = mockk(relaxed = true)
-        
+
         repository = BabyCareRepositoryImpl(
             apiService = fakeService,
             userRepository = userRepository,
@@ -99,7 +105,7 @@ class BabyCareRepositoryImplTest {
 
         // Verify it was saved to firestore (via fake service)
         assertNotNull(fakeService.fetchMonthDocument(userId, "2026-08"))
-        
+
         // Verify sync flag is cleared in DB
         coVerify { babyEventDao.insertEvents(match { !it.first().isPendingSync }) }
     }

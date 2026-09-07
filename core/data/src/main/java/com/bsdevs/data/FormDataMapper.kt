@@ -32,7 +32,7 @@ class FormDataMapperImpl @Inject constructor() : FormDataMapper {
         return when (type) {
             "TEXT_INPUT" -> FormFieldData.TextInputData(fieldKey, label, required, index, placeholder, condition)
             "NUMBER_INPUT" -> FormFieldData.NumberInputData(fieldKey, label, required, index, placeholder, condition)
-            "SWITCH" -> FormFieldData.SwitchFieldData(fieldKey, label, required, index, defaultVal as? Boolean ?: false, condition)
+            "SWITCH" -> FormFieldData.SwitchFieldData(fieldKey, label, required, index, (defaultVal as? Boolean) ?: false, condition)
             "RADIO" -> FormFieldData.RadioFieldData(fieldKey, label, required, index, options, condition)
             "CHECKBOX_LIST" -> FormFieldData.CheckboxListFieldData(fieldKey, label, required, index, options, condition)
             "DROPDOWN" -> FormFieldData.DropdownFieldData(fieldKey, label, required, index, options, multiSelect, editable, dynamicOptions, condition)
@@ -48,7 +48,7 @@ class FormDataMapperImpl @Inject constructor() : FormDataMapper {
         return FormFieldCondition(fieldKey, value)
     }
 
-    private fun jsonToAny(element: JsonElement): Any? {
+    private fun jsonToAny(element: JsonElement): Any {
         if (element is JsonPrimitive) {
             if (element.isString) return element.content
             return element.booleanOrNull ?: element.intOrNull ?: element.longOrNull ?: element.doubleOrNull ?: element.content

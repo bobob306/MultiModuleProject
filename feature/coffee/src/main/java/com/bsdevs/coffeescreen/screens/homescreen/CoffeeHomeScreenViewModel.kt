@@ -9,12 +9,11 @@ import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewD
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
-import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.network.dto.CoffeeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -55,18 +54,25 @@ class CoffeeHomeScreenViewModel @Inject constructor(
         }
     }
 
-    private fun updateDisplay(coffeeList: List<com.bsdevs.coffeescreen.network.CoffeeDto>) {
+    private fun updateDisplay(coffeeList: List<CoffeeDto>) {
         _viewData.update { currentResult ->
-            val currentData = (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
+            val currentData =
+                (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
             val updatedViewData = currentData.viewData.map {
                 when (it) {
                     is CoffeeHomeScreenViewDatas.CoffeeList -> {
                         it.copy(coffeeList = coffeeList)
                     }
+
                     else -> it
                 }
             }
-            Result.Success(data = currentData.copy(viewData = updatedViewData, isRefreshing = false))
+            Result.Success(
+                data = currentData.copy(
+                    viewData = updatedViewData,
+                    isRefreshing = false
+                )
+            )
         }
     }
 
@@ -78,7 +84,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
 
     private suspend fun loadDataFromNetwork() {
         if (currentUser.isEmpty()) return
-        
+
         try {
             repository.loadInitialData(currentUser)
             _viewData.update { current ->
@@ -89,13 +95,13 @@ class CoffeeHomeScreenViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
-             _viewData.update { current ->
-                 when (current) {
-                     is Result.Loading -> Result.Error(e)
-                     is Result.Success -> Result.Success(current.data.copy(isRefreshing = false))
-                     else -> current
-                 }
-             }
+            _viewData.update { current ->
+                when (current) {
+                    is Result.Loading -> Result.Error(e)
+                    is Result.Success -> Result.Success(current.data.copy(isRefreshing = false))
+                    else -> current
+                }
+            }
         }
     }
 
