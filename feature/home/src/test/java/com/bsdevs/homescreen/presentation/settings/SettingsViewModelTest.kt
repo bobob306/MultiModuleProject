@@ -4,7 +4,7 @@ import app.cash.turbine.test
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

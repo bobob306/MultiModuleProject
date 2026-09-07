@@ -3,7 +3,7 @@ package com.bsdevs.login.loginscreen
 import app.cash.turbine.test
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

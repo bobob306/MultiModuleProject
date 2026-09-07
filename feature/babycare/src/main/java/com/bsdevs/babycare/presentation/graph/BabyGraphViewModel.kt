@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.withContext

@@ -5,9 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow

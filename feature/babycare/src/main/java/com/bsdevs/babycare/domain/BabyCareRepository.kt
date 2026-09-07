@@ -1,7 +1,7 @@
 package com.bsdevs.babycare.domain
 
-import com.bsdevs.babycare.network.DailyLogDto
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.DailyLogDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import kotlinx.coroutines.flow.StateFlow
 import java.time.LocalDate
 import java.time.YearMonth

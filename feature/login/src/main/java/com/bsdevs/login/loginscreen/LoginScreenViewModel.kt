@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope

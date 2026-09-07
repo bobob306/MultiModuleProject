@@ -6,7 +6,12 @@ import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.SyncManager
+import com.bsdevs.data.local.dao.BabyEventDao
+import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.UserDto
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,9 +51,23 @@ class VaccinationDataViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         val userRepo = mockk<UserRepository>(relaxed = true)
+        every { userRepo.userProfile } returns MutableStateFlow(UserDto(id = userId))
+        
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
-        repository = BabyCareRepositoryImpl(fakeService, userRepo, dispatchers, timeProvider)
+        
+        val babyEventDao = mockk<BabyEventDao>(relaxed = true)
+        every { babyEventDao.getEvents(any()) } returns flowOf(emptyList())
+        val syncManager = mockk<SyncManager>(relaxed = true)
+        
+        repository = BabyCareRepositoryImpl(
+            apiService = fakeService, 
+            userRepository = userRepo, 
+            dispatchers = dispatchers, 
+            timeProvider = timeProvider,
+            babyEventDao = babyEventDao,
+            syncManager = syncManager
+        )
         accountService = FakeAccountService(userId)
         
         viewModel = VaccinationDataViewModel(

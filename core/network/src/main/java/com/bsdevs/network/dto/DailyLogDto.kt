@@ -1,8 +1,10 @@
-package com.bsdevs.babycare.network
+package com.bsdevs.network.dto
 
 import com.google.firebase.firestore.IgnoreExtraProperties
+import kotlinx.serialization.Serializable
 
 @IgnoreExtraProperties
+@Serializable
 data class DailyLogDto(
     val date: String = "", // Document ID (e.g., "2026-08-19")
     val userId: String = "",
@@ -10,6 +12,7 @@ data class DailyLogDto(
 )
 
 @IgnoreExtraProperties
+@Serializable
 data class UnifiedEventDto(
     val id: String = "",
     val type: String = "", // "NAPPY", "FEEDING", or "TEMPERATURE"

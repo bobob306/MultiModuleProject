@@ -3,7 +3,7 @@ package com.bsdevs.homescreen
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.dto.FormSchemaDto
 import com.bsdevs.network.dto.FormSubmissionDto
-import com.bsdevs.network.repository.FormRepository
+import com.bsdevs.data.repository.FormRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 

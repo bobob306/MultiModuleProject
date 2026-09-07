@@ -2,7 +2,7 @@ package com.bsdevs.babycare.network
 
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.FirestoreHolder
 import com.google.firebase.firestore.*
 import io.mockk.*

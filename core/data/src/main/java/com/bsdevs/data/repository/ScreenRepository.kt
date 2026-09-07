@@ -1,8 +1,10 @@
-package com.bsdevs.network.repository
+package com.bsdevs.data.repository
 
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
+import com.bsdevs.data.local.dao.ScreenDao
+import com.bsdevs.data.local.entities.ScreenEntity
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.ScreenDtoMapper
 import com.bsdevs.network.dto.ScreenDto
@@ -10,7 +12,7 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +34,7 @@ class ScreenRepositoryImpl @Inject constructor(
     private val userRepository: UserRepository,
     private val mapper: ScreenDtoMapper,
     private val dispatchers: DispatcherProvider,
+    private val screenDao: ScreenDao
 ) : ScreenRepository, Clearable {
     private val cacheFlowMap = ConcurrentHashMap<String, List<ScreenDto>>()
 
@@ -46,19 +49,26 @@ class ScreenRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getScreenFlow(screen: String, forceRefresh: Boolean): Flow<Result<List<ScreenDto>>> = withContext(dispatchers.io) {
-        val cached = if (forceRefresh) null else cacheFlowMap[screen]
-        if (cached != null) {
-            flowOf(Result.Success(cached))
-        } else {
-            try {
-                Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
-                val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-                val document = scr.document(screen).get(source).await().data
-                val dto = mapper.mapToDto(document as HashMap)
-                cacheFlowMap[screen] = dto
-                flowOf(Result.Success(dto))
-            } catch (e: Exception) {
-                flowOf(Result.Error(e))
+        flow {
+            val cached = screenDao.getScreen(screen)
+            if (cached != null) {
+                emit(Result.Success(cached.components))
+                cacheFlowMap[screen] = cached.components
+            }
+
+            if (forceRefresh || cached == null) {
+                try {
+                    Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
+                    val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
+                    val document = scr.document(screen).get(source).await().data
+                    val dto = mapper.mapToDto(document as HashMap)
+                    
+                    screenDao.insertScreen(ScreenEntity(screen, dto))
+                    cacheFlowMap[screen] = dto
+                    emit(Result.Success(dto))
+                } catch (e: Exception) {
+                    if (cached == null) emit(Result.Error(e))
+                }
             }
         }
     }
@@ -67,12 +77,14 @@ class ScreenRepositoryImpl @Inject constructor(
         val map = mapper.mapToFirebase(dtos)
         Log.d("FIREBASE_CALL", "Update Screen: $screen")
         scr.document(screen).set(map).await()
+        screenDao.insertScreen(ScreenEntity(screen, dtos))
         cacheFlowMap[screen] = dtos
     }
 
     override suspend fun deleteScreen(screen: String) = withContext(dispatchers.io) {
         Log.d("FIREBASE_CALL", "Delete Screen: $screen")
         scr.document(screen).delete().await()
+        screenDao.deleteScreen(screen)
         cacheFlowMap.remove(screen)
         Unit
     }

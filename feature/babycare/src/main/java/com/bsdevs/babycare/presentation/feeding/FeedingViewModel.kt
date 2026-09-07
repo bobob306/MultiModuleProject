@@ -5,10 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.presentation.common.TimeProvider
 import com.bsdevs.babycare.presentation.navigation.FeedingRoute
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -38,6 +39,7 @@ class FeedingViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val userRepository: UserRepository,
     private val timerManager: FeedingTimerManager,
+    private val timeProvider: TimeProvider,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -45,7 +47,12 @@ class FeedingViewModel @Inject constructor(
     private val activityIdArg: String? = savedStateHandle["activityId"]
     private val startSide: String? = savedStateHandle["startSide"]
 
-    private val _localState = MutableStateFlow(FeedingUiState())
+    private val _localState = MutableStateFlow(
+        FeedingUiState(
+            date = timeProvider.currentLocalDate().toString(),
+            startTime = timeProvider.currentLocalTime().format(DateTimeFormatter.ofPattern("HH:mm"))
+        )
+    )
     
     val uiState: StateFlow<FeedingUiState> = combine(
         _localState,

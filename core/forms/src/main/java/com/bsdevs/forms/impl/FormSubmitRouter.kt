@@ -1,11 +1,11 @@
 package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.common.result.Result
-import com.bsdevs.network.repository.FormSubmitter
+import com.bsdevs.data.repository.FormSubmitter
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime

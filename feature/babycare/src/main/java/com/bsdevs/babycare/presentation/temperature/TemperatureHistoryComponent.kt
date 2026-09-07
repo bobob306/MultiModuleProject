@@ -56,8 +56,8 @@ import androidx.lifecycle.viewModelScope
 import android.util.Log
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.network.DailyLogDto
-import com.bsdevs.babycare.network.UnifiedEventDto
+import com.bsdevs.network.dto.DailyLogDto
+import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryUiData
 import com.bsdevs.babycare.presentation.temperature.TemperatureItem
 import com.bsdevs.common.DispatcherProvider

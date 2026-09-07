@@ -13,11 +13,11 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.data.FormDataMapper
 import com.bsdevs.data.FormFieldData
 import com.bsdevs.data.FormSchemaData
-import com.bsdevs.network.repository.FormDeleter
-import com.bsdevs.network.repository.FormPrefiller
-import com.bsdevs.network.repository.FormRepository
-import com.bsdevs.network.repository.FormSubmitter
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.FormDeleter
+import com.bsdevs.data.repository.FormPrefiller
+import com.bsdevs.data.repository.FormRepository
+import com.bsdevs.data.repository.FormSubmitter
+import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

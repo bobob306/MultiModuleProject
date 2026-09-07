@@ -3,7 +3,7 @@ package com.bsdevs.babycare.network
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.FirestoreHolder
-import com.bsdevs.network.repository.UserRepository
+import com.bsdevs.data.repository.UserRepository
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestoreException

@@ -6,7 +6,7 @@ import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
-import com.bsdevs.network.repository.ScreenRepository
+import com.bsdevs.data.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
