@@ -3,6 +3,7 @@ package com.bsdevs.data
 import com.bsdevs.network.dto.FormFieldConditionDto
 import com.bsdevs.network.dto.FormFieldDto
 import com.bsdevs.network.dto.FormSchemaDto
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -65,7 +66,7 @@ class FormDataMapperTest {
 
     @Test
     fun `SWITCH maps to SwitchFieldData with default`() {
-        val field = FormFieldDto("enabled", "SWITCH", "Enable", false, 0, defaultValue = true)
+        val field = FormFieldDto("enabled", "SWITCH", "Enable", false, 0, defaultValue = JsonPrimitive(true))
         val result = mapper.mapToData("f", schema(field)).fields[0] as FormFieldData.SwitchFieldData
         assertTrue(result.default)
     }
@@ -144,7 +145,7 @@ class FormDataMapperTest {
     @Test
     fun `WHEEL_INPUT maps to WheelInputData with correct properties`() {
         val field = FormFieldDto("temp", "WHEEL_INPUT", "Temperature", true, 0,
-            startNumber = 350, endNumber = 420, decimalPlaces = 1, defaultValue = 370)
+            startNumber = 350, endNumber = 420, decimalPlaces = 1, defaultValue = JsonPrimitive(370))
         val result = mapper.mapToData("f", schema(field)).fields[0] as FormFieldData.WheelInputData
         assertEquals(350, result.startNumber)
         assertEquals(420, result.endNumber)
@@ -162,7 +163,7 @@ class FormDataMapperTest {
     @Test
     fun `showWhen condition maps to FormFieldCondition`() {
         val field = FormFieldDto("height", "WHEEL_INPUT", "Height", false, 0,
-            showWhen = FormFieldConditionDto("record_height", true))
+            showWhen = FormFieldConditionDto("record_height", JsonPrimitive(true)))
         val result = mapper.mapToData("f", schema(field)).fields[0]
         assertEquals("record_height", result.showWhen?.fieldKey)
         assertEquals(true, result.showWhen?.equals)

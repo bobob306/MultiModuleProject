@@ -7,7 +7,6 @@ import com.bsdevs.forms.navigation.FormRoute
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.FormDataMapperImpl
-import com.bsdevs.data.FormFieldData
 import com.bsdevs.network.dto.FormFieldConditionDto
 import com.bsdevs.network.dto.FormFieldDto
 import com.bsdevs.network.dto.FormSchemaDto
@@ -19,7 +18,6 @@ import com.bsdevs.data.repository.FormSubmitter
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.UserDto
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -27,7 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -35,6 +32,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -122,7 +120,7 @@ class FormViewModelTest {
 
     @Test
     fun `switch field default is pre-populated in fieldValues`() = runTest {
-        val switchField = FormFieldDto("newsletter", "SWITCH", "Newsletter", false, 0, defaultValue = true)
+        val switchField = FormFieldDto("newsletter", "SWITCH", "Newsletter", false, 0, defaultValue = JsonPrimitive(true))
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField)))
         assertEquals(true, vm.fieldValues.value["newsletter"])
@@ -325,9 +323,9 @@ class FormViewModelTest {
         // height_value is required but only visible when record_height == true
         val conditionalField = FormFieldDto(
             "height_value", "WHEEL_INPUT", "Height", required = true, index = 1,
-            showWhen = FormFieldConditionDto("record_height", true),
+            showWhen = FormFieldConditionDto("record_height", JsonPrimitive(true)),
         )
-        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = false)
+        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = JsonPrimitive(false))
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))
@@ -343,9 +341,9 @@ class FormViewModelTest {
     fun `required field visible via showWhen condition blocks submit when empty`() = runTest {
         val conditionalField = FormFieldDto(
             "height_value", "WHEEL_INPUT", "Height", required = true, index = 1,
-            showWhen = FormFieldConditionDto("record_height", true),
+            showWhen = FormFieldConditionDto("record_height", JsonPrimitive(true)),
         )
-        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = false)
+        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = JsonPrimitive(false))
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))
@@ -365,9 +363,9 @@ class FormViewModelTest {
 
         val conditionalField = FormFieldDto(
             "height_value", "WHEEL_INPUT", "Height", required = true, index = 1,
-            showWhen = FormFieldConditionDto("record_height", true),
+            showWhen = FormFieldConditionDto("record_height", JsonPrimitive(true)),
         )
-        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = false)
+        val switchField = FormFieldDto("record_height", "SWITCH", "Record Height", required = false, index = 0, defaultValue = JsonPrimitive(false))
 
         val vm = createViewModel()
         fakeRepository.emitSchema("testForm", sampleSchema(fields = listOf(switchField, conditionalField)))

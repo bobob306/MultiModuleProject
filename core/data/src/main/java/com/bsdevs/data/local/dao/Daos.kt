@@ -6,6 +6,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.bsdevs.data.local.entities.BabyEntity
 import com.bsdevs.data.local.entities.BabyEventEntity
+import com.bsdevs.data.local.entities.FormSchemaEntity
+import com.bsdevs.data.local.entities.FormSubmissionEntity
 import com.bsdevs.data.local.entities.ScreenEntity
 import com.bsdevs.data.local.entities.ShoppingItemEntity
 import com.bsdevs.data.local.entities.UserEntity
@@ -98,5 +100,29 @@ interface BabyEventDao {
     suspend fun deleteById(eventId: String)
     
     @Query("DELETE FROM baby_events")
+    suspend fun clearAll()
+}
+
+@Dao
+interface FormDao {
+    @Query("SELECT * FROM form_schemas WHERE formId = :formId")
+    suspend fun getSchema(formId: String): FormSchemaEntity?
+
+    @Query("SELECT * FROM form_schemas WHERE formId = :formId")
+    fun getSchemaFlow(formId: String): Flow<FormSchemaEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSchema(schema: FormSchemaEntity)
+
+    @Query("SELECT * FROM form_submissions WHERE userId = :userId AND formId = :formId")
+    suspend fun getSubmission(userId: String, formId: String): FormSubmissionEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSubmission(submission: FormSubmissionEntity)
+
+    @Query("SELECT * FROM form_submissions WHERE isPendingSync = 1")
+    suspend fun getPendingSubmissions(): List<FormSubmissionEntity>
+
+    @Query("DELETE FROM form_schemas")
     suspend fun clearAll()
 }

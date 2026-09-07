@@ -104,7 +104,11 @@ class UserRepositoryImpl @Inject constructor(
             _userProfile.value = updatedUser
             updatedUser
         } catch (e: Exception) {
-            null
+            Log.e("USER_REPO", "Failed to fetch user $userId", e)
+            if (forceRefresh) {
+                // Fallback to cache
+                userBabyDao.getUser(userId)?.profile
+            } else null
         }
     }
 
@@ -130,7 +134,10 @@ class UserRepositoryImpl @Inject constructor(
             }
             updatedBaby
         } catch (e: Exception) {
-            null
+            Log.e("USER_REPO", "Failed to fetch baby $babyId", e)
+            if (forceRefresh) {
+                userBabyDao.getBaby(babyId)?.data
+            } else null
         }
     }
 

@@ -1,7 +1,9 @@
 package com.bsdevs.data.module
 
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.data.local.dao.FormDao
 import com.bsdevs.data.local.dao.ScreenDao
+import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.UserBabyDao
 import com.bsdevs.data.repository.FormRepository
 import com.bsdevs.data.repository.FormRepositoryImpl
@@ -49,8 +51,10 @@ object RepositoryModule {
     fun provideFormRepository(
         firestoreHolder: FirestoreHolder,
         mapper: FormDtoMapper,
-        dispatchers: DispatcherProvider
+        dispatchers: DispatcherProvider,
+        formDao: FormDao,
+        syncManager: SyncManager
     ): FormRepository {
-        return FormRepositoryImpl(firestoreHolder, mapper, dispatchers)
+        return FormRepositoryImpl(firestoreHolder, mapper, dispatchers, formDao, syncManager)
     }
 }

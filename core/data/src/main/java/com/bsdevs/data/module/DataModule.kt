@@ -1,5 +1,6 @@
 package com.bsdevs.data.module
 
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.FormDataMapper
 import com.bsdevs.data.FormDataMapperImpl
 import com.bsdevs.data.ScreenDataMapper
@@ -18,7 +19,10 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideSyncManager(connectivityObserver: ConnectivityObserver): SyncManager = SyncManager(connectivityObserver)
+    fun provideSyncManager(
+        connectivityObserver: ConnectivityObserver,
+        dispatchers: DispatcherProvider
+    ): SyncManager = SyncManager(connectivityObserver, dispatchers)
 
     @Provides
     fun provideScreenDataMapper(): ScreenDataMapper = ScreenDataMapperImpl()

@@ -1,6 +1,7 @@
 package com.bsdevs.data
 
 import android.util.Log
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.connectivity.ConnectivityObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -15,9 +16,10 @@ interface Syncable {
 
 @Singleton
 class SyncManager @Inject constructor(
-    private val connectivityObserver: ConnectivityObserver
+    private val connectivityObserver: ConnectivityObserver,
+    dispatchers: DispatcherProvider
 ) {
-    private val scope = CoroutineScope(SupervisorJob())
+    private val scope = CoroutineScope(dispatchers.io + SupervisorJob())
     private val syncables = mutableSetOf<Syncable>()
 
     init {

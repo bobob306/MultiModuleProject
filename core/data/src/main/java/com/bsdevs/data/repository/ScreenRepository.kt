@@ -60,13 +60,19 @@ class ScreenRepositoryImpl @Inject constructor(
                 try {
                     Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
                     val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-                    val document = scr.document(screen).get(source).await().data
-                    val dto = mapper.mapToDto(document as HashMap)
+                    val snapshot = scr.document(screen).get(source).await()
+                    val document = snapshot.data
                     
-                    screenDao.insertScreen(ScreenEntity(screen, dto))
-                    cacheFlowMap[screen] = dto
-                    emit(Result.Success(dto))
+                    if (document != null) {
+                        val dto = mapper.mapToDto(document as HashMap)
+                        screenDao.insertScreen(ScreenEntity(screen, dto))
+                        cacheFlowMap[screen] = dto
+                        emit(Result.Success(dto))
+                    } else if (cached == null) {
+                        emit(Result.Error(Exception("Screen document not found")))
+                    }
                 } catch (e: Exception) {
+                    Log.e("SCREEN_REPO", "Failed to fetch screen $screen", e)
                     if (cached == null) emit(Result.Error(e))
                 }
             }

@@ -1,5 +1,6 @@
 package com.bsdevs.forms.presentation
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -64,41 +65,52 @@ class FormViewModel @Inject constructor(
     }
 
     private fun loadForm() {
+        Log.d("FormViewModel", "loading form: $formId")
         viewModelScope.launch(dispatchers.io) {
             formRepository.getFormSchema(formId).collect { result ->
+                Log.d("FormViewModel", "Received result for $formId: $result")
                 when (result) {
                     is Result.Success -> {
-                        val schema = formDataMapper.mapToData(formId, result.data)
-                        val today = LocalDate.now().toString()
-                        val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-                        val defaults = mutableMapOf<String, Any>()
-                        schema.fields.forEach { field ->
-                            when (field) {
-                                is FormFieldData.SwitchFieldData -> defaults[field.fieldKey] = field.default
-                                is FormFieldData.DateInputData -> defaults[field.fieldKey] = today
-                                is FormFieldData.TimeInputData -> defaults[field.fieldKey] = currentTime
-                                else -> {}
+                        try {
+                            val schema = formDataMapper.mapToData(formId, result.data)
+                            Log.d("FormViewModel", "Mapped schema for $formId successfully")
+                            val today = LocalDate.now().toString()
+                            val currentTime = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                            val defaults = mutableMapOf<String, Any>()
+                            schema.fields.forEach { field ->
+                                when (field) {
+                                    is FormFieldData.SwitchFieldData -> defaults[field.fieldKey] = field.default
+                                    is FormFieldData.DateInputData -> defaults[field.fieldKey] = today
+                                    is FormFieldData.TimeInputData -> defaults[field.fieldKey] = currentTime
+                                    else -> {}
+                                }
                             }
-                        }
 
-                        val prefilled = if (entityId != null) {
-                            val userId = userRepository.userProfile.value?.id
-                            if (userId != null) {
-                                defaults + (formPrefiller.loadExistingValues(userId, schema.submitTarget, entityId) ?: emptyMap())
+                            val prefilled = if (entityId != null) {
+                                val userId = userRepository.userProfile.value?.id
+                                if (userId != null) {
+                                    defaults + (formPrefiller.loadExistingValues(userId, schema.submitTarget, entityId) ?: emptyMap())
+                                } else defaults
                             } else defaults
-                        } else defaults
 
-                        _fieldValues.value = prefilled
-                        _formSchema.value = Result.Success(schema)
-                        
-                        // Handle dynamic options (like vaccination series)
-                        schema.fields.filterIsInstance<FormFieldData.DropdownFieldData>()
-                            .filter { it.dynamicOptions != null }
-                            .forEach { field ->
-                                updateDynamicOptions(field)
-                            }
+                            _fieldValues.value = prefilled
+                            _formSchema.value = Result.Success(schema)
+                            
+                            // Handle dynamic options (like vaccination series)
+                            schema.fields.filterIsInstance<FormFieldData.DropdownFieldData>()
+                                .filter { it.dynamicOptions != null }
+                                .forEach { field ->
+                                    updateDynamicOptions(field)
+                                }
+                        } catch (e: Exception) {
+                            Log.e("FormViewModel", "Error mapping schema for $formId", e)
+                            _formSchema.value = Result.Error(e)
+                        }
                     }
-                    is Result.Error -> _formSchema.value = Result.Error(result.exception)
+                    is Result.Error -> {
+                        Log.e("FormViewModel", "Error loading schema for $formId from repo", result.exception)
+                        _formSchema.value = Result.Error(result.exception)
+                    }
                     Result.Loading -> _formSchema.value = Result.Loading
                 }
             }

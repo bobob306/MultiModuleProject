@@ -53,49 +53,81 @@ class FirestoreBabyCareService @Inject constructor(
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
         Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId (Force: $forceRefresh)")
         val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
-        getMonthsCollection(babyId)
-            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
-            .limit(1)
-            .get(source)
-            .await()
-            .documents
-            .firstOrNull()?.id
+        try {
+            getMonthsCollection(babyId)
+                .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+                .limit(1)
+                .get(source)
+                .await()
+                .documents
+                .firstOrNull()?.id
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Failed to get latest month id from $source", e)
+            if (forceRefresh) {
+                // Fallback to cache if server fetch failed
+                getMonthsCollection(babyId)
+                    .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+                    .limit(1)
+                    .get(Source.CACHE)
+                    .await()
+                    .documents
+                    .firstOrNull()?.id
+            } else null
+        }
     }
 
     override suspend fun getMonthIdBefore(userId: String, monthId: String): String? = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
         Log.d("FIREBASE_CALL", "Read Month ID Before (Optimized Query) for Baby: $babyId / $monthId")
-        getMonthsCollection(babyId)
-            .whereLessThan(FieldPath.documentId(), monthId)
-            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
-            .limit(1)
-            .get()
-            .await()
-            .documents
-            .firstOrNull()?.id
+        try {
+            getMonthsCollection(babyId)
+                .whereLessThan(FieldPath.documentId(), monthId)
+                .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+                .limit(1)
+                .get()
+                .await()
+                .documents
+                .firstOrNull()?.id
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Failed to get month id before $monthId", e)
+            null
+        }
     }
 
     override suspend fun getAllMonthIds(userId: String): List<String> = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
         Log.d("FIREBASE_CALL", "Read Collection (All Months IDs) for Baby: $babyId")
-        getMonthsCollection(babyId)
-            .get()
-            .await()
-            .documents
-            .map { it.id }
+        try {
+            getMonthsCollection(babyId)
+                .get()
+                .await()
+                .documents
+                .map { it.id }
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Failed to get all month ids", e)
+            emptyList()
+        }
     }
 
     override suspend fun fetchMonthDocument(userId: String, monthId: String, forceRefresh: Boolean): Map<String, Any?>? = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
         Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId (Force: $forceRefresh)")
-        val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-        val snapshot = getMonthsCollection(babyId).document(monthId).get(source).await()
-        val data = if (snapshot.exists()) snapshot.data else null
-        data?.let {
-            val sizeKb = it.toString().toByteArray().size / 1024.0
-            Log.d("FIREBASE_CALL", "Month Doc Size: %.2f KB".format(sizeKb))
+        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        try {
+            val snapshot = getMonthsCollection(babyId).document(monthId).get(source).await()
+            val data = if (snapshot.exists()) snapshot.data else null
+            data?.let {
+                val sizeKb = it.toString().toByteArray().size / 1024.0
+                Log.d("FIREBASE_CALL", "Month Doc Size: %.2f KB".format(sizeKb))
+            }
+            data
+        } catch (e: Exception) {
+            Log.e("BABYCARE_SERVICE", "Failed to fetch month doc $monthId from $source", e)
+            if (forceRefresh) {
+                val snapshot = getMonthsCollection(babyId).document(monthId).get(Source.CACHE).await()
+                if (snapshot.exists()) snapshot.data else null
+            } else null
         }
-        data
     }
 
     override suspend fun saveEvent(userId: String, monthId: String, date: String, event: Map<String, Any?>) = withContext(dispatchers.io) {
@@ -104,8 +136,8 @@ class FirestoreBabyCareService @Inject constructor(
         try {
             Log.d("FIREBASE_CALL", "Update Event for Baby: $babyId / $monthId / $date")
             docRef.update("days.$date", FieldValue.arrayUnion(event)).await()
-        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
-            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
                 Log.d("FIREBASE_CALL", "Set Initial Month Doc for Baby: $babyId / $monthId")
                 docRef.set(mapOf("days" to mapOf(date to listOf(event))), SetOptions.merge()).await()
             } else throw e
@@ -162,8 +194,8 @@ class FirestoreBabyCareService @Inject constructor(
         try {
             // Use dot notation to update a specific item in the map without overwriting other items
             docRef.update("items.$eventId", measurement).await()
-        } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
-            if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.NOT_FOUND) {
+        } catch (e: FirebaseFirestoreException) {
+            if (e.code == FirebaseFirestoreException.Code.NOT_FOUND) {
                 // Document doesn't exist yet, create it with the first item
                 docRef.set(mapOf("items" to mapOf(eventId to measurement))).await()
             } else {

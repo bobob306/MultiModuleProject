@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.YearMonth
@@ -157,7 +156,11 @@ class BabyCareRepositoryImpl @Inject constructor(
 
             mergeAndSortCachedDays(finalMonthlyDays, measurementList, vaccinationList, userId)
             
-            val nextMonthId = apiService.getMonthIdBefore(userId, lastFetchedId)
+            val nextMonthId = try { 
+                apiService.getMonthIdBefore(userId, lastFetchedId) 
+            } catch (e: Exception) { 
+                null 
+            }
             currentAnchorMonth = nextMonthId?.let { parseYearMonth(it) }
 
             RepositoryFetchResult(
@@ -166,7 +169,15 @@ class BabyCareRepositoryImpl @Inject constructor(
             )
         } catch (e: Exception) {
             Log.e("BABYCARE_REPO", "Error loading initial data", e)
-            throw e // Rethrow so ViewModel can catch it
+            if (forceRefresh) {
+                // Return current state instead of throwing if we are just refreshing
+                RepositoryFetchResult(
+                    nextAnchorMonth = currentAnchorMonth,
+                    hasMoreData = currentAnchorMonth != null
+                )
+            } else {
+                throw e
+            }
         }
     }
 

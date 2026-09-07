@@ -173,47 +173,46 @@ fun NavGraphBuilder.babyCareSection(
                         }
 
                         is NetworkScreenData.ActivityFeedDataNetwork -> {
-                            (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data?.let { data ->
-                                ActivityFeedItems(
-                                    viewData = data,
-                                    onToggleHeaderCollapse = homeViewModel::toggleHeaderCollapse,
-                                    onToggleActivityFilter = homeViewModel::toggleActivityFilter,
-                                    onDeleteActivity = { activityToDelete = it },
-                                    onToggleVitaminD = homeViewModel::toggleVitaminD,
-                                    onLoadMore = homeViewModel::loadMore,
-                                    onNavigateToEditNappyChange = { id ->
-                                        navigateToForm(
-                                            "nappyLog",
-                                            id
-                                        )
-                                    },
-                                    onNavigateToEditFeeding = { id ->
-                                        navController.navigateToFeeding(
-                                            id
-                                        )
-                                    },
-                                    onNavigateToEditTemperature = { id ->
-                                        navigateToForm(
-                                            "temperatureLog",
-                                            id
-                                        )
-                                    },
-                                    onNavigateToEditMeasurement = { id ->
-                                        navigateToForm(
-                                            "measurementLog",
-                                            id
-                                        )
-                                    },
-                                    onNavigateToEditVaccination = { id ->
-                                        navigateToForm(
-                                            "vaccinationLog",
-                                            id
-                                        )
-                                    },
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = this@composable
-                                )
-                            }
+                            val data = (homeViewState as? Result.Success<BabyCareHomeViewData>)?.data
+                            ActivityFeedItems(
+                                viewData = data,
+                                onToggleHeaderCollapse = homeViewModel::toggleHeaderCollapse,
+                                onToggleActivityFilter = homeViewModel::toggleActivityFilter,
+                                onDeleteActivity = { activityToDelete = it },
+                                onToggleVitaminD = homeViewModel::toggleVitaminD,
+                                onLoadMore = homeViewModel::loadMore,
+                                onNavigateToEditNappyChange = { id ->
+                                    navigateToForm(
+                                        "nappyLog",
+                                        id
+                                    )
+                                },
+                                onNavigateToEditFeeding = { id ->
+                                    navController.navigateToFeeding(
+                                        id
+                                    )
+                                },
+                                onNavigateToEditTemperature = { id ->
+                                    navigateToForm(
+                                        "temperatureLog",
+                                        id
+                                    )
+                                },
+                                onNavigateToEditMeasurement = { id ->
+                                    navigateToForm(
+                                        "measurementLog",
+                                        id
+                                    )
+                                },
+                                onNavigateToEditVaccination = { id ->
+                                    navigateToForm(
+                                        "vaccinationLog",
+                                        id
+                                    )
+                                },
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = this@composable
+                            )
                             true
                         }
 

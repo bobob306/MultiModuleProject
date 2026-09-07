@@ -3,6 +3,8 @@ package com.bsdevs.data.local.entities
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.bsdevs.network.dto.BabyDto
+import com.bsdevs.network.dto.FormSchemaDto
+import com.bsdevs.network.dto.FormSubmissionDto
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
@@ -48,4 +50,21 @@ data class BabyEventEntity(
     val lastUpdated: Long = System.currentTimeMillis(),
     val isPendingSync: Boolean = false,
     val isDeleted: Boolean = false
+)
+
+@Entity(tableName = "form_schemas")
+data class FormSchemaEntity(
+    @PrimaryKey val formId: String,
+    val schema: FormSchemaDto,
+    val lastUpdated: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "form_submissions")
+data class FormSubmissionEntity(
+    @PrimaryKey val id: String, // userId + "_" + formId
+    val userId: String,
+    val formId: String,
+    val submission: FormSubmissionDto,
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val isPendingSync: Boolean = false
 )

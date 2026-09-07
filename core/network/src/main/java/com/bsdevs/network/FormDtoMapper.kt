@@ -3,13 +3,18 @@ package com.bsdevs.network
 import com.bsdevs.network.dto.FormFieldConditionDto
 import com.bsdevs.network.dto.FormFieldDto
 import com.bsdevs.network.dto.FormSchemaDto
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 import javax.inject.Inject
 
-interface FormDtoMapper : FirebaseMapper<HashMap<*, *>, FormSchemaDto>
+interface FormDtoMapper : FirebaseMapper<Map<*, *>, FormSchemaDto>
 
 class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
-    override fun mapToDto(map: HashMap<*, *>): FormSchemaDto {
-        val rawFields = (map["fields"] as? List<*>)?.filterIsInstance<HashMap<*, *>>() ?: emptyList()
+    private val json = Json { ignoreUnknownKeys = true }
+
+    override fun mapToDto(map: Map<*, *>): FormSchemaDto {
+        val rawFields = (map["fields"] as? List<*>)?.filterIsInstance<Map<*, *>>() ?: emptyList()
         return FormSchemaDto(
             title = map["title"] as? String ?: "",
             submitTarget = map["submitTarget"] as? String ?: "",
@@ -24,7 +29,7 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
                     required = field["required"] as? Boolean ?: false,
                     index = (field["index"] as? Number)?.toInt() ?: idx,
                     placeholder = field["placeholder"] as? String,
-                    defaultValue = field["defaultValue"],
+                    defaultValue = field["defaultValue"]?.let { anyToJson(it) },
                     options = (field["options"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
                     multiSelect = field["multiSelect"] as? Boolean ?: false,
                     editable = field["editable"] as? Boolean ?: false,
@@ -35,11 +40,23 @@ class FormDtoMapperImpl @Inject constructor() : FormDtoMapper {
                     showWhen = showWhenMap?.let {
                         FormFieldConditionDto(
                             fieldKey = it["fieldKey"] as? String ?: "",
-                            equals = it["equals"],
+                            equals = it["equals"]?.let { anyToJson(it) },
                         )
                     },
                 )
             }.sortedBy { it.index }
         )
+    }
+
+    private fun anyToJson(any: Any): JsonElement {
+        return when (any) {
+            is String -> json.encodeToJsonElement(any)
+            is Boolean -> json.encodeToJsonElement(any)
+            is Int -> json.encodeToJsonElement(any)
+            is Long -> json.encodeToJsonElement(any)
+            is Double -> json.encodeToJsonElement(any)
+            is Float -> json.encodeToJsonElement(any)
+            else -> json.encodeToJsonElement(any.toString())
+        }
     }
 }

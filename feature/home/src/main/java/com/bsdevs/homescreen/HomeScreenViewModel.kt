@@ -1,11 +1,13 @@
 package com.bsdevs.homescreen
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
+import com.bsdevs.data.repository.FormRepository
 import com.bsdevs.data.repository.ScreenRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,12 +23,26 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
     private val repository: ScreenRepository,
+    private val formRepository: FormRepository,
     private val mapper: ScreenDataMapper,
     private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
 
     init {
-        android.util.Log.d("HomeScreenViewModel", "ViewModel Initialized: $this")
+        Log.d("HomeScreenViewModel", "ViewModel Initialized: $this")
+        seedForms()
+    }
+
+    private fun seedForms() {
+        Log.d("HomeScreenViewModel", "Seeding forms...")
+        viewModelScope.launch(dispatchers.io) {
+            formRepository.seedFormIfAbsent("coffeeLog", FormSeeds.coffeeLog)
+            formRepository.seedFormIfAbsent("nappyLog", FormSeeds.nappyLog)
+            formRepository.seedFormIfAbsent("temperatureLog", FormSeeds.temperatureLog)
+            formRepository.seedFormIfAbsent("measurementLog", FormSeeds.measurementLog)
+            formRepository.seedFormIfAbsent("vaccinationLog", FormSeeds.vaccinationLog)
+            Log.d("HomeScreenViewModel", "Forms seeding completed (or at least triggered)")
+        }
     }
 
     private val _viewData = MutableStateFlow<Result<List<NetworkScreenData>>>(value = Result.Loading)
@@ -39,10 +55,10 @@ class HomeScreenViewModel @Inject constructor(
         )
 
     fun getScreen() {
-        android.util.Log.d("HomeScreenViewModel", "getScreen() called")
+        Log.d("HomeScreenViewModel", "getScreen() called")
         viewModelScope.launch {
             repository.getScreenFlow("home").collect { result ->
-                android.util.Log.d("HomeScreenViewModel", "Received result: $result")
+                Log.d("HomeScreenViewModel", "Received result: $result")
                 when (result) {
                     is Result.Success -> {
                         val mappedData = withContext(dispatchers.default) {

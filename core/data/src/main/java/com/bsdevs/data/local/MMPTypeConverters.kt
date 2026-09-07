@@ -2,11 +2,12 @@ package com.bsdevs.data.local
 
 import androidx.room.TypeConverter
 import com.bsdevs.network.dto.BabyDto
+import com.bsdevs.network.dto.FormSchemaDto
+import com.bsdevs.network.dto.FormSubmissionDto
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.dto.UnifiedEventDto
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 class MMPTypeConverters {
@@ -45,4 +46,16 @@ class MMPTypeConverters {
 
     @TypeConverter
     fun toUnifiedEventDto(value: String): UnifiedEventDto = json.decodeFromString(value)
+
+    @TypeConverter
+    fun fromFormSchemaDto(value: FormSchemaDto): String = json.encodeToString(value)
+
+    @TypeConverter
+    fun toFormSchemaDto(value: String): FormSchemaDto = json.decodeFromString(value)
+
+    @TypeConverter
+    fun fromFormSubmissionDto(value: FormSubmissionDto): String = json.encodeToString(value)
+
+    @TypeConverter
+    fun toFormSubmissionDto(value: String): FormSubmissionDto = json.decodeFromString(value)
 }
