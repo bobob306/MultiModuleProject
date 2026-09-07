@@ -2,6 +2,7 @@ package com.bsdevs.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -38,9 +39,9 @@ fun MMPNavHost(
         NavHost(
             navController = navController,
             startDestination = SplashScreenBaseRoute,
-            modifier = modifier.padding(
-                bottom = rootPadding.calculateBottomPadding()
-            )
+            modifier = modifier
+                .padding(bottom = rootPadding.calculateBottomPadding())
+                .consumeWindowInsets(PaddingValues(bottom = rootPadding.calculateBottomPadding()))
         ) {
             homeScreenSection(
                 onShowSnackBar = onShowSnackBar,

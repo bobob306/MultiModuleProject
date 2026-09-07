@@ -142,7 +142,14 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     private fun parseUnifiedEvent(eventMap: Map<String, Any?>): UnifiedEventDto {
-        val dateTimeString = eventMap["dateTimeString"] as? String ?: ""
+        val rawDateTime = eventMap["dateTimeString"] as? String ?: ""
+        // Normalize: replace "YYYY-MM-DD HH:mm" with "YYYY-MM-DDTHH:mm" for better string sorting
+        val dateTimeString = if (rawDateTime.contains(" ") && !rawDateTime.contains("T")) {
+            rawDateTime.replace(" ", "T")
+        } else {
+            rawDateTime
+        }
+
         val time = eventMap["time"] as? String ?: run {
             try {
                 // Try parsing as UTC ISO 8601 first

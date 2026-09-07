@@ -6,6 +6,10 @@ import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.network.CoffeeDto
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.repository.FormSubmitter
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -53,11 +57,18 @@ class FormSubmitRouter @Inject constructor(
     private suspend fun submitNappy(userId: String, entityId: String?, values: Map<String, Any>): Result<Unit> = try {
         val date = values["date"] as? String
             ?: return Result.Error(IllegalArgumentException("nappyLog requires 'date' field"))
+        val time = values["time"] as? String ?: "00:00"
+        
+        val utcDateTimeString = LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
+
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "NAPPY",
-            time = values["time"] as? String ?: "",
-            dateTimeString = "$date ${values["time"] ?: "00:00"}",
+            time = time,
+            dateTimeString = utcDateTimeString,
             nappyType = values["nappy_type"] as? String,
             comment = values["comment"] as? String,
         )
@@ -76,11 +87,18 @@ class FormSubmitRouter @Inject constructor(
             ?: return Result.Error(IllegalArgumentException("temperatureLog requires 'date' field"))
         val tNum = values["temperature_value"] as? Number
             ?: return Result.Error(IllegalArgumentException("temperatureLog requires 'temperature_value' field"))
+        val time = values["time"] as? String ?: "00:00"
+
+        val utcDateTimeString = LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
+
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "TEMPERATURE",
-            time = values["time"] as? String ?: "",
-            dateTimeString = "$date ${values["time"] ?: "00:00"}",
+            time = time,
+            dateTimeString = utcDateTimeString,
             temperature = tNum.toDouble() / 10.0,
             comment = values["comment"] as? String,
         )
@@ -109,12 +127,18 @@ class FormSubmitRouter @Inject constructor(
         val hNum = values["height_value"] as? Number
         val wNum = values["weight_value"] as? Number
         val hcNum = values["head_circumference_value"] as? Number
+        val time = values["time"] as? String ?: "00:00"
+
+        val utcDateTimeString = LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
 
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "MEASUREMENT",
-            time = values["time"] as? String ?: "",
-            dateTimeString = "$date ${values["time"] ?: "00:00"}",
+            time = time,
+            dateTimeString = utcDateTimeString,
             height = if (recordHeight) (hNum?.toDouble()?.div(10.0) ?: 50.0) else null,
             weight = if (recordWeight) (wNum?.toDouble()?.div(100.0) ?: 3.5) else null,
             headCircumference = if (recordHead) (hcNum?.toDouble()?.div(10.0) ?: 40.0) else null,
@@ -136,12 +160,18 @@ class FormSubmitRouter @Inject constructor(
             ?: return Result.Error(IllegalArgumentException("feedingLog requires 'date' field"))
         
         val bottleStr = values["bottle_amount_ml"] as? String
+        val time = values["start_time"] as? String ?: "00:00"
+
+        val utcDateTimeString = LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
         
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "FEEDING",
-            time = values["start_time"] as? String ?: "",
-            dateTimeString = "$date ${values["start_time"] ?: "00:00"}",
+            time = time,
+            dateTimeString = utcDateTimeString,
             mainFeedingSide = values["feeding_side"] as? String,
             bottleAmountMl = bottleStr?.toIntOrNull(),
             comment = values["comment"] as? String,
@@ -164,12 +194,18 @@ class FormSubmitRouter @Inject constructor(
         val seriesId = if (!sIdRaw.isNullOrBlank()) sIdRaw
             else names.firstOrNull()?.replace(Regex("[^a-zA-Z0-9]"), "_")?.lowercase()
             ?: UUID.randomUUID().toString()
+        val time = values["time"] as? String ?: "00:00"
+
+        val utcDateTimeString = LocalDateTime.of(LocalDate.parse(date), LocalTime.parse(time))
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toString()
 
         val event = UnifiedEventDto(
             id = entityId ?: UUID.randomUUID().toString(),
             type = "VACCINATION",
-            time = values["time"] as? String ?: "",
-            dateTimeString = "$date ${values["time"] ?: "00:00"}",
+            time = time,
+            dateTimeString = utcDateTimeString,
             vaccinationNames = names,
             location = values["location"] as? String,
             seriesId = seriesId,

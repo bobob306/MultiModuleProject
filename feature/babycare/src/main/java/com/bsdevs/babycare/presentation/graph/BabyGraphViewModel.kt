@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.Locale
 import javax.inject.Inject
 
@@ -20,6 +23,29 @@ class BabyGraphViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val dispatchers: DispatcherProvider,
 ) : ViewModel() {
+
+    private fun parseToInstant(dateTimeStr: String): Instant {
+        return try {
+            Instant.parse(dateTimeStr)
+        } catch (_: Exception) {
+            try {
+                val normalized = if (dateTimeStr.contains(" ") && !dateTimeStr.contains("T")) {
+                    dateTimeStr.replace(" ", "T")
+                } else {
+                    dateTimeStr
+                }
+                LocalDateTime.parse(normalized).atZone(ZoneId.systemDefault()).toInstant()
+            } catch (_: Exception) {
+                Instant.EPOCH
+            }
+        }
+    }
+
+    private val eventComparator = Comparator<UnifiedEventDto> { a, b ->
+        val instantA = parseToInstant(a.dateTimeString)
+        val instantB = parseToInstant(b.dateTimeString)
+        instantA.compareTo(instantB) // Oldest first for gap calculation
+    }
 
     val uiState: StateFlow<FeedingGraphUiState> = repository.cachedDays
         .map { dailyLogs ->
@@ -62,7 +88,7 @@ class BabyGraphViewModel @Inject constructor(
         val onlyFeedings = events.filter { it.type == "FEEDING" && it.dateTimeString.isNotEmpty() }
         if (onlyFeedings.size < 2) return emptyList()
 
-        val sortedFeeds = onlyFeedings.sortedBy { it.dateTimeString }
+        val sortedFeeds = onlyFeedings.sortedWith(eventComparator)
 
         data class DatedGap(val date: String, val gapMinutes: Long)
         val gapMeasurements = mutableListOf<DatedGap>()
@@ -71,10 +97,10 @@ class BabyGraphViewModel @Inject constructor(
             val currentFeed = sortedFeeds[i]
             val nextFeed = sortedFeeds[i + 1]
 
-            val currentMinutes = parseToTotalMinutes(currentFeed.dateTimeString)
-            val nextMinutes = parseToTotalMinutes(nextFeed.dateTimeString)
+            val currentMinutes = parseToInstant(currentFeed.dateTimeString).toEpochMilli() / 60000L
+            val nextMinutes = parseToInstant(nextFeed.dateTimeString).toEpochMilli() / 60000L
 
-            if (currentMinutes == -1L || nextMinutes == -1L) continue
+            if (currentMinutes == 0L || nextMinutes == 0L) continue
             val gapMinutes = nextMinutes - currentMinutes
 
             if (gapMinutes in 15..720) {
@@ -113,9 +139,6 @@ class BabyGraphViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Extracts the hour directly from standard "HH:mm" strings cleanly without relying on LocalTime
-     */
     private fun extractHourFromTime(timeString: String): Int {
         return try {
             // Split "22:31" into ["22", "31"] and grab the first element
@@ -141,8 +164,8 @@ class BabyGraphViewModel @Inject constructor(
             return null
         }
 
-        // 2. SORT: Chronologically order from OLDEST to NEWEST (Ascending text sort fits YYYY-MM-DD flawlessly)
-        val sortedFeeds = onlyFeedings.sortedBy { it.dateTimeString }
+        // 2. SORT: Chronologically order from OLDEST to NEWEST
+        val sortedFeeds = onlyFeedings.sortedWith(eventComparator)
         Log.d("ANALYSIS_DEBUG", "🚀 Processing ${sortedFeeds.size} chronological feeds for interval gaps")
 
         data class FeedGapPair(val feedDurationMinutes: Long, val gapMinutes: Long)
@@ -153,11 +176,11 @@ class BabyGraphViewModel @Inject constructor(
             val currentFeed = sortedFeeds[i]
             val nextFeed = sortedFeeds[i + 1]
 
-            val currentMinutes = parseToTotalMinutes(currentFeed.dateTimeString)
-            val nextMinutes = parseToTotalMinutes(nextFeed.dateTimeString)
+            val currentMinutes = parseToInstant(currentFeed.dateTimeString).toEpochMilli() / 60000L
+            val nextMinutes = parseToInstant(nextFeed.dateTimeString).toEpochMilli() / 60000L
 
             // Skip if either date fails to parse cleanly into absolute minutes
-            if (currentMinutes == -1L || nextMinutes == -1L) continue
+            if (currentMinutes == 0L || nextMinutes == 0L) continue
 
             val gapMinutes = nextMinutes - currentMinutes
 
@@ -211,47 +234,5 @@ class BabyGraphViewModel @Inject constructor(
         }
 
         return FeedingAnalysisResult(bucketGaps = bucketDataList)
-    }
-
-
-    /**
-     * Converts a standard "yyyy-MM-dd HH:mm" string into raw total minutes since a baseline
-     * to easily calculate time differences without using Java 8 time libraries.
-     */
-    private fun parseToTotalMinutes(dateTimeString: String): Long {
-        return try {
-            val dateStr = dateTimeString.substringBefore("T").substringBefore(" ")
-            val timeStr = if (dateTimeString.contains("T")) {
-                dateTimeString.substringAfter("T").substringBefore("Z").substringBefore("+").substringBefore(".")
-            } else {
-                dateTimeString.substringAfter(" ", "")
-            }
-
-            val dateParts = dateStr.split("-") // ["2026", "08", "16"]
-            val timeParts = timeStr.split(":") // ["22", "31"]
-
-            if (dateParts.size < 3 || timeParts.size < 2) return -1L
-
-            // Explicitly cast every integer chunk into a Long primitive immediately
-            val year = dateParts[0].toLong()
-            val month = dateParts[1].toLong()
-            val day = dateParts[2].toLong()
-            val hour = timeParts[0].toLong()
-            val minute = timeParts[1].toLong()
-
-            // Cumulative days at start of each month (non-leap year)
-            val monthOffsets = longArrayOf(0, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
-            val safeMonth = month.toInt().coerceIn(1..12)
-
-            // Combine operations using uniform Long math
-            val minutesInDay = (hour * 60L) + minute
-            val minutesInYear = year * 365L * 24L * 60L
-            val minutesInMonth = monthOffsets[safeMonth] * 24L * 60L
-            val minutesInDays = (day - 1) * 24L * 60L
-
-            minutesInYear + minutesInMonth + minutesInDays + minutesInDay
-        } catch (e: Exception) {
-            -1L
-        }
     }
 }

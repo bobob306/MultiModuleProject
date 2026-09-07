@@ -45,7 +45,7 @@ class FormPrefillerImpl @Inject constructor(
             put("time", event.time)
             event.nappyType?.let { put("nappy_type", it) }
             event.comment?.let { put("comment", it) }
-            put("date", event.dateTimeString.substringBefore(" "))
+            put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
         }
     }
 
@@ -53,7 +53,7 @@ class FormPrefillerImpl @Inject constructor(
         val event = babyCareRepository.getTemperatureEventById(userId, entityId)
             ?.takeIf { it.type == "TEMPERATURE" } ?: return null
         return buildMap {
-            put("date", event.dateTimeString.substringBefore(" "))
+            put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)
             event.temperature?.let { put("temperature_value", (it * 10).toInt()) }
             event.comment?.let { put("comment", it) }
@@ -64,7 +64,7 @@ class FormPrefillerImpl @Inject constructor(
         val event = babyCareRepository.getMeasurementEventById(userId, entityId)
             ?.takeIf { it.type == "MEASUREMENT" } ?: return null
         return buildMap {
-            put("date", event.dateTimeString.substringBefore(" "))
+            put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)
             put("is_medical", event.isMedical ?: false)
             event.height?.let {
@@ -90,7 +90,7 @@ class FormPrefillerImpl @Inject constructor(
             event.mainFeedingSide?.let { put("feeding_side", it) }
             event.bottleAmountMl?.let { put("bottle_amount_ml", it.toString()) }
             event.comment?.let { put("comment", it) }
-            put("date", event.dateTimeString.substringBefore(" "))
+            put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
         }
     }
 
@@ -98,7 +98,7 @@ class FormPrefillerImpl @Inject constructor(
         val event = babyCareRepository.getVaccinationEventById(userId, entityId)
             ?.takeIf { it.type == "VACCINATION" } ?: return null
         return buildMap {
-            put("date", event.dateTimeString.substringBefore(" "))
+            put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)
             event.vaccinationNames?.let { put("vaccination_names", it) }
             event.location?.let { put("location", it) }

@@ -4,9 +4,12 @@ import android.util.Log
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.repository.UserRepository
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -47,54 +50,39 @@ class FirestoreBabyCareService @Inject constructor(
         firestore.collection("babyLogs").document(babyId).collection("vaccinations").document("all_data")
 
     override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? = withContext(dispatchers.io) {
-        try {
-            val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
-            Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId (Force: $forceRefresh)")
-            val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
-            getMonthsCollection(babyId)
-                .orderBy(com.google.firebase.firestore.FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(1)
-                .get(source)
-                .await()
-                .documents
-                .firstOrNull()?.id
-        } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Error fetching latest month ID", e)
-            null
-        }
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
+        Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId (Force: $forceRefresh)")
+        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        getMonthsCollection(babyId)
+            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+            .limit(1)
+            .get(source)
+            .await()
+            .documents
+            .firstOrNull()?.id
     }
 
     override suspend fun getMonthIdBefore(userId: String, monthId: String): String? = withContext(dispatchers.io) {
-        try {
-            val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
-            Log.d("FIREBASE_CALL", "Read Month ID Before (Optimized Query) for Baby: $babyId / $monthId")
-            getMonthsCollection(babyId)
-                .whereLessThan(com.google.firebase.firestore.FieldPath.documentId(), monthId)
-                .orderBy(com.google.firebase.firestore.FieldPath.documentId(), com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(1)
-                .get()
-                .await()
-                .documents
-                .firstOrNull()?.id
-        } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Error fetching month ID before $monthId", e)
-            null
-        }
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
+        Log.d("FIREBASE_CALL", "Read Month ID Before (Optimized Query) for Baby: $babyId / $monthId")
+        getMonthsCollection(babyId)
+            .whereLessThan(FieldPath.documentId(), monthId)
+            .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
+            .limit(1)
+            .get()
+            .await()
+            .documents
+            .firstOrNull()?.id
     }
 
     override suspend fun getAllMonthIds(userId: String): List<String> = withContext(dispatchers.io) {
-        try {
-            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
-            Log.d("FIREBASE_CALL", "Read Collection (All Months IDs) for Baby: $babyId")
-            getMonthsCollection(babyId)
-                .get()
-                .await()
-                .documents
-                .map { it.id }
-        } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Error fetching all month IDs", e)
-            emptyList()
-        }
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+        Log.d("FIREBASE_CALL", "Read Collection (All Months IDs) for Baby: $babyId")
+        getMonthsCollection(babyId)
+            .get()
+            .await()
+            .documents
+            .map { it.id }
     }
 
     override suspend fun fetchMonthDocument(userId: String, monthId: String, forceRefresh: Boolean): Map<String, Any?>? = withContext(dispatchers.io) {
@@ -154,22 +142,17 @@ class FirestoreBabyCareService @Inject constructor(
     }
 
     override suspend fun fetchAllMeasurements(userId: String): List<Map<String, Any?>> = withContext(dispatchers.io) {
-        try {
-            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
-            
-            Log.d("FIREBASE_CALL", "Read All Measurements (Single Doc) for Baby: $babyId")
-            val snapshot = getMeasurementsDocument(babyId).get().await()
-            val data = if (snapshot.exists()) snapshot.data else null
-            data?.let {
-                val sizeKb = it.toString().toByteArray().size / 1024.0
-                Log.d("FIREBASE_CALL", "Measurements Doc Size: %.2f KB".format(sizeKb))
-            }
-            val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
-            items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
-        } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Error fetching measurements", e)
-            emptyList()
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+
+        Log.d("FIREBASE_CALL", "Read All Measurements (Single Doc) for Baby: $babyId")
+        val snapshot = getMeasurementsDocument(babyId).get().await()
+        val data = if (snapshot.exists()) snapshot.data else null
+        data?.let {
+            val sizeKb = it.toString().toByteArray().size / 1024.0
+            Log.d("FIREBASE_CALL", "Measurements Doc Size: %.2f KB".format(sizeKb))
         }
+        val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+        items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
     }
 
     override suspend fun saveMeasurement(userId: String, eventId: String, measurement: Map<String, Any?>) = withContext(dispatchers.io) {
@@ -203,22 +186,17 @@ class FirestoreBabyCareService @Inject constructor(
     }
 
     override suspend fun fetchAllVaccinations(userId: String): List<Map<String, Any?>> = withContext(dispatchers.io) {
-        try {
-            val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
-            Log.d("FIREBASE_CALL", "Read All Vaccinations (Single Doc) for Baby: $babyId")
-            val snapshot = getVaccinationsDocument(babyId).get().await()
-            val data = if (snapshot.exists()) snapshot.data else null
-            data?.let {
-                val sizeKb = it.toString().toByteArray().size / 1024.0
-                Log.d("FIREBASE_CALL", "Vaccinations Doc Size: %.2f KB".format(sizeKb))
-            }
-            val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
-            Log.d("FIREBASE_CALL", "Fetched ${items.size} vaccinations")
-            items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
-        } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Error fetching vaccinations", e)
-            emptyList()
+        val babyId = getAuthorizedBabyId(userId) ?: return@withContext emptyList()
+        Log.d("FIREBASE_CALL", "Read All Vaccinations (Single Doc) for Baby: $babyId")
+        val snapshot = getVaccinationsDocument(babyId).get().await()
+        val data = if (snapshot.exists()) snapshot.data else null
+        data?.let {
+            val sizeKb = it.toString().toByteArray().size / 1024.0
+            Log.d("FIREBASE_CALL", "Vaccinations Doc Size: %.2f KB".format(sizeKb))
         }
+        val items = data?.get("items") as? Map<String, Map<String, Any?>> ?: emptyMap()
+        Log.d("FIREBASE_CALL", "Fetched ${items.size} vaccinations")
+        items.values.toList().sortedByDescending { it["dateTimeString"] as? String ?: "" }
     }
 
     override suspend fun saveVaccination(userId: String, eventId: String, vaccination: Map<String, Any?>) = withContext(dispatchers.io) {

@@ -22,6 +22,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -235,11 +239,20 @@ class MeasurementViewModel @Inject constructor(
         val userId = accountService.currentUserId
         val measurementId = currentState.id ?: UUID.randomUUID().toString()
 
+        val utcDateTimeString = try {
+            LocalDateTime.of(LocalDate.parse(currentState.date), LocalTime.parse(currentState.time))
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toString()
+        } catch (e: Exception) {
+            "${currentState.date} ${currentState.time}"
+        }
+
         val unifiedEvent = UnifiedEventDto(
             id = measurementId,
             type = "MEASUREMENT",
             time = currentState.time,
-            dateTimeString = "${currentState.date} ${currentState.time}",
+            dateTimeString = utcDateTimeString,
             comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
             height = if (currentState.recordHeight) (currentState.height ?: 50.0) else null,
             weight = if (currentState.recordWeight) (currentState.weight ?: 3.5) else null,

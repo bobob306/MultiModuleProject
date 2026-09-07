@@ -8,6 +8,8 @@ import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.repository.UserRepository
 import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.network.dto.BabyDto
+import com.bsdevs.network.dto.UserDto
 import java.time.LocalDate
 import io.mockk.*
 import java.util.UUID
@@ -21,6 +23,7 @@ import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.util.TimeZone
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,6 +44,7 @@ class FeedingViewModelTest {
 
     @Before
     fun setUp() {
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
         Dispatchers.setMain(testDispatcher)
         
         dispatchers = object : DispatcherProvider {
@@ -51,6 +55,9 @@ class FeedingViewModelTest {
 
         fakeService = FakeBabyCareFirestoreService()
         userRepository = mockk<UserRepository>(relaxed = true)
+        val userProfileFlow = MutableStateFlow<UserDto?>(UserDto(id = userId))
+        every { userRepository.userProfile } returns userProfileFlow
+        
         val timeProvider = mockk<TimeProvider>(relaxed = true)
         every { timeProvider.currentLocalDate() } returns LocalDate.of(2026, 9, 1)
         repository = BabyCareRepositoryImpl(fakeService, userRepository, dispatchers, timeProvider)
@@ -331,9 +338,10 @@ class FeedingViewModelTest {
     @Test
     fun `submitFeeding calculates and saves prediction gap from baby profile`() = runTest {
         // Given
-        val baby = com.bsdevs.network.dto.BabyDto(
+        val today = LocalDate.now().toString()
+        val baby = BabyDto(
             id = "baby1",
-            nextFeedingTime = "2026-09-01T14:00:00"
+            nextFeedingTime = "${today}T14:00:00"
         )
         coEvery { userRepository.getBaby(any(), any()) } returns baby
         every { userRepository.userProfile.value } returns com.bsdevs.network.dto.UserDto(babyId = "baby1")
@@ -347,7 +355,6 @@ class FeedingViewModelTest {
         viewModel.submitFeeding()
 
         // Then
-        val today = viewModel.uiState.value.date
         val monthId = today.substring(0, 7)
         val savedMonth = fakeService.fetchMonthDocument(userId, monthId)
         val days = savedMonth!!["days"] as Map<*, *>
