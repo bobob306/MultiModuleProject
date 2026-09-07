@@ -164,10 +164,6 @@ class CoffeeDetailsViewModel @Inject constructor(
     }
 }
 
-data class ShotList(
-    val shots: List<ShotDto>
-)
-
 sealed class CoffeeDetailsIntent {
     object NavigateHome : CoffeeDetailsIntent()
     data class SubmitShot(val shot: EspressoShotDetails) : CoffeeDetailsIntent()

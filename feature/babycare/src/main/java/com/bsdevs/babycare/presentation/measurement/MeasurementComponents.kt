@@ -442,9 +442,9 @@ fun GrowthChartSection(
                     if (scaleFactorX < minScale) scaleFactorX = minScale
                 }
 
-                val transformState = rememberTransformableState { zoomChange, _, _ ->
-                    scaleFactorX = (scaleFactorX * (1f + (zoomChange - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
-                    val yZoom = 1f + (zoomChange - 1f) * pinchWeights.y * 0.5f
+                val transformState = rememberTransformableState { _, zoom, _, _ ->
+                    scaleFactorX = (scaleFactorX * (1f + (zoom - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
+                    val yZoom = 1f + (zoom - 1f) * pinchWeights.y * 0.5f
                     scaleFactorY = (scaleFactorY * yZoom).coerceIn(1.0f, 4f)
                 }
 

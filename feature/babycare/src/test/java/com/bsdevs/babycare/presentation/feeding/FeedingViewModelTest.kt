@@ -13,7 +13,6 @@ import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.dto.FeedingDto
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

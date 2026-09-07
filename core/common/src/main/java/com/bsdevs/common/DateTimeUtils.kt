@@ -1,16 +1,13 @@
 package com.bsdevs.common
 
 import java.time.Instant
-import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 object DateTimeUtils {
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
     fun parseToInstant(dateTimeStr: String): Instant {
         if (dateTimeStr.isBlank()) return Instant.EPOCH

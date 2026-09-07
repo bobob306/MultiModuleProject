@@ -7,7 +7,6 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
 import com.bsdevs.network.dto.MeasurementDto
 import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -139,15 +138,6 @@ class MeasurementViewModel @Inject constructor(
         }
     }
 
-    fun onDateSelected(date: String) {
-        _localState.update { it.copy(date = date) }
-    }
-
-    fun onTimeSelected(hour: Int, minute: Int) {
-        val formattedTime = String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
-        _localState.update { it.copy(time = formattedTime) }
-    }
-
     fun onHeightChanged(heightValue: Int) {
         _localState.update { it.copy(height = heightValue.toDouble() / 10.0, recordHeight = true) }
     }
@@ -156,28 +146,8 @@ class MeasurementViewModel @Inject constructor(
         _localState.update { it.copy(weight = weightValue.toDouble() / 100.0, recordWeight = true) }
     }
 
-    fun onHeadCircumferenceChanged(headValue: Int) {
-        _localState.update { it.copy(headCircumference = headValue.toDouble() / 10.0, recordHeadCircumference = true) }
-    }
-
-    fun toggleRecordHeight(enabled: Boolean) {
-        _localState.update { it.copy(recordHeight = enabled) }
-    }
-
-    fun toggleRecordWeight(enabled: Boolean) {
-        _localState.update { it.copy(recordWeight = enabled) }
-    }
-
-    fun toggleRecordHeadCircumference(enabled: Boolean) {
-        _localState.update { it.copy(recordHeadCircumference = enabled) }
-    }
-
     fun onIsMedicalChanged(isMedical: Boolean) {
         _localState.update { it.copy(isMedical = isMedical) }
-    }
-
-    fun onCommentChanged(comment: String) {
-        _localState.update { it.copy(comment = comment) }
     }
 
     fun toggleMedicalOnly(medicalOnly: Boolean) {
@@ -192,41 +162,8 @@ class MeasurementViewModel @Inject constructor(
         _localState.update { it.copy(showSheet = show) }
     }
 
-    fun setShowTimePicker(show: Boolean) {
-        _localState.update { it.copy(showTimePicker = show) }
-    }
-
     fun setShowDatePicker(show: Boolean) {
         _localState.update { it.copy(showDatePicker = show) }
-    }
-
-    fun setShowDeleteConfirmation(show: Boolean) {
-        _localState.update { it.copy(showDeleteConfirmation = show) }
-    }
-
-    fun resetForm() {
-        _localState.update {
-            it.copy(
-                id = null,
-                date = java.time.LocalDate.now().toString(),
-                time = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
-                height = null,
-                weight = null,
-                headCircumference = null,
-                recordHeight = false,
-                recordWeight = false,
-                recordHeadCircumference = false,
-                isMedical = false,
-                comment = "",
-                error = null,
-                showSheet = true
-            )
-        }
-    }
-
-    fun onEditMeasurement(id: String) {
-        _localState.update { it.copy(showSheet = true) }
-        loadMeasurement(id)
     }
 
     fun submitMeasurement() {

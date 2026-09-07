@@ -177,7 +177,7 @@ class FormSubmitRouterTest {
     }
 
     @Test
-    fun `temperatureLog converts wheel int to correct double (365 to 36·5)`() = runTest {
+    fun `temperatureLog converts wheel int to correct double (365 to 36,5)`() = runTest {
         val eventSlot = slot<UnifiedEventDto>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
         router.submit("u", "temperatureLog", null, mapOf("date" to "2026-08-31", "temperature_value" to 365))

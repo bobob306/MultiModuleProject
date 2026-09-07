@@ -77,20 +77,11 @@ data class FeedingRoute(val activityId: String? = null, val startSide: String? =
 fun NavController.navigateToBabyCareHome(navOptions: NavOptions? = null) =
     navigate(route = BabyCareHomeRoute, navOptions = navOptions)
 
-fun NavController.navigateToShoppingList(navOptions: NavOptions? = null) =
-    navigate(route = ShoppingListRoute, navOptions = navOptions)
-
 fun NavController.navigateToGraph(navOptions: NavOptions? = null) =
     navigate(route = BabyGraphRoute, navOptions = navOptions)
 
 fun NavController.navigateToVaccinationHistory(navOptions: NavOptions? = null) =
     navigate(route = VaccinationHistoryRoute, navOptions = navOptions)
-
-fun NavController.navigateToNappyChange(
-    activityId: String? = null,
-    navOptions: NavOptions? = null
-) =
-    navigate(route = NappyChangeRoute(activityId), navOptions = navOptions)
 
 fun NavController.navigateToFeeding(activityId: String? = null, navOptions: NavOptions? = null) =
     navigate(route = FeedingRoute(activityId), navOptions = navOptions)

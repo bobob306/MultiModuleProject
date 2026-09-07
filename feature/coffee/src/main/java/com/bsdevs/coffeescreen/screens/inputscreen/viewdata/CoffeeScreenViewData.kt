@@ -238,10 +238,8 @@ fun generateSampleCoffeeDto(count: Int): List<CoffeeDto> {
         val numBeanTypes = if (i % 4 == 0) 2 else 1
         val beans = coffeeBeanTypes.shuffled().take(numBeanTypes)
 
-        val numOrigins = if (i % 4 == 0) 2 else 1
         val origins = listOf(originCountries.random())
 
-        val numTastingNotes = if (i % 4 == 0) 1 else 2
         val notes = listOf(coffeeTastingNotesList.random(), coffeeTastingNotesList.random(), coffeeTastingNotesList.random())
 
         val singleMethod = listOf(beanPreparationMethod.random())

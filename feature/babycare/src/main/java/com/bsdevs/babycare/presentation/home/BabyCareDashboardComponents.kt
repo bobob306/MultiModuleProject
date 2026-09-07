@@ -454,7 +454,6 @@ fun ActivityFeedItem(
                     alpha = 0.5f
                 )
 
-                SwipeToDismissBoxValue.Settled -> Color.Transparent
             }
             Box(
                 modifier = Modifier

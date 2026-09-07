@@ -5,13 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.network.dto.DailyLogDto
-import com.bsdevs.network.dto.FeedingDto
-import com.bsdevs.network.dto.MeasurementDto
-import com.bsdevs.network.dto.NappyChangeDto
-import com.bsdevs.network.dto.TemperatureDto
-import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.network.dto.VaccinationDto
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DateTimeUtils
 import com.bsdevs.common.DispatcherProvider
@@ -20,6 +13,13 @@ import com.bsdevs.data.NetworkScreenData
 import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.repository.ScreenRepository
 import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.dto.DailyLogDto
+import com.bsdevs.network.dto.FeedingDto
+import com.bsdevs.network.dto.MeasurementDto
+import com.bsdevs.network.dto.NappyChangeDto
+import com.bsdevs.network.dto.TemperatureDto
+import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,8 +31,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.Locale
 import javax.inject.Inject
@@ -143,7 +141,7 @@ class BabyCareHomeViewModel @Inject constructor(
         forceSuccess: Boolean = false
     ) {
         val currentResult = _viewData.value
-        
+
         // 🛡️ Optimization: If we are in Loading state and have no data yet, 
         // don't switch to Success with empty data UNLESS forceSuccess is true (initial load complete)
         if (currentResult is Result.Loading && dailyLogs.isEmpty() && !forceSuccess) {
@@ -181,14 +179,15 @@ class BabyCareHomeViewModel @Inject constructor(
                 // Refresh Screen Config too
                 launch {
                     try {
-                        screenRepository.getScreenFlow("baby_home", forceRefresh = true).collect { result ->
-                            if (result is Result.Success) {
-                                val mappedData = withContext(dispatchers.default) {
-                                    mapper.mapToData(result.data)
+                        screenRepository.getScreenFlow("baby_home", forceRefresh = true)
+                            .collect { result ->
+                                if (result is Result.Success) {
+                                    val mappedData = withContext(dispatchers.default) {
+                                        mapper.mapToData(result.data)
+                                    }
+                                    _dynamicUi.value = mappedData
                                 }
-                                _dynamicUi.value = mappedData
                             }
-                        }
                     } catch (e: Exception) {
                         Log.e("REFRESH_ERROR", "Failed to refresh screen config", e)
                     }
@@ -270,7 +269,8 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         // 🌟 IMPROVED: Find absolute latest readings across all cached logs, not just today
-        val allEventsFlattened = dailyLogs.asSequence().flatMap { it.events }.sortedWith(eventComparator).toList()
+        val allEventsFlattened =
+            dailyLogs.asSequence().flatMap { it.events }.sortedWith(eventComparator).toList()
 
         val absoluteLastNappy = allEventsFlattened.firstOrNull {
             it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both"
@@ -292,9 +292,11 @@ class BabyCareHomeViewModel @Inject constructor(
                 val max = DateTimeUtils.formatIsoToTime(baby.effectiveNextFeedingTimeMax, zone)
                 "Next: $min - $max"
             }
+
             baby?.effectiveNextFeedingTime != null -> {
                 "Next: ${DateTimeUtils.formatIsoToTime(baby.effectiveNextFeedingTime, zone)}"
             }
+
             else -> null
         }
 
@@ -311,9 +313,13 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         val absoluteLastMeasurement = lastMeasurementEvent?.let {
-            val weight = it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
-            val height = it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
-            val head = it.headCircumference?.let { hc -> String.format(Locale.getDefault(), "%.1fcm", hc) } ?: ""
+            val weight =
+                it.weight?.let { w -> String.format(Locale.getDefault(), "%.2fkg", w) } ?: ""
+            val height =
+                it.height?.let { h -> String.format(Locale.getDefault(), "%.1fcm", h) } ?: ""
+            val head =
+                it.headCircumference?.let { hc -> String.format(Locale.getDefault(), "%.1fcm", hc) }
+                    ?: ""
             "Last: $weight $height $head".trim()
         }
 
