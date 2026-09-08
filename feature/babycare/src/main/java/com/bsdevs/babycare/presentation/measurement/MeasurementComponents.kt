@@ -376,34 +376,23 @@ fun GrowthChartSection(
             }
             
             val lastMeasurementDate = validData.last().second
-            val ageAtLastMeasurementMonths = if (parsedBirthDate != null) {
-                ChronoUnit.DAYS.between(parsedBirthDate, lastMeasurementDate) / 30.4375
-            } else 0.0
+            val ageAtLastMeasurementMonths = parsedBirthDate?.let { birthDate ->
+                ChronoUnit.DAYS.between(birthDate, lastMeasurementDate) / 30.4375
+            } ?: 0.0
 
-            val relevantWhoData = if (showWhoOverlay && parsedBirthDate != null) {
-                // Include WHO data points up to the current age plus a buffer.
-                // We need at least two points to draw a line segment.
-                val filtered = whoData.filter { it.month <= ageAtLastMeasurementMonths + 2 }
-                if (filtered.size < 2 && whoData.size >= 2) {
-                    whoData.take(2)
-                } else {
-                    filtered
-                }
-            } else emptyList()
+            val relevantWhoData = whoData.takeIf { showWhoOverlay && parsedBirthDate != null }?.let { data ->
+                val filtered = data.filter { it.month <= ageAtLastMeasurementMonths + 2 }
+                if (filtered.size < 2 && data.size >= 2) data.take(2) else filtered
+            } ?: emptyList()
 
-            val minDate = if (showWhoOverlay && parsedBirthDate != null) {
-                minOf(validData.first().second, parsedBirthDate)
-            } else {
-                validData.first().second
-            }
+            val minDate = parsedBirthDate?.takeIf { showWhoOverlay }?.let { birthDate ->
+                minOf(validData.first().second, birthDate)
+            } ?: validData.first().second
 
-            val maxDate = if (relevantWhoData.isNotEmpty() && parsedBirthDate != null) {
-                val lastWhoMonth = relevantWhoData.last().month
-                val lastWhoDate = parsedBirthDate.plusMonths(lastWhoMonth.toLong())
+            val maxDate = parsedBirthDate?.takeIf { relevantWhoData.isNotEmpty() }?.let { birthDate ->
+                val lastWhoDate = birthDate.plusMonths(relevantWhoData.last().month.toLong())
                 maxOf(lastMeasurementDate, lastWhoDate)
-            } else {
-                lastMeasurementDate
-            }
+            } ?: lastMeasurementDate
 
             val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
 

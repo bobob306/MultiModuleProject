@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.network
+package com.bsdevs.babycare.core.network
 
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.UserDto
@@ -148,6 +148,33 @@ class FirestoreBabyCareServiceTest {
     }
 
     @Test
+    fun `updateEvent performs transaction and updates specific event`() = runTest {
+        val user = UserDto(id = userId, babyId = babyId)
+        every { userRepository.userProfile } returns MutableStateFlow(user)
+        
+        val docRef = mockk<DocumentReference>(relaxed = true)
+        every { firestore.collection("babyLogs").document(babyId).collection("months").document("2026-08") } returns docRef
+        
+        val oldEvent = mapOf("id" to "e1", "val" to "old")
+        val otherEvent = mapOf("id" to "e2")
+        val snapshot = mockk<DocumentSnapshot>(relaxed = true)
+        every { snapshot["days"] } returns mapOf("2026-08-27" to listOf(oldEvent, otherEvent))
+        
+        val transaction = mockk<Transaction>(relaxed = true)
+        every { transaction.get(docRef) } returns snapshot
+        
+        val transactionSlot = slot<Transaction.Function<Unit>>()
+        coEvery { firestore.runTransaction(capture(transactionSlot)).await() } returns mockk()
+        
+        val updatedEvent = mapOf("id" to "e1", "val" to "new")
+        service.updateEvent(userId, "2026-08", "2026-08-27", "e1", updatedEvent)
+        
+        transactionSlot.captured.apply(transaction)
+        
+        verify { transaction.update(docRef, "days.2026-08-27", listOf(updatedEvent, otherEvent)) }
+    }
+
+    @Test
     fun `saveVaccination uses update with dot notation when document exists`() = runTest {
         val user = UserDto(id = userId, babyId = babyId)
         every { userRepository.userProfile } returns MutableStateFlow(user)
@@ -199,5 +226,19 @@ class FirestoreBabyCareServiceTest {
 
         val result = service.getLatestMonthId(userId, forceRefresh = false)
         assertNull(result)
+    }
+
+    @Test
+    fun `deleteMeasurement updates document by removing item from map`() = runTest {
+        val user = UserDto(id = userId, babyId = babyId)
+        every { userRepository.userProfile } returns MutableStateFlow(user)
+        
+        val docRef = mockk<DocumentReference>(relaxed = true)
+        every { firestore.collection("babyLogs").document(babyId).collection("measurements").document("all_data") } returns docRef
+        coEvery { docRef.update("items.m1", FieldValue.delete()).await() } returns mockk()
+
+        service.deleteMeasurement(userId, "m1")
+        
+        coVerify { docRef.update("items.m1", FieldValue.delete()) }
     }
 }

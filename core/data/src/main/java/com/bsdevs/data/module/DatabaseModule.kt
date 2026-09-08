@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.bsdevs.data.local.MMPDatabase
 import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.local.dao.FormDao
+import com.bsdevs.data.local.dao.CoffeeDao
 import com.bsdevs.data.local.dao.ScreenDao
 import com.bsdevs.data.local.dao.ShoppingDao
 import com.bsdevs.data.local.dao.UserBabyDao
@@ -43,4 +44,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFormDao(db: MMPDatabase): FormDao = db.formDao()
+
+    @Provides
+    fun provideCoffeeDao(db: MMPDatabase): CoffeeDao = db.coffeeDao()
 }

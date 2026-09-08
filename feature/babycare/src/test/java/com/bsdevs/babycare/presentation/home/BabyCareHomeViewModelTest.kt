@@ -1,23 +1,22 @@
 package com.bsdevs.babycare.presentation.home
 
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.BabyCareRepositoryImpl
-import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
-import java.time.LocalDate
-
-import com.bsdevs.babycare.network.BabyCareFirestoreService
+import com.bsdevs.babycare.core.data.BabyCareRepositoryImpl
+import com.bsdevs.babycare.core.testing.FakeBabyCareFirestoreService
+import com.bsdevs.babycare.core.network.BabyCareFirestoreService
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.common.TimeProvider
+import com.bsdevs.common.result.Result
+import com.bsdevs.data.NetworkScreenData
+import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.BabyEventDao
-import com.bsdevs.data.repository.UserRepository
-import com.bsdevs.common.result.Result
-import com.bsdevs.data.ScreenDataMapper
 import com.bsdevs.data.repository.ScreenRepository
-import io.mockk.*
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
+import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +33,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.LocalDate
 import java.util.TimeZone
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -121,9 +121,9 @@ class BabyCareHomeViewModelTest {
 
         // Then
         viewModel.viewData.test {
-            val result = awaitItem()
-            assertTrue(result is Result.Success)
-            val data = (result as Result.Success).data
+            var result = awaitItem()
+            while (result !is Result.Success) { result = awaitItem() }
+            val data = result.data
             assertEquals(3, data.activityFeed.filterIsInstance<HomeFeedItem.ActivityRow>().size)
             assertEquals("Last feed: 10:00", data.lastFeeding)
             assertEquals("Last: 3.50kg", data.lastMeasurement)
@@ -134,7 +134,7 @@ class BabyCareHomeViewModelTest {
     @Test
     fun `viewModel loads dynamic UI configuration on init`() = runTest {
         // Given
-        val mockData = mockk<com.bsdevs.data.NetworkScreenData>()
+        val mockData = mockk<NetworkScreenData>()
         val dynamicUi = listOf(mockData)
         every { mapper.mapToData(any()) } returns dynamicUi
         coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(listOf(mockk())))

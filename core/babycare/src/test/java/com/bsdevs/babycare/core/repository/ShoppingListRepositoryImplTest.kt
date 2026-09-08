@@ -1,19 +1,17 @@
-package com.bsdevs.babycare.data
+package com.bsdevs.babycare.core.repository
 
 import app.cash.turbine.test
+import com.bsdevs.babycare.core.data.ShoppingListRepositoryImpl
 import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.FirestoreHolder
-import com.bsdevs.network.dto.ShoppingListDto
-import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.ShoppingDao
 import com.bsdevs.data.local.entities.ShoppingItemEntity
+import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.network.dto.ShoppingListDto
 import com.google.android.gms.tasks.Task
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.FirebaseFirestore
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf

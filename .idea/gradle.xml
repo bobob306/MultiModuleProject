@@ -27,6 +27,7 @@
             <option value="$PROJECT_DIR$/build-logic/convention" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/core/authentication" />
+            <option value="$PROJECT_DIR$/core/babycare" />
             <option value="$PROJECT_DIR$/core/common" />
             <option value="$PROJECT_DIR$/core/common/uicomponents" />
             <option value="$PROJECT_DIR$/core/data" />

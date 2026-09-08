@@ -65,11 +65,9 @@ class FormRepositoryImpl @Inject constructor(
 
     override suspend fun getFormSchema(formId: String): Flow<Result<FormSchemaDto>> = flow {
         val cached = formDao.getSchema(formId)
-        if (cached != null) {
-            emit(Result.Success(cached.schema))
-        } else {
-            emit(Result.Loading)
-        }
+        cached?.let {
+            emit(Result.Success(it.schema))
+        } ?: emit(Result.Loading)
 
         try {
             Log.d("FIREBASE_CALL", "Read Form Schema: $formId")
@@ -79,8 +77,10 @@ class FormRepositoryImpl @Inject constructor(
                 val dto = mapper.mapToDto(document as Map<*, *>)
                 formDao.insertSchema(FormSchemaEntity(formId, dto))
                 emit(Result.Success(dto))
-            } else if (cached == null) {
-                emit(Result.Error(Exception("Form schema not found")))
+            } else {
+                if (cached == null) {
+                    emit(Result.Error(Exception("Form schema not found")))
+                }
             }
         } catch (e: Exception) {
             Log.e("FORM_REPO", "Error fetching schema for $formId", e)

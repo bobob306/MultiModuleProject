@@ -3,7 +3,7 @@ package com.bsdevs.babycare.presentation.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.NetworkScreenData
@@ -59,11 +59,14 @@ class GenericSduiViewModel @Inject constructor(
     fun refresh(screenId: String) {
         viewModelScope.launch {
             _isRefreshing.value = true
-            // Force refresh screen config
-            screenRepository.getScreenFlow(screenId, forceRefresh = true).collect { }
-            // Force refresh baby data (since components depend on it)
-            babyRepository.refreshData(accountService.currentUserId, 20)
-            _isRefreshing.value = false
+            try {
+                // Force refresh screen config
+                screenRepository.getScreenFlow(screenId, forceRefresh = true).collect { }
+                // Force refresh baby data (since components depend on it)
+                babyRepository.refreshData(accountService.currentUserId, 20)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 }

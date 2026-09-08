@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.domain
+package com.bsdevs.babycare.core.domain
 
 import com.bsdevs.network.dto.DailyLogDto
 import com.bsdevs.network.dto.UnifiedEventDto

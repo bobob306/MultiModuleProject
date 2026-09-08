@@ -1,6 +1,6 @@
 package com.bsdevs.forms.impl
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.result.Result
 import io.mockk.coEvery

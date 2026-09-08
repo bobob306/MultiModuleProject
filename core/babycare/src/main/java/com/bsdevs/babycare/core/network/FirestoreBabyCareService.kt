@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.network
+package com.bsdevs.babycare.core.network
 
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider

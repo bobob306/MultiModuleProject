@@ -3,9 +3,9 @@ package com.bsdevs.babycare.presentation.feeding
 import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.BabyCareRepositoryImpl
-import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.babycare.core.data.BabyCareRepositoryImpl
+import com.bsdevs.babycare.core.testing.FakeBabyCareFirestoreService
+import com.bsdevs.common.TimeProvider
 import com.bsdevs.babycare.presentation.home.FakeAccountService
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.SyncManager
@@ -80,6 +80,8 @@ class FeedingViewModelTest {
         timeProvider = mockk {
             every { currentLocalDate() } returns fixedTestDate
             every { currentLocalTime() } returns fixedTestTime
+            every { currentTimeMillis() } returns System.currentTimeMillis()
+            every { elapsedRealtime() } returns 1000L
         }
 
         val babyEventDao = mockk<BabyEventDao>(relaxed = true)
@@ -132,8 +134,8 @@ class FeedingViewModelTest {
         val eventId = UUID.randomUUID().toString()
         val date = fixedTestDate.toString()
         val monthId = date.substring(0, 7)
-        val rawData = mapOf(
-            "days" to mapOf(
+        val rawData = mutableMapOf(
+            "days" to mutableMapOf(
                 date to listOf(
                     mapOf(
                         "id" to eventId,
@@ -232,8 +234,8 @@ class FeedingViewModelTest {
         val date = fixedTestDate.toString()
         val monthId = date.substring(0, 7)
         fakeService.injectMonth(
-            userId, monthId, mapOf(
-                "days" to mapOf(
+            userId, monthId, mutableMapOf(
+                "days" to mutableMapOf(
                     date to listOf(
                         mapOf(
                             "id" to eventId,
@@ -316,8 +318,8 @@ class FeedingViewModelTest {
         val historicalDate = fixedTestDate.toString()
         val monthId = historicalDate.substring(0, 7)
         fakeService.injectMonth(
-            userId, monthId, mapOf(
-                "days" to mapOf(
+            userId, monthId, mutableMapOf(
+                "days" to mutableMapOf(
                     historicalDate to listOf(
                         mapOf(
                             "id" to eventId,

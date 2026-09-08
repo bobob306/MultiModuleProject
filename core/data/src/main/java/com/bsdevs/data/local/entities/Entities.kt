@@ -9,6 +9,7 @@ import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.CoffeeDto
 
 @Entity(tableName = "screens")
 data class ScreenEntity(
@@ -67,4 +68,14 @@ data class FormSubmissionEntity(
     val submission: FormSubmissionDto,
     val lastUpdated: Long = System.currentTimeMillis(),
     val isPendingSync: Boolean = false
+)
+
+@Entity(tableName = "coffee_logs")
+data class CoffeeEntity(
+    @PrimaryKey val id: String,
+    val userId: String,
+    val coffee: CoffeeDto,
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val isPendingSync: Boolean = false,
+    val isDeleted: Boolean = false
 )

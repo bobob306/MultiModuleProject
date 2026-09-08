@@ -61,6 +61,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":feature:home"))
     implementation(project(":feature:babycare"))
+    implementation(project(":core:babycare"))
     implementation(project(":core:authentication"))
     implementation(project(":feature:coffee"))
     implementation(project(":feature:splashscreen"))

@@ -2,7 +2,7 @@ package com.bsdevs.babycare.presentation.shopping
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bsdevs.babycare.domain.ShoppingListRepository
+import com.bsdevs.babycare.core.domain.ShoppingListRepository
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

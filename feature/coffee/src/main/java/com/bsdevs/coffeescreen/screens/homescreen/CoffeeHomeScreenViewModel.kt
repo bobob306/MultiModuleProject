@@ -49,7 +49,7 @@ class CoffeeHomeScreenViewModel @Inject constructor(
             _navigationEvent.send(NavigationEvent.NavigateToLogin)
             ""
         }
-        if (currentUser.isNotEmpty()) {
+        currentUser.takeIf { it.isNotEmpty() }?.let {
             loadDataFromNetwork()
         }
     }

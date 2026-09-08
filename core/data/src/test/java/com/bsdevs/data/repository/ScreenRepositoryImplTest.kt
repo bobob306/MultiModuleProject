@@ -9,11 +9,7 @@ import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.ScreenDtoMapper
 import com.bsdevs.network.dto.ScreenDto
 import com.google.android.gms.tasks.Task
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.*
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.tasks.await
@@ -102,6 +98,28 @@ class ScreenRepositoryImplTest {
         }
 
         coVerify { screenDao.insertScreen(match { it.screenId == screenId && it.components == components }) }
+    }
+
+    @Test
+    fun `getScreenFlow emits cached data and ignores network error`() = runTest {
+        val screenId = "home"
+        val cachedComponents = listOf(ScreenDto.TitleDto(0, "Cached"))
+        coEvery { screenDao.getScreen(screenId) } returns ScreenEntity(screenId, cachedComponents)
+
+        val collection = mockk<CollectionReference>(relaxed = true)
+        val document = mockk<DocumentReference>(relaxed = true)
+        val task = mockk<Task<DocumentSnapshot>>(relaxed = true)
+        
+        every { firestore.collection("screens") } returns collection
+        every { collection.document(screenId) } returns document
+        every { document.get(any<Source>()) } returns task
+        coEvery { task.await() } throws RuntimeException("Network Error")
+
+        repository.getScreenFlow(screenId).test {
+            val first = awaitItem() as Result.Success
+            assertEquals(cachedComponents, first.data)
+            awaitComplete()
+        }
     }
 
     @Test

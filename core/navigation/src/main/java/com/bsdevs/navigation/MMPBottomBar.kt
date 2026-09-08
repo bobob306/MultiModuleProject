@@ -57,9 +57,9 @@ sealed class BottomNavItem(
 fun MMPBottomBar(navController: NavHostController, userRoles: List<String>) {
     val items = listOfNotNull(
         BottomNavItem.Home,
-        BottomNavItem.Coffee.takeIf { userRoles.contains("coffee") },
-        BottomNavItem.ShoppingList.takeIf { userRoles.contains("shopping_list") },
-        BottomNavItem.Baby.takeIf { userRoles.contains("parent") },
+        BottomNavItem.Coffee.takeIf { "coffee" in userRoles },
+        BottomNavItem.ShoppingList.takeIf { "shopping_list" in userRoles },
+        BottomNavItem.Baby.takeIf { "parent" in userRoles },
         BottomNavItem.Settings
     )
     NavigationBar {

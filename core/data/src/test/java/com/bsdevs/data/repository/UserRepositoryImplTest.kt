@@ -2,18 +2,14 @@ package com.bsdevs.data.repository
 
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.local.dao.UserBabyDao
+import com.bsdevs.data.local.entities.BabyEntity
 import com.bsdevs.data.local.entities.UserEntity
 import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
 import com.google.android.gms.tasks.Task
-import com.google.firebase.firestore.FirebaseFirestore
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkAll
-import io.mockk.verify
+import com.google.firebase.firestore.*
+import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -76,5 +72,47 @@ class UserRepositoryImplTest {
         assertEquals(user, result)
         // Verify firestore was NOT called
         verify(exactly = 0) { firestore.collection("users") }
+    }
+
+    @Test
+    fun `getUser with forceRefresh fallbacks to DB on firestore failure`() = runTest {
+        val userId = "u1"
+        val cachedUser = UserDto(id = userId, firstName = "Cached")
+        coEvery { userBabyDao.getUser(userId) } returns UserEntity(userId, cachedUser)
+        
+        val collection = mockk<CollectionReference>(relaxed = true)
+        val document = mockk<DocumentReference>(relaxed = true)
+        val task = mockk<Task<DocumentSnapshot>>(relaxed = true)
+        
+        every { firestore.collection("users") } returns collection
+        every { collection.document(userId) } returns document
+        every { document.get(any<Source>()) } returns task
+        coEvery { task.await() } throws RuntimeException("Network Error")
+
+        val result = userRepository.getUser(userId, forceRefresh = true)
+
+        assertEquals(cachedUser, result)
+        coVerify { userBabyDao.getUser(userId) }
+    }
+
+    @Test
+    fun `getBaby with forceRefresh fallbacks to DB on firestore failure`() = runTest {
+        val babyId = "b1"
+        val cachedBaby = BabyDto(id = babyId, firstName = "Cached Baby")
+        coEvery { userBabyDao.getBaby(babyId) } returns BabyEntity(babyId, cachedBaby)
+        
+        val collection = mockk<CollectionReference>(relaxed = true)
+        val document = mockk<DocumentReference>(relaxed = true)
+        val task = mockk<Task<DocumentSnapshot>>(relaxed = true)
+        
+        every { firestore.collection("babies") } returns collection
+        every { collection.document(babyId) } returns document
+        every { document.get(any<Source>()) } returns task
+        coEvery { task.await() } throws RuntimeException("Network Error")
+
+        val result = userRepository.getBaby(babyId, forceRefresh = true)
+
+        assertEquals(cachedBaby, result)
+        coVerify { userBabyDao.getBaby(babyId) }
     }
 }

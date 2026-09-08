@@ -57,15 +57,16 @@ fun MMPTimePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (isLandscape) {
-                    Text(
-                        text = "Enter time",
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    TimeInput(state = timePickerState)
-                } else {
-                    TimePicker(state = timePickerState)
+                when {
+                    isLandscape -> {
+                        Text(
+                            text = "Enter time",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        TimeInput(state = timePickerState)
+                    }
+                    else -> TimePicker(state = timePickerState)
                 }
             }
         }

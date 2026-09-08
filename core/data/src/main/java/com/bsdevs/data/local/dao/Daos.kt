@@ -11,6 +11,7 @@ import com.bsdevs.data.local.entities.FormSubmissionEntity
 import com.bsdevs.data.local.entities.ScreenEntity
 import com.bsdevs.data.local.entities.ShoppingItemEntity
 import com.bsdevs.data.local.entities.UserEntity
+import com.bsdevs.data.local.entities.CoffeeEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -124,5 +125,26 @@ interface FormDao {
     suspend fun getPendingSubmissions(): List<FormSubmissionEntity>
 
     @Query("DELETE FROM form_schemas")
+    suspend fun clearAll()
+}
+
+@Dao
+interface CoffeeDao {
+    @Query("SELECT * FROM coffee_logs WHERE userId = :userId AND isDeleted = 0 ORDER BY lastUpdated DESC")
+    fun getCoffeeLogs(userId: String): Flow<List<CoffeeEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCoffee(logs: List<CoffeeEntity>)
+
+    @Query("UPDATE coffee_logs SET isDeleted = 1, isPendingSync = 1 WHERE id = :coffeeId")
+    suspend fun markDeleted(coffeeId: String)
+
+    @Query("SELECT * FROM coffee_logs WHERE isPendingSync = 1")
+    suspend fun getPendingSync(): List<CoffeeEntity>
+
+    @Query("DELETE FROM coffee_logs WHERE id = :coffeeId")
+    suspend fun deleteById(coffeeId: String)
+
+    @Query("DELETE FROM coffee_logs")
     suspend fun clearAll()
 }

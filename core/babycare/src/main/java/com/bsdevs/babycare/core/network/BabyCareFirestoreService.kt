@@ -1,4 +1,4 @@
-package com.bsdevs.babycare.network
+package com.bsdevs.babycare.core.network
 
 interface BabyCareFirestoreService {
     suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean = false): String?

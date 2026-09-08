@@ -1,6 +1,6 @@
 package com.bsdevs.forms.di
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.forms.impl.FormDeleterImpl
 import com.bsdevs.forms.impl.FormPrefillerImpl
