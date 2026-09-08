@@ -24,10 +24,10 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): MMPDatabase {
         return Room.databaseBuilder(
-            context,
-            MMPDatabase::class.java,
-            "mmp_database"
-        ).build()
+                context,
+                MMPDatabase::class.java,
+                "mmp_database"
+            ).build()
     }
 
     @Provides
