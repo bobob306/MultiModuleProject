@@ -8,3 +8,6 @@
 -keepclassmembers class **$serializer {
     public static final **$serializer INSTANCE;
 }
+
+# Keep Firestore DTOs in the network module
+-keep class com.bsdevs.network.dto.** { *; }
