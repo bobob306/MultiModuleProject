@@ -3,18 +3,8 @@ package com.bsdevs.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.bsdevs.data.local.dao.BabyEventDao
-import com.bsdevs.data.local.dao.FormDao
-import com.bsdevs.data.local.dao.ScreenDao
-import com.bsdevs.data.local.dao.ShoppingDao
-import com.bsdevs.data.local.dao.UserBabyDao
-import com.bsdevs.data.local.entities.BabyEntity
-import com.bsdevs.data.local.entities.BabyEventEntity
-import com.bsdevs.data.local.entities.FormSchemaEntity
-import com.bsdevs.data.local.entities.FormSubmissionEntity
-import com.bsdevs.data.local.entities.ScreenEntity
-import com.bsdevs.data.local.entities.ShoppingItemEntity
-import com.bsdevs.data.local.entities.UserEntity
+import com.bsdevs.data.local.dao.*
+import com.bsdevs.data.local.entities.*
 
 @Database(
     entities = [
@@ -24,7 +14,8 @@ import com.bsdevs.data.local.entities.UserEntity
         ShoppingItemEntity::class,
         BabyEventEntity::class,
         FormSchemaEntity::class,
-        FormSubmissionEntity::class
+        FormSubmissionEntity::class,
+        CoffeeEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -36,4 +27,5 @@ abstract class MMPDatabase : RoomDatabase() {
     abstract fun shoppingDao(): ShoppingDao
     abstract fun babyEventDao(): BabyEventDao
     abstract fun formDao(): FormDao
+    abstract fun coffeeDao(): CoffeeDao
 }

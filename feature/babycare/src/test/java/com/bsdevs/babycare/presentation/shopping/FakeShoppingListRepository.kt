@@ -1,6 +1,6 @@
 package com.bsdevs.babycare.presentation.shopping
 
-import com.bsdevs.babycare.domain.ShoppingListRepository
+import com.bsdevs.babycare.core.domain.ShoppingListRepository
 import com.bsdevs.network.dto.ShoppingListDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -95,7 +95,7 @@ fun BabyCareTileRowComponent(
             .horizontalScroll(state = rememberScrollState(), enabled = true)
             .padding(top = 8.dp)
             .wrapContentHeight(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Spacer(modifier = Modifier.width(0.dp))
         tiles.forEach { tile ->
@@ -232,7 +232,7 @@ fun LazyListScope.activityFeedItems(
                     // Pagination trigger
                     val allRows = activityItems.filterIsInstance<HomeFeedItem.ActivityRow>()
                     val globalIndex = allRows.indexOf(feedItem)
-                    if (globalIndex >= allRows.size - 1 && viewData.canLoadMore && !viewData.isLoadingMore) {
+                    if ((globalIndex >= allRows.size - 1) && viewData.canLoadMore && !viewData.isLoadingMore) {
                         LaunchedEffect(Unit) { onLoadMore() }
                     }
 
@@ -253,10 +253,12 @@ fun LazyListScope.activityFeedItems(
                             animatedAlpha.animateTo(1f, tween(durationMillis = 400))
                         }
 
-                        Box(modifier = Modifier.graphicsLayer {
-                            translationY = animatedOffset.value
-                            alpha = animatedAlpha.value
-                        }) {
+                        Box(
+                            modifier = Modifier.graphicsLayer {
+                                translationY = animatedOffset.value
+                                alpha = animatedAlpha.value
+                            },
+                        ) {
                             ActivityFeedItem(
                                 item = currentActivity,
                                 onEdit = {
@@ -518,12 +520,12 @@ fun ActivityFeedItem(
                         }
                     }
 
-    if (item is BabyActivity.Feeding) {
-        FeedingBar(
-            durationSeconds = item.dto.totalDuration,
-            modifier = Modifier.padding(horizontal = 8.dp),
-        )
-    }
+                    (item as? BabyActivity.Feeding)?.let { feeding ->
+                        FeedingBar(
+                            durationSeconds = feeding.dto.totalDuration,
+                            modifier = Modifier.padding(horizontal = 8.dp),
+                        )
+                    }
 
                     if (item is BabyActivity.Feeding && item.showVitaminDToggle) {
                         IconButton(
@@ -671,16 +673,18 @@ fun BabyCareTile(
                                 .clip(MaterialTheme.shapes.extraSmall)
                                 .shimmer()
                         )
-                    } else if (subtitle != null) {
-                        Text(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(top = 2.dp),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    } else {
+                        subtitle?.let {
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 2.dp),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

@@ -1,6 +1,6 @@
 package com.bsdevs.forms.impl
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.data.repository.FormPrefiller
 import javax.inject.Inject
@@ -32,7 +32,7 @@ class FormPrefillerImpl @Inject constructor(
             coffee.beanTypes?.let { put("bean_types", it) }
             coffee.originCountries?.let { put("origin_countries", it) }
             coffee.tastingNotes?.let { put("tasting_notes", it) }
-            coffee.beanPreparationMethod?.let { if (it.isNotEmpty()) put("preparation_method", it) }
+            coffee.beanPreparationMethod?.takeIf { it.isNotEmpty() }?.let { put("preparation_method", it) }
             coffee.roaster?.let { put("roaster", it) }
             coffee.roastDate?.let { put("roast_date", it) }
             put("is_decaf", if (coffee.isDecaf == true) "Decaffeinated" else "Caffeinated")

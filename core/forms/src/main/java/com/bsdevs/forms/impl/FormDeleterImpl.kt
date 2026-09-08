@@ -1,8 +1,9 @@
 package com.bsdevs.forms.impl
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.repository.FormDeleter
+import com.bsdevs.network.dto.UnifiedEventDto
 import javax.inject.Inject
 
 class FormDeleterImpl @Inject constructor(
@@ -10,60 +11,25 @@ class FormDeleterImpl @Inject constructor(
 ) : FormDeleter {
 
     override suspend fun delete(userId: String, target: String, entityId: String): Result<Unit> = when (target) {
-        "nappyLog" -> deleteNappy(userId, entityId)
-        "feedingLog" -> deleteFeeding(userId, entityId)
-        "temperatureLog" -> deleteTemperature(userId, entityId)
-        "measurementLog" -> deleteMeasurement(userId, entityId)
-        "vaccinationLog" -> deleteVaccination(userId, entityId)
+        "nappyLog" -> performDelete(userId, entityId, "Nappy") { babyCareRepository.getNappyEventById(it, entityId) }
+        "feedingLog" -> performDelete(userId, entityId, "Feeding") { babyCareRepository.getFeedingEventById(it, entityId) }
+        "temperatureLog" -> performDelete(userId, entityId, "Temperature") { babyCareRepository.getTemperatureEventById(it, entityId) }
+        "measurementLog" -> performDelete(userId, entityId, "Measurement") { babyCareRepository.getMeasurementEventById(it, entityId) }
+        "vaccinationLog" -> performDelete(userId, entityId, "Vaccination") { babyCareRepository.getVaccinationEventById(it, entityId) }
         else -> Result.Error(UnsupportedOperationException("Delete not supported for target: $target"))
     }
 
-    private suspend fun deleteNappy(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getNappyEventById(userId, entityId)
-            ?: return Result.Error(Exception("Nappy record not found"))
-        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
-        babyCareRepository.deleteActivityEvent(userId, date, entityId)
-        Result.Success(Unit)
-    } catch (e: Exception) {
-        Result.Error(e)
-    }
-
-    private suspend fun deleteTemperature(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getTemperatureEventById(userId, entityId)
-            ?: return Result.Error(Exception("Temperature record not found"))
-        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
-        babyCareRepository.deleteActivityEvent(userId, date, entityId)
-        Result.Success(Unit)
-    } catch (e: Exception) {
-        Result.Error(e)
-    }
-
-    private suspend fun deleteMeasurement(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getMeasurementEventById(userId, entityId)
-            ?: return Result.Error(Exception("Measurement record not found"))
-        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
-        babyCareRepository.deleteActivityEvent(userId, date, entityId)
-        Result.Success(Unit)
-    } catch (e: Exception) {
-        Result.Error(e)
-    }
-
-    private suspend fun deleteFeeding(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getFeedingEventById(userId, entityId)
-            ?: return Result.Error(Exception("Feeding record not found"))
-        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
-        babyCareRepository.deleteActivityEvent(userId, date, entityId)
-        Result.Success(Unit)
-    } catch (e: Exception) {
-        Result.Error(e)
-    }
-
-    private suspend fun deleteVaccination(userId: String, entityId: String): Result<Unit> = try {
-        val event = babyCareRepository.getVaccinationEventById(userId, entityId)
-            ?: return Result.Error(Exception("Vaccination record not found"))
-        val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
-        babyCareRepository.deleteActivityEvent(userId, date, entityId)
-        Result.Success(Unit)
+    private suspend fun performDelete(
+        userId: String,
+        entityId: String,
+        label: String,
+        fetcher: suspend (String) -> UnifiedEventDto?
+    ): Result<Unit> = try {
+        fetcher(userId)?.let { event ->
+            val date = event.dateTimeString.substringBefore("T").substringBefore(" ")
+            babyCareRepository.deleteActivityEvent(userId, date, entityId)
+            Result.Success(Unit)
+        } ?: Result.Error(Exception("$label record not found"))
     } catch (e: Exception) {
         Result.Error(e)
     }

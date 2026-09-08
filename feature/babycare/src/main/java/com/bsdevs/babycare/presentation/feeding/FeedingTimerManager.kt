@@ -1,6 +1,6 @@
 package com.bsdevs.babycare.presentation.feeding
 
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.common.TimeProvider
 import com.bsdevs.common.DispatcherProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

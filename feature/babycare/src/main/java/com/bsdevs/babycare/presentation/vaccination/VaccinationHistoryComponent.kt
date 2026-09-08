@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel

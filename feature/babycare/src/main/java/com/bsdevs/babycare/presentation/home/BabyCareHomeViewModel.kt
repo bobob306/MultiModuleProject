@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.common.DateTimeUtils
 import com.bsdevs.common.DispatcherProvider
@@ -78,7 +78,7 @@ class BabyCareHomeViewModel @Inject constructor(
         viewModelScope.launch {
             repository.cachedDays.collect { dailyLogs ->
                 // Transition to success if we have data to show (Offline-first)
-                if (dailyLogs.isNotEmpty() || _viewData.value !is Result.Loading) {
+                if (dailyLogs.isNotEmpty() || (_viewData.value !is Result.Loading)) {
                     updateDisplayFeed(dailyLogs)
                 }
             }
@@ -90,7 +90,18 @@ class BabyCareHomeViewModel @Inject constructor(
 
     private fun initialLoad() {
         viewModelScope.launch {
-            // Load dynamic UI config from Firebase
+            // 1. 🔄 SEQUENCE: Refresh User Profile first to ensure we have the correct babyId and auth
+            // This prevents stale/unauthorized data if the user just signed in or changed babies.
+            try {
+                val userId = accountService.currentUserId
+                if (userId.isNotEmpty()) {
+                    userRepository.getUser(userId, forceRefresh = true)
+                }
+            } catch (e: Exception) {
+                Log.e("HOME_INIT", "Failed to refresh user profile on launch", e)
+            }
+
+            // 2. ⚡ PARALLEL: Load dynamic UI and baby activity data
             launch {
                 screenRepository.getScreenFlow("baby_home").collect { result ->
                     if (result is Result.Success) {
@@ -108,7 +119,12 @@ class BabyCareHomeViewModel @Inject constructor(
 
             try {
                 // Fetch the current month document from Firestore
-                val fetchResult = repository.loadInitialData(accountService.currentUserId, pageSize)
+                // 🚀 Force server check for the initial data to guarantee freshness on app start
+                val fetchResult = repository.loadInitialData(
+                    userId = accountService.currentUserId,
+                    pageSize = pageSize,
+                    forceRefresh = true,
+                )
 
                 // Force switch the state to success immediately, even if the month is brand new/empty
                 updateDisplayFeed(
@@ -120,13 +136,13 @@ class BabyCareHomeViewModel @Inject constructor(
             } catch (_: Exception) {
                 Log.e("HOME_INIT_ERROR", "Failed initial data block fetch")
                 // If we have cached data, don't show error screen, just stop loading
-                if (repository.cachedDays.value.isNotEmpty()) {
+                repository.cachedDays.value.takeIf { it.isNotEmpty() }?.let { logs ->
                     updateDisplayFeed(
-                        dailyLogs = repository.cachedDays.value,
+                        dailyLogs = logs,
                         isRefreshing = false,
                         forceSuccess = true,
                     )
-                } else {
+                } ?: run {
                     _viewData.value = Result.Error(Exception("Failed to fetch initial data"))
                 }
             }
@@ -336,7 +352,7 @@ class BabyCareHomeViewModel @Inject constructor(
             val visibleEvents = sortedDayEvents.filter { event ->
                 when (filter) {
                     ActivityFilter.NONE -> true
-                    ActivityFilter.NAPPY -> event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
+                    ActivityFilter.NAPPY -> event.type in listOf("NAPPY", "Wet", "Dirty", "Both")
                     ActivityFilter.FEEDING -> event.type == "FEEDING"
                     ActivityFilter.TEMPERATURE -> event.type == "TEMPERATURE"
                     ActivityFilter.MEASUREMENT -> event.type == "MEASUREMENT"
@@ -345,8 +361,7 @@ class BabyCareHomeViewModel @Inject constructor(
             }
 
             val feedingCount = visibleEvents.count { it.type == "FEEDING" }
-            val nappyCount =
-                visibleEvents.count { it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both" }
+            val nappyCount = visibleEvents.count { it.type in listOf("NAPPY", "Wet", "Dirty", "Both") }
             val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
             val measurementCount = visibleEvents.count { it.type == "MEASUREMENT" }
             val vaccinationCount = visibleEvents.count { it.type == "VACCINATION" }
@@ -498,7 +513,7 @@ class BabyCareHomeViewModel @Inject constructor(
                     "$day $month $yearShort"
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             dateString // Fallback safety representation if parsing strings fails
         }
     }

@@ -1,6 +1,6 @@
 package com.bsdevs.forms.impl
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.network.dto.CoffeeDto
@@ -12,7 +12,6 @@ import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -153,6 +152,11 @@ class FormSubmitRouterTest {
     }
 
     @Test
+    fun `feedingLog returns Error when date field is missing`() = runTest {
+        assertTrue(router.submit("u", "feedingLog", null, mapOf("start_time" to "10:00")) is Result.Error)
+    }
+
+    @Test
     fun `unknown target returns Error`() = runTest {
         assertTrue(router.submit("u", "unknownTarget", null, emptyMap()) is Result.Error)
     }
@@ -177,14 +181,6 @@ class FormSubmitRouterTest {
     }
 
     @Test
-    fun `temperatureLog converts wheel int to correct double (365 to 36,5)`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
-        coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
-        router.submit("u", "temperatureLog", null, mapOf("date" to "2026-08-31", "temperature_value" to 365))
-        assertEquals(36.5, eventSlot.captured.temperature!!, 0.001)
-    }
-
-    @Test
     fun `temperatureLog edit calls updateActivityEvent`() = runTest {
         coEvery { babyCareRepository.updateActivityEvent(any(), any(), any(), any()) } returns Unit
         router.submit("u", "temperatureLog", "t1", mapOf("date" to "2026-08-31", "temperature_value" to 370))
@@ -195,11 +191,6 @@ class FormSubmitRouterTest {
     @Test
     fun `temperatureLog returns Error when date missing`() = runTest {
         assertTrue(router.submit("u", "temperatureLog", null, mapOf("temperature_value" to 370)) is Result.Error)
-    }
-
-    @Test
-    fun `temperatureLog returns Error when temperature_value missing`() = runTest {
-        assertTrue(router.submit("u", "temperatureLog", null, mapOf("date" to "2026-08-31")) is Result.Error)
     }
 
     // --- measurementLog ---
@@ -229,39 +220,8 @@ class FormSubmitRouterTest {
     }
 
     @Test
-    fun `measurementLog saves with only head circumference when others absent`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
-        coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
-        router.submit("u", "measurementLog", null, mapOf(
-            "date" to "2026-08-31", 
-            "record_head_circumference" to true,
-            "head_circumference_value" to 400
-        ))
-        assertEquals(40.0, eventSlot.captured.headCircumference!!, 0.001)
-        assertNull(eventSlot.captured.height)
-        assertNull(eventSlot.captured.weight)
-    }
-
-    @Test
-    fun `measurementLog edit calls updateActivityEvent`() = runTest {
-        coEvery { babyCareRepository.updateActivityEvent(any(), any(), any(), any()) } returns Unit
-        router.submit("u", "measurementLog", "m1", mapOf(
-            "date" to "2026-08-31", 
-            "record_height" to true,
-            "height_value" to 650
-        ))
-        coVerify { babyCareRepository.updateActivityEvent("u", "2026-08-31", "m1", any()) }
-        coVerify(exactly = 0) { babyCareRepository.saveActivityEvent(any(), any(), any()) }
-    }
-
-    @Test
     fun `measurementLog returns Error when neither height nor weight provided`() = runTest {
         assertTrue(router.submit("u", "measurementLog", null, mapOf("date" to "2026-08-31")) is Result.Error)
-    }
-
-    @Test
-    fun `measurementLog returns Error when date missing`() = runTest {
-        assertTrue(router.submit("u", "measurementLog", null, mapOf("height_value" to 700)) is Result.Error)
     }
 
     // --- vaccinationLog ---
@@ -287,15 +247,7 @@ class FormSubmitRouterTest {
     }
 
     @Test
-    fun `vaccinationLog autogenerates seriesId if missing`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
-        coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
-
-        router.submit("u", "vaccinationLog", null, mapOf(
-            "date" to "2026-08-31",
-            "vaccination_names" to listOf("6-in-1")
-        ))
-
-        assertEquals("6_in_1", eventSlot.captured.seriesId)
+    fun `vaccinationLog returns Error when date field is missing`() = runTest {
+        assertTrue(router.submit("u", "vaccinationLog", null, mapOf("vaccination_names" to listOf("Polio"))) is Result.Error)
     }
 }

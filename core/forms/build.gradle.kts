@@ -11,7 +11,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:common"))
     implementation(project(":core:data"))
-    implementation(project(":feature:babycare"))
+    implementation(project(":core:babycare"))
     implementation(project(":feature:coffee"))
 
     testImplementation(libs.mockk)

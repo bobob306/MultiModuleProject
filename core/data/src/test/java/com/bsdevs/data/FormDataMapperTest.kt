@@ -79,6 +79,13 @@ class FormDataMapperTest {
     }
 
     @Test
+    fun `SWITCH default is false when defaultValue is non-boolean`() {
+        val field = FormFieldDto("enabled", "SWITCH", "Enable", false, 0, defaultValue = JsonPrimitive("not a bool"))
+        val result = mapper.mapToData("f", schema(field)).fields[0] as FormFieldData.SwitchFieldData
+        assertFalse(result.default)
+    }
+
+    @Test
     fun `RADIO maps to RadioFieldData with options`() {
         val field = FormFieldDto("type", "RADIO", "Type", true, 0, options = listOf("Wet", "Dirty", "Both"))
         val result = mapper.mapToData("f", schema(field)).fields[0] as FormFieldData.RadioFieldData

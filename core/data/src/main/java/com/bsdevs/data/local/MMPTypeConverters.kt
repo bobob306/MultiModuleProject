@@ -8,6 +8,7 @@ import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.CoffeeDto
 import kotlinx.serialization.json.Json
 
 class MMPTypeConverters {
@@ -58,4 +59,10 @@ class MMPTypeConverters {
 
     @TypeConverter
     fun toFormSubmissionDto(value: String): FormSubmissionDto = json.decodeFromString(value)
+
+    @TypeConverter
+    fun fromCoffeeDto(value: CoffeeDto): String = json.encodeToString(value)
+
+    @TypeConverter
+    fun toCoffeeDto(value: String): CoffeeDto = json.decodeFromString(value)
 }

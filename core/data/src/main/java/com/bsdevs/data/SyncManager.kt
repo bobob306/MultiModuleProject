@@ -7,6 +7,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.CopyOnWriteArraySet
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,7 +21,7 @@ class SyncManager @Inject constructor(
     dispatchers: DispatcherProvider
 ) {
     private val scope = CoroutineScope(dispatchers.io + SupervisorJob())
-    private val syncables = mutableSetOf<Syncable>()
+    private val syncables = CopyOnWriteArraySet<Syncable>()
 
     init {
         scope.launch {

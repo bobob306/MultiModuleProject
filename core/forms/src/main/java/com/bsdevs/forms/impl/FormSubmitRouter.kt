@@ -1,6 +1,6 @@
 package com.bsdevs.forms.impl
 
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.network.dto.CoffeeDto
@@ -72,11 +72,10 @@ class FormSubmitRouter @Inject constructor(
             nappyType = values["nappy_type"] as? String,
             comment = values["comment"] as? String,
         )
-        if (entityId != null) {
-            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
-        } else {
-            babyCareRepository.saveActivityEvent(userId, date, event)
-        }
+        entityId?.let {
+            babyCareRepository.updateActivityEvent(userId, date, it, event)
+        } ?: babyCareRepository.saveActivityEvent(userId, date, event)
+        
         Result.Success(Unit)
     } catch (e: Exception) {
         Result.Error(e)
@@ -102,11 +101,10 @@ class FormSubmitRouter @Inject constructor(
             temperature = tNum.toDouble() / 10.0,
             comment = values["comment"] as? String,
         )
-        if (entityId != null) {
-            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
-        } else {
-            babyCareRepository.saveActivityEvent(userId, date, event)
-        }
+        entityId?.let {
+            babyCareRepository.updateActivityEvent(userId, date, it, event)
+        } ?: babyCareRepository.saveActivityEvent(userId, date, event)
+
         Result.Success(Unit)
     } catch (e: Exception) {
         Result.Error(e)
@@ -145,11 +143,10 @@ class FormSubmitRouter @Inject constructor(
             isMedical = values["is_medical"] == true,
             comment = values["comment"] as? String,
         )
-        if (entityId != null) {
-            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
-        } else {
-            babyCareRepository.saveActivityEvent(userId, date, event)
-        }
+        entityId?.let {
+            babyCareRepository.updateActivityEvent(userId, date, it, event)
+        } ?: babyCareRepository.saveActivityEvent(userId, date, event)
+
         Result.Success(Unit)
     } catch (e: Exception) {
         Result.Error(e)
@@ -176,11 +173,10 @@ class FormSubmitRouter @Inject constructor(
             bottleAmountMl = bottleStr?.toIntOrNull(),
             comment = values["comment"] as? String,
         )
-        if (entityId != null) {
-            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
-        } else {
-            babyCareRepository.saveActivityEvent(userId, date, event)
-        }
+        entityId?.let {
+            babyCareRepository.updateActivityEvent(userId, date, it, event)
+        } ?: babyCareRepository.saveActivityEvent(userId, date, event)
+
         Result.Success(Unit)
     } catch (e: Exception) {
         Result.Error(e)
@@ -211,11 +207,10 @@ class FormSubmitRouter @Inject constructor(
             seriesId = seriesId,
             comment = values["comment"] as? String,
         )
-        if (entityId != null) {
-            babyCareRepository.updateActivityEvent(userId, date, entityId, event)
-        } else {
-            babyCareRepository.saveActivityEvent(userId, date, event)
-        }
+        entityId?.let {
+            babyCareRepository.updateActivityEvent(userId, date, it, event)
+        } ?: babyCareRepository.saveActivityEvent(userId, date, event)
+
         Result.Success(Unit)
     } catch (e: Exception) {
         Result.Error(e)

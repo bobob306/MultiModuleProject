@@ -1,12 +1,12 @@
-package com.bsdevs.babycare.data
+package com.bsdevs.babycare.core.data
 
 import android.util.Log
-import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.domain.RepositoryFetchResult
+import com.bsdevs.babycare.core.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.RepositoryFetchResult
 import com.bsdevs.network.dto.DailyLogDto
 import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.babycare.network.BabyCareFirestoreService
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.babycare.core.network.BabyCareFirestoreService
+import com.bsdevs.common.TimeProvider
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.Syncable
@@ -17,7 +17,10 @@ import com.bsdevs.data.repository.UserRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.YearMonth
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,40 +60,68 @@ class BabyCareRepositoryImpl @Inject constructor(
         for (entity in pending) {
             try {
                 if (entity.isDeleted) {
-                    deleteActivityEvent(userId, entity.date, entity.id)
+                    syncDelete(userId, entity.date, entity.id, entity.event.type)
                 } else {
-                    saveActivityEvent(userId, entity.date, entity.event)
+                    syncSave(userId, entity.date, entity.event)
                 }
-                babyEventDao.insertEvents(listOf(entity.copy(isPendingSync = false)))
-            } catch (_: Exception) {
-                Log.e("BABYCARE_REPO", "Sync failed for event ${entity.id}")
+            } catch (e: Exception) {
+                Log.e("BABYCARE_REPO", "Sync failed for event ${entity.id}", e)
             }
         }
+    }
+
+    private suspend fun syncSave(userId: String, date: String, event: UnifiedEventDto) {
+        when (event.type) {
+            "MEASUREMENT" -> apiService.saveMeasurement(userId, event.id, toMap(event))
+            "VACCINATION" -> apiService.saveVaccination(userId, event.id, toMap(event))
+            else -> {
+                val monthId = extractMonthString(date)
+                apiService.saveEvent(userId, monthId, date, toMap(event))
+            }
+        }
+        val babyId = getAuthorizedBabyId(userId) ?: return
+        babyEventDao.insertEvents(listOf(BabyEventEntity(event.id, babyId, date, event, isPendingSync = false)))
+    }
+
+    private suspend fun syncDelete(userId: String, date: String, eventId: String, type: String) {
+        when (type) {
+            "MEASUREMENT" -> apiService.deleteMeasurement(userId, eventId)
+            "VACCINATION" -> apiService.deleteVaccination(userId, eventId)
+            else -> {
+                val monthId = extractMonthString(date)
+                apiService.deleteEvent(userId, monthId, date, eventId)
+            }
+        }
+        babyEventDao.deleteById(eventId)
     }
 
     override suspend fun loadInitialData(userId: String, pageSize: Int, forceRefresh: Boolean): RepositoryFetchResult = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId)
         
-        // Load from DB first
-        if (!forceRefresh && _cachedDays.value.isEmpty() && (babyId != null)) {
-            val localEvents = babyEventDao.getEvents(babyId).first()
-            if (localEvents.isNotEmpty()) {
-                val dailyLogs = localEvents.groupBy { it.date }.asSequence().map { (date, events) ->
-                    DailyLogDto(date, userId, events.map { it.event })
-                }.sortedByDescending { it.date }.toList()
-                _cachedDays.value = dailyLogs
+        // 1. 📂 Offline-first: Load from Room immediately if memory is empty
+        if (_cachedDays.value.isEmpty()) {
+            babyId?.let { id ->
+                val localEvents = babyEventDao.getEvents(id).first()
+                localEvents.takeIf { it.isNotEmpty() }?.let { events ->
+                    val dailyLogs = events.groupBy { it.date }.asSequence().map { (date, eventsForDate) ->
+                        DailyLogDto(date, userId, eventsForDate.map { it.event })
+                    }.sortedByDescending { it.date }.toList()
+                    _cachedDays.value = dailyLogs
+                }
             }
         }
 
-        // Optimization: If we already have data in memory, don't hit the network unless force refreshed
-        if (!forceRefresh && _cachedDays.value.isNotEmpty()) {
+        // 2. 🛡️ Optimization: If we already have data in memory AND we have already performed a network fetch 
+        // in this session (anchor is set), don't hit the network unless force refreshed.
+        if (!forceRefresh && _cachedDays.value.isNotEmpty() && currentAnchorMonth != null) {
             return@withContext RepositoryFetchResult(
                 nextAnchorMonth = currentAnchorMonth,
-                hasMoreData = currentAnchorMonth != null
+                hasMoreData = true
             )
         }
         
         try {
+            // 3. 🌐 Network Sync: Fetch the latest pointers from Firestore
             val latestMonthId = apiService.getLatestMonthId(userId, forceRefresh)
 
             // 1. Fetch all measurements once (Separate collection)
@@ -207,9 +238,9 @@ class BabyCareRepositoryImpl @Inject constructor(
         val time = (eventMap["time"] as? String) ?: run {
             try {
                 // Try parsing as UTC ISO 8601 first
-                java.time.OffsetDateTime.parse(dateTimeString)
-                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
-                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                OffsetDateTime.parse(dateTimeString)
+                    .atZoneSameInstant(ZoneId.systemDefault())
+                    .format(DateTimeFormatter.ofPattern("HH:mm"))
             } catch (_: Exception) {
                 // Fallback to legacy extraction logic (handles "YYYY-MM-DD HH:mm" or ISO)
                 dateTimeString.substringAfter("T", dateTimeString.substringAfter(" ", "")).take(5)
@@ -280,93 +311,58 @@ class BabyCareRepositoryImpl @Inject constructor(
     }
 
     override suspend fun saveActivityEvent(userId: String, date: String, event: UnifiedEventDto) = withContext(dispatchers.io) {
-        val babyId = getAuthorizedBabyId(userId)
-        if (babyId != null) {
+        // 1. 📂 Update Local DB with pending flag
+        getAuthorizedBabyId(userId)?.let { babyId ->
             babyEventDao.insertEvents(listOf(BabyEventEntity(event.id, babyId, date, event, isPendingSync = true)))
         }
 
-        try {
-            when (event.type) {
-                "MEASUREMENT" -> {
-                    apiService.saveMeasurement(userId, event.id, toMap(event))
-                    _measurements.value = (_measurements.value + event).sortedByDescending { it.dateTimeString }
-                }
-                "VACCINATION" -> {
-                    apiService.saveVaccination(userId, event.id, toMap(event))
-                    _vaccinations.value = (_vaccinations.value + event).sortedByDescending { it.dateTimeString }
-                }
-                else -> {
-                    val monthId = extractMonthString(date)
-                    apiService.saveEvent(userId, monthId, date, toMap(event))
-                }
-            }
-            if (babyId != null) {
-                babyEventDao.insertEvents(listOf(BabyEventEntity(event.id, babyId, date, event, isPendingSync = false)))
-            }
-        } catch (e: Exception) {
-            Log.e("BABYCARE_REPO", "Failed to sync saved event", e)
-        }
+        // 2. 🧠 Update in-memory StateFlows IMMEDIATELY for UI responsiveness
         updateLocalCacheWithNewEvent(date, userId, event)
+
+        // 3. 🌐 Non-blocking network sync
+        try {
+            syncSave(userId, date, event)
+        } catch (e: Exception) {
+            Log.e("BABYCARE_REPO", "Network sync failed for saved event, will retry later", e)
+        }
+        Unit
     }
 
     override suspend fun updateActivityEvent(userId: String, date: String, eventId: String, updatedEvent: UnifiedEventDto) = withContext(dispatchers.io) {
-        val babyId = getAuthorizedBabyId(userId)
-        if (babyId != null) {
+        // 1. 📂 Update Local DB with pending flag
+        getAuthorizedBabyId(userId)?.let { babyId ->
             babyEventDao.insertEvents(listOf(BabyEventEntity(eventId, babyId, date, updatedEvent, isPendingSync = true)))
         }
 
-        try {
-            when (updatedEvent.type) {
-                "MEASUREMENT" -> {
-                    apiService.updateMeasurement(userId, eventId, toMap(updatedEvent))
-                    _measurements.value = _measurements.value.map { if (it.id == eventId) updatedEvent else it }
-                }
-                "VACCINATION" -> {
-                    apiService.updateVaccination(userId, eventId, toMap(updatedEvent))
-                    _vaccinations.value = _vaccinations.value.map { if (it.id == eventId) updatedEvent else it }
-                }
-                else -> {
-                    val monthId = extractMonthString(date)
-                    apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
-                }
-            }
-
-            if (babyId != null) {
-                babyEventDao.insertEvents(listOf(BabyEventEntity(eventId, babyId, date, updatedEvent, isPendingSync = false)))
-            }
-        } catch (e: Exception) {
-            Log.e("BABYCARE_REPO", "Failed to sync updated event", e)
-        }
+        // 2. 🧠 Update in-memory StateFlows IMMEDIATELY
         updateLocalCacheWithModifiedEvent(date, userId, eventId, updatedEvent)
+
+        try {
+            syncSave(userId, date, updatedEvent)
+        } catch (e: Exception) {
+            Log.e("BABYCARE_REPO", "Network sync failed for updated event", e)
+        }
+        Unit
     }
 
     override suspend fun deleteActivityEvent(userId: String, date: String, eventId: String) = withContext(dispatchers.io) {
+        // 1. 📂 Mark as deleted in Local DB
+        val type = _cachedDays.value.asSequence().flatMap { it.events }.firstOrNull { it.id == eventId }?.type
+            ?: _measurements.value.firstOrNull { it.id == eventId }?.type
+            ?: _vaccinations.value.firstOrNull { it.id == eventId }?.type
+            ?: ""
+
         babyEventDao.markDeleted(eventId)
 
-        try {
-            val cachedEvent = _cachedDays.value.asSequence().flatMap { it.events }.firstOrNull { it.id == eventId }
-                ?: _measurements.value.firstOrNull { it.id == eventId }
-                ?: _vaccinations.value.firstOrNull { it.id == eventId }
-
-            when (cachedEvent?.type) {
-                "MEASUREMENT" -> {
-                    apiService.deleteMeasurement(userId, eventId)
-                    _measurements.value = _measurements.value.filterNot { it.id == eventId }
-                }
-                "VACCINATION" -> {
-                    apiService.deleteVaccination(userId, eventId)
-                    _vaccinations.value = _vaccinations.value.filterNot { it.id == eventId }
-                }
-                else -> {
-                    val monthId = extractMonthString(date)
-                    apiService.deleteEvent(userId, monthId, date, eventId)
-                }
-            }
-            babyEventDao.deleteById(eventId)
-        } catch (e: Exception) {
-            Log.e("BABYCARE_REPO", "Failed to sync deleted event", e)
-        }
+        // 2. 🧠 Update in-memory StateFlows IMMEDIATELY
         updateLocalCacheWithDeletedEvent(date, eventId)
+
+        try {
+            syncDelete(userId, date, eventId, type)
+        } catch (e: Exception) {
+            Log.e("BABYCARE_REPO", "Network sync failed for deleted event", e)
+        }
+        Unit
     }
 
     override fun getCurrentDate(): LocalDate = timeProvider.currentLocalDate()
@@ -485,4 +481,3 @@ class BabyCareRepositoryImpl @Inject constructor(
         currentAnchorMonth = null
     }
 }
-

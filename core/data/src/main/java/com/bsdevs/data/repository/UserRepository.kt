@@ -84,8 +84,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun getUser(userId: String, forceRefresh: Boolean): UserDto? = withContext(dispatchers.io) {
         if (!forceRefresh) {
-            val cached = userBabyDao.getUser(userId)
-            if (cached != null) {
+            userBabyDao.getUser(userId)?.let { cached ->
                 _userProfile.value = cached.profile
                 return@withContext cached.profile
             }
@@ -114,8 +113,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun getBaby(babyId: String, forceRefresh: Boolean): BabyDto? = withContext(dispatchers.io) {
         if (!forceRefresh) {
-            val cached = userBabyDao.getBaby(babyId)
-            if (cached != null) {
+            userBabyDao.getBaby(babyId)?.let { cached ->
                 babyCache[babyId] = cached.data
                 return@withContext cached.data
             }
@@ -153,7 +151,7 @@ class UserRepositoryImpl @Inject constructor(
                     return@addSnapshotListener
                 }
                 val babyDto = snapshot?.toObject<BabyDto>()
-                val updatedBaby = (babyDto as? BabyDto)?.copy(id = snapshot?.id ?: babyId)
+                val updatedBaby = (babyDto as? BabyDto)?.copy(id = snapshot.id ?: babyId)
                 updatedBaby?.let { 
                     babyCache[babyId] = it
                     launch { userBabyDao.insertBaby(BabyEntity(babyId, it)) }

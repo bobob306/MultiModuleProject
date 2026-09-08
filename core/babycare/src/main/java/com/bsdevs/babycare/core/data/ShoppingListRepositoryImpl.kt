@@ -1,17 +1,17 @@
-package com.bsdevs.babycare.data
+package com.bsdevs.babycare.core.data
 
-import com.bsdevs.babycare.domain.ShoppingListRepository
-import com.bsdevs.common.DispatcherProvider
-import com.bsdevs.network.FirestoreHolder
 import android.util.Log
-import com.bsdevs.network.dto.ShoppingListDto
-import com.bsdevs.network.dto.ShoppingListDoc
+import com.bsdevs.babycare.core.domain.ShoppingListRepository
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.Syncable
 import com.bsdevs.data.local.dao.ShoppingDao
 import com.bsdevs.data.local.entities.ShoppingItemEntity
 import com.bsdevs.data.repository.Clearable
 import com.bsdevs.data.repository.UserRepository
+import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.network.dto.ShoppingListDoc
+import com.bsdevs.network.dto.ShoppingListDto
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.snapshots
@@ -35,7 +35,7 @@ class ShoppingListRepositoryImpl @Inject constructor(
     private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider,
     private val shoppingDao: ShoppingDao,
-    private val syncManager: SyncManager
+    syncManager: SyncManager
 ) : ShoppingListRepository, Clearable, Syncable {
 
     private val firestore get() = firestoreHolder.firestore
@@ -152,10 +152,6 @@ class ShoppingListRepositoryImpl @Inject constructor(
                     .document(babyId)
                     .update("items.$itemId", FieldValue.delete())
                     .await()
-                
-                // We could delete from DB here or let markDeleted stand. 
-                // Typically we'd delete after successful sync.
-                // But room query for list filters out isDeleted.
             } catch (e: Exception) {
                 Log.e("SHOPPING_REPO", "Failed to sync deleted item", e)
             }

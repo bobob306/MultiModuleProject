@@ -1,5 +1,6 @@
 package com.bsdevs.babycare.presentation.temperature
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,10 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,50 +34,33 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.network.dto.DailyLogDto
-import com.bsdevs.network.dto.UnifiedEventDto
-import com.bsdevs.babycare.presentation.temperature.TemperatureHistoryUiData
-import com.bsdevs.babycare.presentation.temperature.TemperatureItem
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.network.dto.DailyLogDto
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,29 +93,32 @@ class TemperatureDataViewModel @Inject constructor(
         }
     }
 
-    private suspend fun updateHistory(dailyLogs: List<DailyLogDto>) = withContext(dispatchers.default) {
-        val allReadings = dailyLogs.flatMap { day ->
-            day.events
-                .filter { it.type == "TEMPERATURE" }
-                .map { event ->
-                    TemperatureItem(
-                        id = event.id,
-                        date = day.date,
-                        time = event.time,
-                        temperature = event.temperature ?: 37.0,
-                        comment = event.comment
-                    )
-                }
+    private suspend fun updateHistory(dailyLogs: List<DailyLogDto>) =
+        withContext(dispatchers.default) {
+            val allReadings = dailyLogs.flatMap { day ->
+                day.events
+                    .filter { it.type == "TEMPERATURE" }
+                    .map { event ->
+                        TemperatureItem(
+                            id = event.id,
+                            date = day.date,
+                            time = event.time,
+                            temperature = event.temperature ?: 37.0,
+                            comment = event.comment
+                        )
+                    }
+            }
+
+            val grouped = allReadings.groupBy { it.date }
+            val sortedDates = grouped.keys.sortedDescending()
+
+            _uiState.update {
+                it.copy(
+                    dates = sortedDates,
+                    dailyReadings = grouped
+                )
+            }
         }
-
-        val grouped = allReadings.groupBy { it.date }
-        val sortedDates = grouped.keys.sortedDescending()
-
-        _uiState.update { it.copy(
-            dates = sortedDates,
-            dailyReadings = grouped
-        ) }
-    }
 
     fun deleteTemperature(id: String, date: String) {
         val userId = accountService.currentUserId
@@ -165,7 +156,12 @@ fun TemperatureHistoryComponent(
     val scope = rememberCoroutineScope()
 
     if (uiData.dates.isEmpty()) {
-        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            contentAlignment = Alignment.Center
+        ) {
             Text("No temperature records found.")
         }
         return
@@ -174,7 +170,9 @@ fun TemperatureHistoryComponent(
     Column(modifier = Modifier.fillMaxWidth()) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxWidth().height(400.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
             verticalAlignment = Alignment.Top
         ) { pageIndex ->
             val date = uiData.dates[pageIndex]
@@ -226,7 +224,10 @@ fun TemperatureChartComponent(
             onDismissRequest = { isFullScreen = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
                         modifier = Modifier
@@ -235,12 +236,17 @@ fun TemperatureChartComponent(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Daily Trend ($latestDate)", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = "Daily Trend ($latestDate)",
+                            style = MaterialTheme.typography.titleLarge
+                        )
                         IconButton(onClick = { isFullScreen = false }) {
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
-                    Box(modifier = Modifier.weight(1f).padding(16.dp)) {
+                    Box(modifier = Modifier
+                        .weight(1f)
+                        .padding(16.dp)) {
                         TemperatureChart(
                             readings = readings,
                             modifier = Modifier.fillMaxSize()
@@ -251,7 +257,9 @@ fun TemperatureChartComponent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 8.dp, vertical = 16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,7 +268,9 @@ fun TemperatureChartComponent(
             Text(
                 text = "Daily Trend ($latestDate)",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp).padding(horizontal = 16.dp)
+                modifier = Modifier
+                    .padding(bottom = 8.dp)
+                    .padding(horizontal = 16.dp)
             )
             IconButton(onClick = { isFullScreen = true }) {
                 Icon(
@@ -272,7 +282,9 @@ fun TemperatureChartComponent(
         }
         TemperatureChart(
             readings = readings,
-            modifier = Modifier.fillMaxWidth().height(260.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(260.dp)
         )
     }
 }
@@ -310,7 +322,9 @@ internal fun DayNavigationHeader(
             if (parts.size >= 3) {
                 "${parts[2]} ${parts[1]} ${parts[0].substring(2)}"
             } else date
-        } catch (e: Exception) { date }
+        } catch (e: Exception) {
+            date
+        }
 
         Text(
             text = displayDate,
@@ -349,10 +363,12 @@ internal fun TemperatureHistoryItem(
                 onDelete()
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
+
             SwipeToDismissBoxValue.EndToStart -> {
                 onEdit()
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
+
             SwipeToDismissBoxValue.Settled -> {}
         }
     }
@@ -363,8 +379,13 @@ internal fun TemperatureHistoryItem(
             val direction = dismissState.dismissDirection
             if (direction == SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
             val bgColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
-                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(
+                    alpha = 0.5f
+                )
+
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(
+                    alpha = 0.5f
+                )
             }
             val alignment = when (direction) {
                 SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
@@ -397,11 +418,15 @@ internal fun TemperatureHistoryItem(
         modifier = Modifier.padding(vertical = 4.dp)
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onEdit),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Row(
-                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(

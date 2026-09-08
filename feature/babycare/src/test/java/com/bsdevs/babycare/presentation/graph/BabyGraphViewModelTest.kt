@@ -1,9 +1,9 @@
 package com.bsdevs.babycare.presentation.graph
 
 import app.cash.turbine.test
-import com.bsdevs.babycare.data.BabyCareRepositoryImpl
-import com.bsdevs.babycare.data.repository.FakeBabyCareFirestoreService
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.babycare.core.data.BabyCareRepositoryImpl
+import com.bsdevs.babycare.core.testing.FakeBabyCareFirestoreService
+import com.bsdevs.common.TimeProvider
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.BabyEventDao
 import java.time.LocalDate

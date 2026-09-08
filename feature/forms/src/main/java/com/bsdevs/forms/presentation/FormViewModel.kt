@@ -86,12 +86,11 @@ class FormViewModel @Inject constructor(
                                 }
                             }
 
-                            val prefilled = if (entityId != null) {
-                                val userId = userRepository.userProfile.value?.id
-                                if (userId != null) {
-                                    defaults + (formPrefiller.loadExistingValues(userId, schema.submitTarget, entityId) ?: emptyMap())
-                                } else defaults
-                            } else defaults
+                            val prefilled = entityId?.let { eId ->
+                                userRepository.userProfile.value?.id?.let { userId ->
+                                    defaults + (formPrefiller.loadExistingValues(userId, schema.submitTarget, eId) ?: emptyMap())
+                                }
+                            } ?: defaults
 
                             _fieldValues.value = prefilled
                             _formSchema.value = Result.Success(schema)
@@ -122,20 +121,21 @@ class FormViewModel @Inject constructor(
     }
 
     private fun updateDynamicOptions(field: FormFieldData.DropdownFieldData) {
-        val type = field.dynamicOptions?.get("type") ?: return
-        viewModelScope.launch(dispatchers.io) {
-            formRepository.getDynamicOptions(type).collect { options ->
-                _formSchema.update { result ->
-                    if (result is Result.Success) {
-                        val updatedFields = result.data.fields.map { f ->
-                            if (f.fieldKey == field.fieldKey && f is FormFieldData.DropdownFieldData) {
-                                // 🔄 Merge static options with dynamic ones to preserve predefined seeds
-                                val merged = (f.options + options).distinct().sorted()
-                                f.copy(options = merged)
-                            } else f
-                        }
-                        Result.Success(result.data.copy(fields = updatedFields))
-                    } else result
+        field.dynamicOptions?.get("type")?.let { type ->
+            viewModelScope.launch(dispatchers.io) {
+                formRepository.getDynamicOptions(type).collect { options ->
+                    _formSchema.update { result ->
+                        (result as? Result.Success)?.let { success ->
+                            val updatedFields = success.data.fields.map { f ->
+                                if (f.fieldKey == field.fieldKey && f is FormFieldData.DropdownFieldData) {
+                                    // 🔄 Merge static options with dynamic ones to preserve predefined seeds
+                                    val merged = (f.options + options).distinct().sorted()
+                                    f.copy(options = merged)
+                                } else f
+                            }
+                            Result.Success(success.data.copy(fields = updatedFields))
+                        } ?: result
+                    }
                 }
             }
         }
@@ -152,8 +152,8 @@ class FormViewModel @Inject constructor(
             }
             .map { it.label }
 
-        if (missingLabels.isNotEmpty()) {
-            _submitState.value = FormSubmitState.Error("Please fill in: ${missingLabels.joinToString()}")
+        missingLabels.takeIf { it.isNotEmpty() }?.let { labels ->
+            _submitState.value = FormSubmitState.Error("Please fill in: ${labels.joinToString()}")
             return
         }
 

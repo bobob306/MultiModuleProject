@@ -51,9 +51,9 @@ class ScreenRepositoryImpl @Inject constructor(
     override suspend fun getScreenFlow(screen: String, forceRefresh: Boolean): Flow<Result<List<ScreenDto>>> = withContext(dispatchers.io) {
         flow {
             val cached = screenDao.getScreen(screen)
-            if (cached != null) {
-                emit(Result.Success(cached.components))
-                cacheFlowMap[screen] = cached.components
+            cached?.let {
+                emit(Result.Success(it.components))
+                cacheFlowMap[screen] = it.components
             }
 
             if (forceRefresh || cached == null) {

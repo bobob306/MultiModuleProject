@@ -4,8 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
-import com.bsdevs.babycare.presentation.common.TimeProvider
+import com.bsdevs.babycare.core.domain.BabyCareRepository
+import com.bsdevs.common.TimeProvider
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import dagger.hilt.android.lifecycle.HiltViewModel

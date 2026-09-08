@@ -71,8 +71,8 @@ fun MMPScaffold(
                     )
                 },
                 navigationIcon = {
-                    if (onBackClick != null) {
-                        IconButton(onClick = onBackClick) {
+                    onBackClick?.let {
+                        IconButton(onClick = it) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back"

@@ -52,8 +52,8 @@ fun GenericSduiScreen(
         title = title,
         onBackClick = onNavigateBack,
         floatingActionButton = {
-            if (onAddNew != null) {
-                FloatingActionButton(onClick = onAddNew) {
+            onAddNew?.let {
+                FloatingActionButton(onClick = it) {
                     Icon(Icons.Default.Add, contentDescription = "Add New")
                 }
             }

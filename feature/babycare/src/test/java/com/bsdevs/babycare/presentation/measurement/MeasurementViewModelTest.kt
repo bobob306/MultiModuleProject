@@ -3,7 +3,7 @@ package com.bsdevs.babycare.presentation.measurement
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bsdevs.authentication.AccountService
-import com.bsdevs.babycare.domain.BabyCareRepository
+import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.UnifiedEventDto
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
@@ -11,17 +11,13 @@ import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MeasurementViewModelTest {
