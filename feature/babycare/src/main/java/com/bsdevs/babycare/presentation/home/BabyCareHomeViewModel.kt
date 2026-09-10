@@ -18,7 +18,7 @@ import com.bsdevs.network.dto.FeedingDto
 import com.bsdevs.network.dto.MeasurementDto
 import com.bsdevs.network.dto.NappyChangeDto
 import com.bsdevs.network.dto.TemperatureDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -119,11 +119,11 @@ class BabyCareHomeViewModel @Inject constructor(
 
             try {
                 // Fetch the current month document from Firestore
-                // 🚀 Force server check for the initial data to guarantee freshness on app start
+                // 📂 Trust cache first for the initial load to improve startup speed and offline support.
                 val fetchResult = repository.loadInitialData(
                     userId = accountService.currentUserId,
                     pageSize = pageSize,
-                    forceRefresh = true,
+                    forceRefresh = false,
                 )
 
                 // Force switch the state to success immediately, even if the month is brand new/empty
@@ -278,7 +278,7 @@ class BabyCareHomeViewModel @Inject constructor(
     ): BabyCareHomeViewData = withContext(dispatchers.default) {
         val finalizedFeed = mutableListOf<HomeFeedItem>()
 
-        val eventComparator = Comparator<UnifiedEventDto> { a, b ->
+        val eventComparator = Comparator<BabyEvent> { a, b ->
             val instantA = DateTimeUtils.parseToInstant(a.dateTimeString)
             val instantB = DateTimeUtils.parseToInstant(b.dateTimeString)
             instantB.compareTo(instantA) // Newest first
@@ -289,11 +289,11 @@ class BabyCareHomeViewModel @Inject constructor(
             dailyLogs.asSequence().flatMap { it.events }.sortedWith(eventComparator).toList()
 
         val absoluteLastNappy = allEventsFlattened.firstOrNull {
-            it.type == "NAPPY" || it.type == "Wet" || it.type == "Dirty" || it.type == "Both"
+            it is BabyEvent.Nappy
         }?.let { "Last nappy: ${it.time}" }
 
         val absoluteLastFeeding = allEventsFlattened.firstOrNull {
-            it.type == "FEEDING"
+            it is BabyEvent.Feeding
         }?.let { "Last feed: ${it.time}" }
 
         val babyId = userRepository.userProfile.value?.babyId
@@ -317,16 +317,16 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         val lastTempEvent = allEventsFlattened.firstOrNull {
-            (it.type == "TEMPERATURE") && (it.temperature != null) && (it.temperature != 0.0)
-        }
+            it is BabyEvent.Temperature && it.temperature != null && it.temperature != 0.0
+        } as? BabyEvent.Temperature
 
         val absoluteLastTemperature = lastTempEvent?.let {
             "Last temp: ${it.temperature}°C"
         }
 
         val lastMeasurementEvent = allEventsFlattened.firstOrNull {
-            it.type == "MEASUREMENT" && (it.weight != null || it.height != null)
-        }
+            it is BabyEvent.Measurement && (it.weight != null || it.height != null)
+        } as? BabyEvent.Measurement
 
         val absoluteLastMeasurement = lastMeasurementEvent?.let {
             val weight =
@@ -340,7 +340,7 @@ class BabyCareHomeViewModel @Inject constructor(
         }
 
         val absoluteLastVaccination = allEventsFlattened.firstOrNull {
-            it.type == "VACCINATION"
+            it is BabyEvent.Vaccination
         }?.let { "Last vaccine: ${it.time}" }
 
         dailyLogs.forEach { dayLog ->
@@ -352,23 +352,23 @@ class BabyCareHomeViewModel @Inject constructor(
             val visibleEvents = sortedDayEvents.filter { event ->
                 when (filter) {
                     ActivityFilter.NONE -> true
-                    ActivityFilter.NAPPY -> event.type in listOf("NAPPY", "Wet", "Dirty", "Both")
-                    ActivityFilter.FEEDING -> event.type == "FEEDING"
-                    ActivityFilter.TEMPERATURE -> event.type == "TEMPERATURE"
-                    ActivityFilter.MEASUREMENT -> event.type == "MEASUREMENT"
-                    ActivityFilter.VACCINATION -> event.type == "VACCINATION"
+                    ActivityFilter.NAPPY -> event is BabyEvent.Nappy
+                    ActivityFilter.FEEDING -> event is BabyEvent.Feeding
+                    ActivityFilter.TEMPERATURE -> event is BabyEvent.Temperature
+                    ActivityFilter.MEASUREMENT -> event is BabyEvent.Measurement
+                    ActivityFilter.VACCINATION -> event is BabyEvent.Vaccination
                 }
             }
 
-            val feedingCount = visibleEvents.count { it.type == "FEEDING" }
-            val nappyCount = visibleEvents.count { it.type in listOf("NAPPY", "Wet", "Dirty", "Both") }
-            val temperatureCount = visibleEvents.count { it.type == "TEMPERATURE" }
-            val measurementCount = visibleEvents.count { it.type == "MEASUREMENT" }
-            val vaccinationCount = visibleEvents.count { it.type == "VACCINATION" }
+            val feedingCount = visibleEvents.count { it is BabyEvent.Feeding }
+            val nappyCount = visibleEvents.count { it is BabyEvent.Nappy }
+            val temperatureCount = visibleEvents.count { it is BabyEvent.Temperature }
+            val measurementCount = visibleEvents.count { it is BabyEvent.Measurement }
+            val vaccinationCount = visibleEvents.count { it is BabyEvent.Vaccination }
             val displayHeaderTitle = formatHeaderDate(dayLog.date)
 
             val isVitaminDTakenForDay =
-                dayLog.events.any { it.type == "FEEDING" && it.hasVitaminD == true }
+                dayLog.events.any { it is BabyEvent.Feeding && it.hasVitaminD == true }
 
             finalizedFeed.add(
                 HomeFeedItem.Header(
@@ -381,10 +381,22 @@ class BabyCareHomeViewModel @Inject constructor(
                 )
             )
 
+            // 🌟 NEW: Insert Prediction Card if header is "Today" and filter is FEEDING
+            if (displayHeaderTitle == "Today" && filter == ActivityFilter.FEEDING) {
+                baby?.effectivePredictionsByModel?.takeIf { it.isNotEmpty() }?.let { predictions ->
+                    finalizedFeed.add(
+                        HomeFeedItem.PredictionCard(
+                            predictions = predictions,
+                            activeModel = baby.effectiveActiveModel
+                        )
+                    )
+                }
+            }
+
             if (!collapsed.contains(displayHeaderTitle)) {
-                visibleEvents.forEach { unifiedEvent ->
+                visibleEvents.forEach { event ->
                     val babyActivityModel =
-                        mapToBabyActivity(unifiedEvent, dayLog.date, isVitaminDTakenForDay)
+                        mapToBabyActivity(event, dayLog.date, isVitaminDTakenForDay)
                     finalizedFeed.add(HomeFeedItem.ActivityRow(babyActivityModel))
                 }
             }
@@ -406,93 +418,89 @@ class BabyCareHomeViewModel @Inject constructor(
 
 
     private fun mapToBabyActivity(
-        event: UnifiedEventDto,
+        event: BabyEvent,
         parentDate: String,
         isVitaminDTakenForDay: Boolean
     ): BabyActivity {
-        // 🔄 Fix 1: Extract the "HH:mm" time segment dynamically from the dateTimeString if the time field is blank
-        val extractedTime = DateTimeUtils.extractTime(event.time, event.dateTimeString)
-
-        // 🔄 Fix 2: If the type field was corrupted (e.g., set to "Wet"), recognize it as a nappy activity
-        val isNappy =
-            event.type == "NAPPY" || event.type == "Wet" || event.type == "Dirty" || event.type == "Both"
-        val isTemperature = event.type == "TEMPERATURE"
-        val isMeasurement = event.type == "MEASUREMENT"
-        val isVaccination = event.type == "VACCINATION"
-
-        return if (isNappy) {
-            // Fallback: If nappyType is missing because it was saved under 'type', recover it here
-            val correctedNappyType =
-                if (!event.nappyType.isNullOrEmpty()) event.nappyType else event.type
-
-            BabyActivity.Nappy(
-                NappyChangeDto(
-                    id = event.id,
-                    date = parentDate,
-                    time = extractedTime, // ✨ Time is now safely populated
-                    dateTime = event.dateTimeString,
-                    type = correctedNappyType,
-                    comment = event.comment,
+        return when (event) {
+            is BabyEvent.Nappy -> {
+                BabyActivity.Nappy(
+                    NappyChangeDto(
+                        id = event.id,
+                        date = parentDate,
+                        time = event.time,
+                        dateTime = event.dateTimeString,
+                        type = event.nappyType ?: "Nappy",
+                        comment = event.comment,
+                    )
                 )
-            )
-        } else if (isTemperature) {
-            BabyActivity.Temperature(
-                TemperatureDto(
-                    id = event.id,
-                    date = parentDate,
-                    time = extractedTime,
-                    dateTime = event.dateTimeString,
-                    temperature = event.temperature ?: 37.0,
-                    comment = event.comment
+            }
+            is BabyEvent.Temperature -> {
+                BabyActivity.Temperature(
+                    TemperatureDto(
+                        id = event.id,
+                        date = parentDate,
+                        time = event.time,
+                        dateTime = event.dateTimeString,
+                        temperature = event.temperature ?: 37.0,
+                        comment = event.comment
+                    )
                 )
-            )
-        } else if (isMeasurement) {
-            BabyActivity.Measurement(
-                MeasurementDto(
-                    id = event.id,
-                    date = parentDate,
-                    time = extractedTime,
-                    dateTime = event.dateTimeString,
-                    height = event.height,
-                    weight = event.weight,
-                    headCircumference = event.headCircumference,
-                    isMedical = event.isMedical ?: false,
-                    comment = event.comment
+            }
+            is BabyEvent.Measurement -> {
+                BabyActivity.Measurement(
+                    MeasurementDto(
+                        id = event.id,
+                        date = parentDate,
+                        time = event.time,
+                        dateTime = event.dateTimeString,
+                        height = event.height,
+                        weight = event.weight,
+                        headCircumference = event.headCircumference,
+                        isMedical = event.isMedical ?: false,
+                        comment = event.comment
+                    )
                 )
-            )
-        } else if (isVaccination) {
-            BabyActivity.Vaccination(
-                VaccinationDto(
-                    id = event.id,
-                    date = parentDate,
-                    time = extractedTime,
-                    dateTime = event.dateTimeString,
-                    vaccinationNames = event.vaccinationNames ?: emptyList(),
-                    location = event.location,
-                    seriesId = event.seriesId,
-                    comment = event.comment
+            }
+            is BabyEvent.Vaccination -> {
+                BabyActivity.Vaccination(
+                    VaccinationDto(
+                        id = event.id,
+                        date = parentDate,
+                        time = event.time,
+                        dateTime = event.dateTimeString,
+                        vaccinationNames = event.vaccinationNames ?: emptyList(),
+                        location = event.location,
+                        seriesId = event.seriesId,
+                        comment = event.comment
+                    )
                 )
-            )
-        } else {
-            val hasVitaminD = event.hasVitaminD ?: false
-            val showToggle = !isVitaminDTakenForDay || hasVitaminD
+            }
+            is BabyEvent.Feeding -> {
+                val hasVitaminD = event.hasVitaminD ?: false
+                val showToggle = !isVitaminDTakenForDay || hasVitaminD
 
-            BabyActivity.Feeding(
-                dto = FeedingDto(
-                    id = event.id,
-                    date = parentDate,
-                    startTime = extractedTime,
-                    dateTime = event.dateTimeString,
-                    mainFeedingSide = event.mainFeedingSide,
-                    leftDuration = event.leftDuration,
-                    rightDuration = event.rightDuration,
-                    totalDuration = event.totalDuration,
-                    bottleAmountMl = event.bottleAmountMl,
-                    comment = event.comment,
-                    hasVitaminD = hasVitaminD
-                ),
-                showVitaminDToggle = showToggle
-            )
+                BabyActivity.Feeding(
+                    dto = FeedingDto(
+                        id = event.id,
+                        date = parentDate,
+                        startTime = event.time,
+                        dateTime = event.dateTimeString,
+                        mainFeedingSide = event.mainFeedingSide,
+                        leftDuration = event.leftDuration,
+                        rightDuration = event.rightDuration,
+                        totalDuration = event.totalDuration,
+                        bottleAmountMl = event.bottleAmountMl,
+                        comment = event.comment,
+                        hasVitaminD = hasVitaminD
+                    ),
+                    showVitaminDToggle = showToggle
+                )
+            }
+            else -> {
+                // Fallback for Unknown or VitaminD (if handled separately)
+                BabyActivity.Nappy(NappyChangeDto(id = event.id, date = parentDate, type = "Unknown"))
+            }
         }
     }
 
@@ -501,7 +509,7 @@ class BabyCareHomeViewModel @Inject constructor(
             // Safe check: extract just the YYYY-MM-DD segment if it contains time info (handles space or T)
             val cleanDateStr = dateString.substringBefore("T").substringBefore(" ")
             val targetDate = LocalDate.parse(cleanDateStr)
-            val today = LocalDate.now()
+            val today = repository.getCurrentDate()
 
             when (targetDate) {
                 today -> "Today"

@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
 import io.mockk.*
@@ -42,7 +42,7 @@ class MeasurementViewModelTest {
         }
         repository = mockk(relaxed = true)
         userRepository = mockk(relaxed = true)
-        every { repository.measurements } returns MutableStateFlow(emptyList<UnifiedEventDto>())
+        every { repository.measurements } returns MutableStateFlow(emptyList<BabyEvent.Measurement>())
         every { userRepository.userProfile } returns MutableStateFlow(null)
         coEvery { repository.saveActivityEvent(any(), any(), any()) } just Runs
         coEvery { repository.updateActivityEvent(any(), any(), any(), any()) } just Runs
@@ -72,9 +72,8 @@ class MeasurementViewModelTest {
     fun `init with activityId loads measurement from repository`() = runTest {
         // Given
         val activityId = "m1"
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Measurement(
             id = activityId,
-            type = "MEASUREMENT",
             time = "10:00",
             dateTimeString = "2026-08-26 10:00",
             height = 52.0,
@@ -150,7 +149,7 @@ class MeasurementViewModelTest {
     fun `submitMeasurement updates existing measurement in repository`() = runTest {
         // Given
         val activityId = "m1"
-        val event = UnifiedEventDto(id = activityId, type = "MEASUREMENT", dateTimeString = "2026-08-26 10:00")
+        val event = BabyEvent.Measurement(id = activityId, dateTimeString = "2026-08-26 10:00")
         coEvery { repository.getMeasurementEventById(any(), any()) } returns event
         
         createViewModel(activityId)
@@ -176,7 +175,7 @@ class MeasurementViewModelTest {
     fun `deleteMeasurement removes measurement from repository`() = runTest {
         // Given
         val activityId = "m1"
-        val event = UnifiedEventDto(id = activityId, type = "MEASUREMENT", dateTimeString = "2026-08-26 10:00")
+        val event = BabyEvent.Measurement(id = activityId, dateTimeString = "2026-08-26 10:00")
         coEvery { repository.getMeasurementEventById(any(), any()) } returns event
         
         createViewModel(activityId)

@@ -8,7 +8,7 @@ import com.bsdevs.network.dto.FormSubmissionDto
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.CoffeeDto
 
 @Entity(tableName = "screens")
@@ -47,7 +47,7 @@ data class BabyEventEntity(
     @PrimaryKey val id: String,
     val babyId: String,
     val date: String,
-    val event: UnifiedEventDto,
+    val event: BabyEvent,
     val lastUpdated: Long = System.currentTimeMillis(),
     val isPendingSync: Boolean = false,
     val isDeleted: Boolean = false

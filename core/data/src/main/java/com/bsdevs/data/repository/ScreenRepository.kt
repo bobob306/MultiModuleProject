@@ -10,6 +10,7 @@ import com.bsdevs.network.ScreenDtoMapper
 import com.bsdevs.network.dto.ScreenDto
 import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.Source
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -59,7 +60,8 @@ class ScreenRepositoryImpl @Inject constructor(
             if (forceRefresh || cached == null) {
                 try {
                     Log.d("FIREBASE_CALL", "Read Screen: $screen (Force: $forceRefresh)")
-                    val source = if (forceRefresh) com.google.firebase.firestore.Source.SERVER else com.google.firebase.firestore.Source.DEFAULT
+                    // Use DEFAULT source. Firestore attempts SERVER first, then CACHE gracefully.
+                    val source = Source.DEFAULT
                     val snapshot = scr.document(screen).get(source).await()
                     val document = snapshot.data
                     

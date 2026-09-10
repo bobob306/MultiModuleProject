@@ -10,7 +10,7 @@ import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.local.entities.BabyEventEntity
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.DailyLogDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.UserDto
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -72,12 +72,12 @@ class BabyCareRepositoryImplTest {
     @Test
     fun `loadInitialData loads from DB when offline or starting`() = runTest {
         val date = "2026-08-26"
-        val localEvent = UnifiedEventDto(id = "local1", type = "FEEDING")
+        val localEvent = BabyEvent.Feeding(id = "local1")
         val entity = BabyEventEntity("local1", babyId, date, localEvent)
         coEvery { babyEventDao.getEvents(babyId) } returns flowOf(listOf(entity))
         
         // Ensure fake service has the month so it doesn't clear cache
-        fakeService.injectMonth(userId, "2026-08", mutableMapOf("days" to mutableMapOf(date to listOf(mapOf("id" to "local1")))))
+        fakeService.injectMonth(userId, "2026-08", mutableMapOf("days" to mutableMapOf(date to listOf(mapOf("id" to "local1", "type" to "FEEDING")))))
 
         repository.loadInitialData(userId, 2)
 
@@ -89,7 +89,7 @@ class BabyCareRepositoryImplTest {
     @Test
     fun `saveActivityEvent inserts into DB with pending sync flag`() = runTest {
         val date = "2026-08-26"
-        val event = UnifiedEventDto(id = "e1", type = "FEEDING")
+        val event = BabyEvent.Feeding(id = "e1")
 
         repository.saveActivityEvent(userId, date, event)
 
@@ -99,7 +99,7 @@ class BabyCareRepositoryImplTest {
     @Test
     fun `saveActivityEvent updates local state immediately even if network fails`() = runTest {
         val date = "2026-08-26"
-        val event = UnifiedEventDto(id = "offline_id", type = "FEEDING")
+        val event = BabyEvent.Feeding(id = "offline_id")
         
         val crashingService = mockk<BabyCareFirestoreService>()
         coEvery { crashingService.saveEvent(any(), any(), any(), any()) } throws RuntimeException("No Network")
@@ -129,7 +129,7 @@ class BabyCareRepositoryImplTest {
 
     @Test
     fun `sync pushes pending events to firestore`() = runTest {
-        val event = UnifiedEventDto(id = "pending1", type = "FEEDING")
+        val event = BabyEvent.Feeding(id = "pending1")
         val entity = BabyEventEntity("pending1", babyId, "2026-08-26", event, isPendingSync = true)
         coEvery { babyEventDao.getPendingSync() } returns listOf(entity)
 

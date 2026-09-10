@@ -62,10 +62,126 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
+import androidx.compose.ui.unit.Dp
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AnalysisFilterComponent(
+    uiState: FeedingGraphUiState,
+    onFilterChanged: (DateFilter) -> Unit,
+    onShowDatePicker: (Boolean) -> Unit
+) {
+    if (uiState.showDatePicker) {
+        val selectableDates = remember(uiState.availableDates) {
+            object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val date = Instant.ofEpochMilli(utcTimeMillis)
+                        .atZone(ZoneId.of("UTC"))
+                        .toLocalDate()
+                    return uiState.availableDates.contains(date)
+                }
+            }
+        }
+        
+        val dateRangePickerState = rememberDateRangePickerState(
+            selectableDates = selectableDates
+        )
+
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        DatePickerDialog(
+            onDismissRequest = { onShowDatePicker(false) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val start = dateRangePickerState.selectedStartDateMillis?.let { 
+                        Instant.ofEpochMilli(it).atZone(ZoneId.of("UTC")).toLocalDate() 
+                    }
+                    val end = dateRangePickerState.selectedEndDateMillis?.let { 
+                        Instant.ofEpochMilli(it).atZone(ZoneId.of("UTC")).toLocalDate() 
+                    }
+                    if (start != null && end != null) {
+                        onFilterChanged(DateFilter.CustomRange(start, end))
+                    } else {
+                        onShowDatePicker(false)
+                    }
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { onShowDatePicker(false) }) {
+                    Text("Cancel")
+                }
+            },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = !isLandscape,
+                dismissOnClickOutside = true
+            )
+        ) {
+            DateRangePicker(
+                state = dateRangePickerState,
+                modifier = if (isLandscape) Modifier.weight(1f) else Modifier.heightIn(max = 500.dp),
+                title = { Text("Select Date Range", modifier = Modifier.padding(16.dp)) },
+                showModeToggle = false
+            )
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FilterChip(
+            selected = uiState.dateFilter is DateFilter.LastNDays && (uiState.dateFilter as DateFilter.LastNDays).days == 7,
+            onClick = { onFilterChanged(DateFilter.LastNDays(7)) },
+            label = { Text("Last 7 Days") }
+        )
+        FilterChip(
+            selected = uiState.dateFilter is DateFilter.LastNDays && (uiState.dateFilter as DateFilter.LastNDays).days == 30,
+            onClick = { onFilterChanged(DateFilter.LastNDays(30)) },
+            label = { Text("Last 30 Days") }
+        )
+        FilterChip(
+            selected = uiState.dateFilter is DateFilter.AllTime,
+            onClick = { onFilterChanged(DateFilter.AllTime) },
+            label = { Text("All Time") }
+        )
+        FilterChip(
+            selected = uiState.dateFilter is DateFilter.CustomRange,
+            onClick = { onShowDatePicker(true) },
+            label = {
+                val text = if (uiState.dateFilter is DateFilter.CustomRange) {
+                    val filter = uiState.dateFilter as DateFilter.CustomRange
+                    "${filter.start.format(DateTimeFormatter.ofPattern("dd/MM"))} - ${filter.end.format(DateTimeFormatter.ofPattern("dd/MM"))}"
+                } else "Custom Range"
+                Text(text)
+            }
+        )
+    }
+}
 
 @Composable
 fun FeedingFrequencyChartComponent(
@@ -119,13 +235,13 @@ fun FeedingFrequencyChartComponent(
 
 @Composable
 fun FeedingGapChartComponent(
-    uiState: FeedingGraphUiState
+    uiState: FeedingGraphUiState,
+    onSetFullScreen: (Boolean) -> Unit,
+    onSelectIndex: (Int?) -> Unit
 ) {
-    var isFullScreen by rememberSaveable { mutableStateOf(false) }
-
-    if (isFullScreen) {
+    if (uiState.isGapChartFullScreen) {
         Dialog(
-            onDismissRequest = { isFullScreen = false },
+            onDismissRequest = { onSetFullScreen(false) },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -138,14 +254,18 @@ fun FeedingGapChartComponent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(text = "Average Gap Between Feeds", style = MaterialTheme.typography.titleLarge)
-                        IconButton(onClick = { isFullScreen = false }) {
+                        IconButton(onClick = { onSetFullScreen(false) }) {
                             Icon(Icons.Default.Close, contentDescription = "Close")
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
                         DailyAverageGapSection(
                             dailyGaps = uiState.dailyAverageGaps,
-                            chartHeight = 0.dp
+                            chartHeight = 0.dp,
+                            selectedIndex = uiState.selectedGapIndex,
+                            onSelectIndex = onSelectIndex,
+                            fixedStartDate = uiState.startDate,
+                            fixedEndDate = uiState.endDate
                         )
                     }
                 }
@@ -164,7 +284,7 @@ fun FeedingGapChartComponent(
                 modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Center)
             )
             IconButton(
-                onClick = { isFullScreen = true },
+                onClick = { onSetFullScreen(true) },
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Icon(
@@ -190,7 +310,11 @@ fun FeedingGapChartComponent(
         } else {
             DailyAverageGapSection(
                 dailyGaps = uiState.dailyAverageGaps,
-                chartHeight = 260.dp
+                chartHeight = 260.dp,
+                selectedIndex = uiState.selectedGapIndex,
+                onSelectIndex = onSelectIndex,
+                fixedStartDate = uiState.startDate,
+                fixedEndDate = uiState.endDate
             )
         }
     }
@@ -199,7 +323,11 @@ fun FeedingGapChartComponent(
 @Composable
 fun DailyAverageGapSection(
     dailyGaps: List<DailyAverageGap>,
-    chartHeight: androidx.compose.ui.unit.Dp = 260.dp
+    chartHeight: Dp = 260.dp,
+    selectedIndex: Int?,
+    onSelectIndex: (Int?) -> Unit,
+    fixedStartDate: LocalDate? = null,
+    fixedEndDate: LocalDate? = null
 ) {
     if (dailyGaps.isEmpty()) return
 
@@ -208,17 +336,16 @@ fun DailyAverageGapSection(
     val axisLabelColor = labelColor
     val lineColor = MaterialTheme.colorScheme.tertiary
 
-    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
     val sortedGaps = remember(dailyGaps) {
         dailyGaps.mapNotNull { gap ->
-            try { gap to LocalDate.parse(gap.dateString, formatter) } catch (e: Exception) { null }
+            gap.date?.let { gap to it }
         }.sortedBy { it.second }
     }
 
     if (sortedGaps.isEmpty()) return
 
-    val minDate = sortedGaps.first().second
-    val maxDate = sortedGaps.last().second
+    val minDate = fixedStartDate ?: sortedGaps.first().second
+    val maxDate = fixedEndDate ?: sortedGaps.last().second
     val totalDaysSpan = ChronoUnit.DAYS.between(minDate, maxDate).coerceAtLeast(1L)
     
     val bottomAxisSpace = 32.dp
@@ -250,7 +377,6 @@ fun DailyAverageGapSection(
         var scaleFactorX by rememberSaveable { mutableFloatStateOf(scaleToFit) }
         var scaleFactorY by rememberSaveable { mutableFloatStateOf(1.0f) }
         var pinchWeights by remember { mutableStateOf(Offset(1f, 1f)) }
-        var selectedIndex by rememberSaveable { mutableStateOf<Int?>(null) }
 
         val transformState = rememberTransformableState { zoomChange, _, _ ->
             scaleFactorX = (scaleFactorX * (1f + (zoomChange - 1f) * pinchWeights.x)).coerceIn(minScale, 15f)
@@ -357,7 +483,7 @@ fun DailyAverageGapSection(
                                             bestIndex = index
                                         }
                                     }
-                                    selectedIndex = if (bestIndex == selectedIndex) null else bestIndex
+                                    onSelectIndex(if (bestIndex == selectedIndex) null else bestIndex)
                                 }
                             }
                     ) {

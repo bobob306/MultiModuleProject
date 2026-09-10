@@ -179,7 +179,7 @@ class BabyCareHomeViewModelTest {
     @Test
     fun `toggling header collapse hides activity rows`() = runTest {
         // Given
-        val today = LocalDate.now().toString()
+        val today = "2026-09-01"
         val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$today 10:00")
         fakeService.injectMonth(userId, today.substring(0, 7), mapOf("days" to mapOf(today to listOf(feeding))))
         
@@ -427,6 +427,36 @@ class BabyCareHomeViewModelTest {
             // Range: 13:00 +/- 20 mins = 12:40 - 13:20
             assertEquals("Next: 12:40 - 13:20", data.nextFeedingPrediction)
         }
+    }
+
+    @Test
+    fun `processFeed inserts prediction card when filtered to FEEDING on current day`() = runTest {
+        // Given: Today is 2026-09-01 (mocked in setUp)
+        val today = "2026-09-01"
+        val feeding = mapOf("id" to "f1", "type" to "FEEDING", "time" to "10:00", "dateTimeString" to "$today 10:00")
+        fakeService.injectMonth(userId, "2026-09", mapOf("days" to mapOf(today to listOf(feeding))))
+        
+        // Mock baby with predictions
+        val predictions = mapOf("model1" to "2026-09-01T13:00:00Z", "model2" to "2026-09-01T14:00:00Z")
+        val baby = BabyDto(id = "b1", predictionsByModel = predictions, activeModel = "model1")
+        coEvery { userRepo.getBaby(any(), any()) } returns baby
+        every { userRepo.userProfile.value } returns UserDto(babyId = "b1")
+
+        viewModel.refreshData()
+
+        // When
+        viewModel.toggleActivityFilter(ActivityFilter.FEEDING)
+
+        // Then
+        val result = viewModel.viewData.value as Result.Success
+        val items = result.data.activityFeed
+        
+        // Should have: Header("Today"), PredictionCard, ActivityRow
+        assertTrue(items[0] is HomeFeedItem.Header)
+        assertTrue(items[1] is HomeFeedItem.PredictionCard)
+        assertEquals(predictions, (items[1] as HomeFeedItem.PredictionCard).predictions)
+        assertEquals("model1", (items[1] as HomeFeedItem.PredictionCard).activeModel)
+        assertTrue(items[2] is HomeFeedItem.ActivityRow)
     }
 
     @Test

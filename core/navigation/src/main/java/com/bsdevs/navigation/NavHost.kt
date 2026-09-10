@@ -9,6 +9,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.navigation.navOptions
 import com.bsdevs.babycare.presentation.navigation.babyCareSection
 import com.bsdevs.babycare.presentation.navigation.navigateToBabyCareHome
 import com.bsdevs.coffeescreen.navigation.coffeeScreenSection
@@ -93,13 +94,26 @@ fun MMPNavHost(
             splashScreenSection(
                 onShowSnackBar,
                 onNavigateToBabyHome = {
+                    val navOptions = navOptions {
+                        popUpTo(SplashScreenBaseRoute) {
+                            inclusive = true
+                        }
+                    }
                     if (userRoles.contains("parent")) {
-                        navController.navigateToBabyCareHome()
+                        navController.navigateToBabyCareHome(navOptions)
                     } else {
-                        navController.navigate(HomeScreenBaseRoute)
+                        navController.navigate(HomeScreenBaseRoute, navOptions)
                     }
                 },
-                onNavigateToSignIn = navController::navigateToLoginScreen,
+                onNavigateToSignIn = {
+                    navController.navigateToLoginScreen(
+                        navOptions {
+                            popUpTo(SplashScreenBaseRoute) {
+                                inclusive = true
+                            }
+                        }
+                    )
+                },
             )
             babyCareSection(
                 navController = navController,

@@ -92,7 +92,8 @@ class UserRepositoryImpl @Inject constructor(
 
         try {
             Log.d("FIREBASE_CALL", "Read User: $userId (Force: $forceRefresh)")
-            val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+            // Use DEFAULT to allow Firestore to handle offline fallback gracefully.
+            val source = Source.DEFAULT
             val snapshot = firestore.collection("users").document(userId).get(source).await()
             val userDto = snapshot.toObject<UserDto>()
             val updatedUser = userDto?.copy(id = snapshot.id)
@@ -103,11 +104,9 @@ class UserRepositoryImpl @Inject constructor(
             _userProfile.value = updatedUser
             updatedUser
         } catch (e: Exception) {
-            Log.e("USER_REPO", "Failed to fetch user $userId", e)
-            if (forceRefresh) {
-                // Fallback to cache
-                userBabyDao.getUser(userId)?.profile
-            } else null
+            Log.w("USER_REPO", "Failed to fetch user $userId", e)
+            // Fallback to Room cache if Firestore fetch fails
+            userBabyDao.getUser(userId)?.profile
         }
     }
 
@@ -121,7 +120,7 @@ class UserRepositoryImpl @Inject constructor(
         
         try {
             Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
-            val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+            val source = Source.DEFAULT
             val snapshot = firestore.collection("babies").document(babyId).get(source).await()
             val babyDto = snapshot.toObject<BabyDto>()
             val updatedBaby = babyDto?.copy(id = snapshot.id)
@@ -132,10 +131,8 @@ class UserRepositoryImpl @Inject constructor(
             }
             updatedBaby
         } catch (e: Exception) {
-            Log.e("USER_REPO", "Failed to fetch baby $babyId", e)
-            if (forceRefresh) {
-                userBabyDao.getBaby(babyId)?.data
-            } else null
+            Log.w("USER_REPO", "Failed to fetch baby $babyId", e)
+            userBabyDao.getBaby(babyId)?.data
         }
     }
 

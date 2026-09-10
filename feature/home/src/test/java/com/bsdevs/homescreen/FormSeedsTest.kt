@@ -14,7 +14,7 @@ import org.junit.Test
  * =====================
  * 1. Add a new `val yourForm: Map<String, Any>` to [FormSeeds] with the required structure:
  *    - "title"              : String  - shown in the form's top bar
- *    - "submitTarget"       : String  - routing key in FormSubmitRouter; add a matching branch there
+ *    - "submitTarget"       : String  - routing key in FormSubmitterImpl; add a matching branch there
  *    - "submitDestination"  : String  - nav destination after submit ("home", "coffee_home", "baby_home")
  *    - "deletable"          : Boolean - shows the Delete button when editing an existing record
  *    - "fields"             : List    - ordered list of field maps (see field types below)
@@ -22,7 +22,7 @@ import org.junit.Test
  * 2. Add `formRepository.seedFormIfAbsent("yourFormId", FormSeeds.yourForm)` in
  *    HomeScreenViewModel.seedForms().
  *
- * 3. Add a matching when-branch in FormSubmitRouter.submit() for "yourFormId".
+ * 3. Add a matching when-branch in FormSubmitterImpl.submit() for "yourFormId".
  *
  * 4. If the form supports edit/delete, add matching branches in FormPrefillerImpl
  *    and FormDeleterImpl.

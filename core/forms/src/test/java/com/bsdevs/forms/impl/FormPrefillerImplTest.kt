@@ -1,7 +1,7 @@
 package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.network.dto.CoffeeDto
 import io.mockk.coEvery
@@ -62,8 +62,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `nappyLog maps time, nappyType, comment and date`() = runTest {
-        coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns UnifiedEventDto(
-            type = "NAPPY",
+        coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns BabyEvent.Nappy(
             time = "10:30",
             dateTimeString = "2026-08-31 10:30",
             nappyType = "Wet",
@@ -91,8 +90,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `temperatureLog maps time, temperature and date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
-            type = "TEMPERATURE",
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns BabyEvent.Temperature(
             time = "09:30",
             dateTimeString = "2026-08-31 09:30",
             temperature = 37.2,
@@ -107,8 +105,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `temperatureLog maps from ISO dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
-            type = "TEMPERATURE",
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns BabyEvent.Temperature(
             time = "09:30",
             dateTimeString = "2026-08-31T09:30:00Z",
             temperature = 37.2,
@@ -119,7 +116,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `temperatureLog returns null when event type is not TEMPERATURE`() = runTest {
-        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(type = "NAPPY")
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns null // Mocking incorrect type via null or specific subclass
         assertNull(prefiller.loadExistingValues("u", "temperatureLog", "t1"))
     }
 
@@ -133,8 +130,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `measurementLog maps height and weight from wheel int conversion`() = runTest {
-        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns UnifiedEventDto(
-            type = "MEASUREMENT",
+        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns BabyEvent.Measurement(
             time = "10:00",
             dateTimeString = "2026-08-31 10:00",
             height = 65.0,
@@ -154,8 +150,8 @@ class FormPrefillerImplTest {
 
     @Test
     fun `measurementLog omits height fields when height is null`() = runTest {
-        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns UnifiedEventDto(
-            type = "MEASUREMENT", time = "10:00", dateTimeString = "2026-08-31 10:00",
+        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns BabyEvent.Measurement(
+            time = "10:00", dateTimeString = "2026-08-31 10:00",
             height = null, weight = 8.0,
         )
         val result = prefiller.loadExistingValues("u", "measurementLog", "m1")!!
@@ -174,8 +170,7 @@ class FormPrefillerImplTest {
 
     @Test
     fun `vaccinationLog maps all fields correctly`() = runTest {
-        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns UnifiedEventDto(
-            type = "VACCINATION",
+        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns BabyEvent.Vaccination(
             time = "10:30",
             dateTimeString = "2026-08-31 10:30",
             vaccinationNames = listOf("HepB"),

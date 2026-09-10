@@ -22,6 +22,7 @@ import com.bsdevs.babycare.presentation.common.BabyActivity
 import com.bsdevs.babycare.presentation.common.GenericSduiScreen
 import com.bsdevs.babycare.presentation.feeding.FeedingScreenRoute
 import com.bsdevs.babycare.presentation.graph.BabyGraphViewModel
+import com.bsdevs.babycare.presentation.graph.AnalysisFilterComponent
 import com.bsdevs.babycare.presentation.graph.FeedingFrequencyChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingGapChartComponent
 import com.bsdevs.babycare.presentation.graph.FeedingInsightComponent
@@ -247,12 +248,25 @@ fun NavGraphBuilder.babyCareSection(
                 lazyFeatureContent = { item ->
                     when (item) {
                         is NetworkScreenData.FeedingFrequencyChartDataNetwork -> {
-                            item { FeedingFrequencyChartComponent(uiState = graphUiState) }
+                            item { 
+                                AnalysisFilterComponent(
+                                    uiState = graphUiState,
+                                    onFilterChanged = graphViewModel::onDateFilterChanged,
+                                    onShowDatePicker = graphViewModel::setShowDatePicker
+                                )
+                                FeedingFrequencyChartComponent(uiState = graphUiState) 
+                            }
                             true
                         }
 
                         is NetworkScreenData.FeedingGapChartDataNetwork -> {
-                            item { FeedingGapChartComponent(uiState = graphUiState) }
+                            item { 
+                                FeedingGapChartComponent(
+                                    uiState = graphUiState,
+                                    onSetFullScreen = graphViewModel::setGapChartFullScreen,
+                                    onSelectIndex = graphViewModel::setSelectedGapIndex
+                                ) 
+                            }
                             true
                         }
 

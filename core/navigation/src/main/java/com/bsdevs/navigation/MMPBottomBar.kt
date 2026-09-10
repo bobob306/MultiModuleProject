@@ -1,11 +1,6 @@
 package com.bsdevs.navigation
 
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,41 +22,11 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.bsdevs.babycare.presentation.navigation.BabyCareBaseRoute
-import com.bsdevs.babycare.presentation.navigation.BabyCareHomeRoute
-import com.bsdevs.babycare.presentation.navigation.ShoppingListBaseRoute
-import com.bsdevs.babycare.presentation.navigation.ShoppingListRoute
-import com.bsdevs.coffeescreen.navigation.CoffeeHomeScreenRoute
-import com.bsdevs.coffeescreen.navigation.CoffeeScreenBaseRoute
-import com.bsdevs.homescreen.navigation.HomeScreenBaseRoute
-import com.bsdevs.homescreen.navigation.HomeScreenRoute
-import com.bsdevs.homescreen.navigation.SettingsBaseRoute
-import com.bsdevs.homescreen.navigation.SettingsRoute
-import kotlin.reflect.KClass
-
-sealed class BottomNavItem(
-    val route: Any,
-    val baseRoute: KClass<*>,
-    val icon: Any,
-    val label: String,
-) {
-    object Home : BottomNavItem(HomeScreenRoute, HomeScreenBaseRoute::class, Icons.Default.Home, "Home")
-    object Coffee : BottomNavItem(CoffeeHomeScreenRoute, CoffeeScreenBaseRoute::class, R.drawable.ic_coffee_bean, "Coffee")
-    object ShoppingList : BottomNavItem(ShoppingListRoute, ShoppingListBaseRoute::class, Icons.Default.ShoppingCart, "Shopping List")
-    object Baby : BottomNavItem(BabyCareHomeRoute, BabyCareBaseRoute::class, Icons.Default.Face, "Baby")
-    object Settings : BottomNavItem(SettingsRoute, SettingsBaseRoute::class, Icons.Default.Settings, "Settings")
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MMPBottomBar(navController: NavHostController, userRoles: List<String>) {
-    val items = listOfNotNull(
-        BottomNavItem.Home,
-        BottomNavItem.Coffee.takeIf { "coffee" in userRoles },
-        BottomNavItem.ShoppingList.takeIf { "shopping_list" in userRoles },
-        BottomNavItem.Baby.takeIf { "parent" in userRoles },
-        BottomNavItem.Settings
-    )
+    val items = getNavItems(userRoles)
     NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination

@@ -7,7 +7,8 @@ import com.bsdevs.common.TimeProvider
 import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.BabyEventDao
 import java.time.LocalDate
-import com.bsdevs.network.dto.UnifiedEventDto
+import androidx.lifecycle.SavedStateHandle
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.dto.UserDto
@@ -66,7 +67,7 @@ class BabyGraphViewModelTest {
             babyEventDao = babyEventDao,
             syncManager = syncManager
         )
-        viewModel = BabyGraphViewModel(repository, dispatchers)
+        viewModel = BabyGraphViewModel(repository, dispatchers, SavedStateHandle())
     }
 
     @After
@@ -87,16 +88,14 @@ class BabyGraphViewModelTest {
     fun `uiState updates when repository emits data`() = runTest {
         // Given
         val date = "2026-08-26"
-        val event1 = UnifiedEventDto(
+        val event1 = BabyEvent.Feeding(
             id = "e1",
-            type = "FEEDING",
             time = "10:00",
             dateTimeString = "$date 10:00",
             totalDuration = 600L // 10 mins
         )
-        val event2 = UnifiedEventDto(
+        val event2 = BabyEvent.Feeding(
             id = "e2",
-            type = "FEEDING",
             time = "14:00",
             dateTimeString = "$date 14:00",
             totalDuration = 600L // 10 mins
@@ -125,8 +124,8 @@ class BabyGraphViewModelTest {
         // Given feedings over multiple days to trigger rolling average (needs >= 3 days for current logic)
         val days = listOf("2026-08-01", "2026-08-02", "2026-08-03")
         days.forEachIndexed { index, date ->
-            val e1 = UnifiedEventDto(id = "a$index", type = "FEEDING", time = "08:00", dateTimeString = "$date 08:00")
-            val e2 = UnifiedEventDto(id = "b$index", type = "FEEDING", time = "12:00", dateTimeString = "$date 12:00")
+            val e1 = BabyEvent.Feeding(id = "a$index", time = "08:00", dateTimeString = "$date 08:00")
+            val e2 = BabyEvent.Feeding(id = "b$index", time = "12:00", dateTimeString = "$date 12:00")
             repository.saveActivityEvent(userId, date, e1)
             repository.saveActivityEvent(userId, date, e2)
         }
@@ -151,11 +150,11 @@ class BabyGraphViewModelTest {
         val date = "2026-08-26"
         
         // Gap of 10 minutes (too short)
-        repository.saveActivityEvent(userId, date, UnifiedEventDto(id = "1", type = "FEEDING", time = "10:00", dateTimeString = "$date 10:00"))
-        repository.saveActivityEvent(userId, date, UnifiedEventDto(id = "2", type = "FEEDING", time = "10:10", dateTimeString = "$date 10:10"))
+        repository.saveActivityEvent(userId, date, BabyEvent.Feeding(id = "1", time = "10:00", dateTimeString = "$date 10:00"))
+        repository.saveActivityEvent(userId, date, BabyEvent.Feeding(id = "2", time = "10:10", dateTimeString = "$date 10:10"))
         
         // Gap of 13 hours (780 mins, too long)
-        repository.saveActivityEvent(userId, date, UnifiedEventDto(id = "3", type = "FEEDING", time = "23:10", dateTimeString = "$date 23:10"))
+        repository.saveActivityEvent(userId, date, BabyEvent.Feeding(id = "3", time = "23:10", dateTimeString = "$date 23:10"))
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
@@ -168,7 +167,7 @@ class BabyGraphViewModelTest {
     fun `handles malformed time strings gracefully`() = runTest {
         val date = "2026-08-26"
         
-        repository.saveActivityEvent(userId, date, UnifiedEventDto(id = "e1", type = "FEEDING", time = "invalid", dateTimeString = "$date invalid"))
+        repository.saveActivityEvent(userId, date, BabyEvent.Feeding(id = "e1", time = "invalid", dateTimeString = "$date invalid"))
         
         viewModel.uiState.test {
             val state = expectMostRecentItem()

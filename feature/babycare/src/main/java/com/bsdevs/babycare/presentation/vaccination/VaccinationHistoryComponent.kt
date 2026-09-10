@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class VaccinationGroup(
@@ -63,21 +64,23 @@ class VaccinationDataViewModel @Inject constructor(
 
     val groupedVaccinations: StateFlow<List<VaccinationGroup>> = repository.vaccinations
         .map { allVaccinations ->
-            allVaccinations.map { event ->
-                VaccinationDto(
-                    id = event.id,
-                    date = event.dateTimeString.substringBefore("T").substringBefore(" "),
-                    time = event.time,
-                    dateTime = event.dateTimeString,
-                    vaccinationNames = event.vaccinationNames ?: emptyList(),
-                    location = event.location,
-                    seriesId = event.seriesId,
-                    comment = event.comment
-                )
-            }.groupBy { it.seriesId }
-                .map { (seriesId, vaccines) ->
-                    VaccinationGroup(seriesId, vaccines.sortedBy { it.dateTime })
-                }.sortedByDescending { it.vaccinations.lastOrNull()?.dateTime ?: "" }
+            withContext(dispatchers.default) {
+                allVaccinations.map { event ->
+                    VaccinationDto(
+                        id = event.id,
+                        date = event.dateTimeString.substringBefore("T").substringBefore(" "),
+                        time = event.time,
+                        dateTime = event.dateTimeString,
+                        vaccinationNames = event.vaccinationNames ?: emptyList(),
+                        location = event.location,
+                        seriesId = event.seriesId,
+                        comment = event.comment
+                    )
+                }.groupBy { it.seriesId }
+                    .map { (seriesId, vaccines) ->
+                        VaccinationGroup(seriesId, vaccines.sortedBy { it.dateTime })
+                    }.sortedByDescending { it.vaccinations.lastOrNull()?.dateTime ?: "" }
+            }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

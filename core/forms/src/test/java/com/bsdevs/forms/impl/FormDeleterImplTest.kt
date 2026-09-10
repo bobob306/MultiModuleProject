@@ -1,7 +1,7 @@
 package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.common.result.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -23,8 +23,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `nappyLog deletes with date extracted from dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns UnifiedEventDto(
-            id = "n1", type = "NAPPY", time = "10:30",
+        coEvery { babyCareRepository.getNappyEventById("u", "n1") } returns BabyEvent.Nappy(
+            id = "n1", time = "10:30",
             dateTimeString = "2026-08-31 10:30",
         )
 
@@ -36,8 +36,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `feedingLog deletes with date extracted from dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getFeedingEventById("u", "f1") } returns UnifiedEventDto(
-            id = "f1", type = "FEEDING", time = "08:00",
+        coEvery { babyCareRepository.getFeedingEventById("u", "f1") } returns BabyEvent.Feeding(
+            id = "f1", time = "08:00",
             dateTimeString = "2026-09-01 08:00",
         )
 
@@ -64,8 +64,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `temperatureLog extracts date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
-            id = "t1", type = "TEMPERATURE", time = "09:30",
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns BabyEvent.Temperature(
+            id = "t1", time = "09:30",
             dateTimeString = "2026-09-01 09:30",
         )
 
@@ -77,8 +77,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `temperatureLog extracts date from ISO dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns UnifiedEventDto(
-            id = "t1", type = "TEMPERATURE", time = "09:30",
+        coEvery { babyCareRepository.getTemperatureEventById("u", "t1") } returns BabyEvent.Temperature(
+            id = "t1", time = "09:30",
             dateTimeString = "2026-09-01T09:30:00Z",
         )
 
@@ -98,8 +98,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `measurementLog extracts date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns UnifiedEventDto(
-            id = "m1", type = "MEASUREMENT", time = "10:00",
+        coEvery { babyCareRepository.getMeasurementEventById("u", "m1") } returns BabyEvent.Measurement(
+            id = "m1", time = "10:00",
             dateTimeString = "2026-09-02 10:00",
         )
 
@@ -119,8 +119,8 @@ class FormDeleterImplTest {
 
     @Test
     fun `vaccinationLog extracts date from space-separated dateTimeString`() = runTest {
-        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns UnifiedEventDto(
-            id = "v1", type = "VACCINATION", time = "10:30",
+        coEvery { babyCareRepository.getVaccinationEventById("u", "v1") } returns BabyEvent.Vaccination(
+            id = "v1", time = "10:30",
             dateTimeString = "2026-09-03 10:30",
         )
 

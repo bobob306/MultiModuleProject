@@ -1,18 +1,21 @@
 package com.bsdevs.babycare.presentation.graph
 
 import android.util.Log
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Locale
@@ -22,7 +25,13 @@ import javax.inject.Inject
 class BabyGraphViewModel @Inject constructor(
     private val repository: BabyCareRepository,
     private val dispatchers: DispatcherProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val _dateFilter = MutableStateFlow<DateFilter>(DateFilter.LastNDays(7))
+    private val _showDatePicker = MutableStateFlow(false)
+    private val _isGapChartFullScreen = MutableStateFlow(false)
+    private val _selectedGapIndex = MutableStateFlow<Int?>(null)
 
     private fun parseToInstant(dateTimeStr: String): Instant {
         return try {
@@ -41,51 +50,128 @@ class BabyGraphViewModel @Inject constructor(
         }
     }
 
-    private val eventComparator = Comparator<UnifiedEventDto> { a, b ->
+    private val eventComparator = Comparator<BabyEvent.Feeding> { a, b ->
         val instantA = parseToInstant(a.dateTimeString)
         val instantB = parseToInstant(b.dateTimeString)
         instantA.compareTo(instantB) // Oldest first for gap calculation
     }
 
-    val uiState: StateFlow<FeedingGraphUiState> = repository.cachedDays
-        .map { dailyLogs ->
-            withContext(dispatchers.default) {
-                val allEvents = dailyLogs.flatMap { it.events }
-                val feedingEvents = allEvents.filter { it.type == "FEEDING" }
+    val uiState: StateFlow<FeedingGraphUiState> = combine(
+        repository.cachedDays,
+        _dateFilter,
+        _showDatePicker,
+        _isGapChartFullScreen,
+        _selectedGapIndex
+    ) { dailyLogs, filter, showPicker, isFullScreen, selectedIndex ->
+        withContext(dispatchers.default) {
+            val allEvents = dailyLogs.flatMap { it.events }
+            val allFeedingEvents = allEvents.filterIsInstance<BabyEvent.Feeding>()
+            
+            // Available dates for the picker (only those with feeding events)
+            val availableDates = allFeedingEvents.map { 
+                parseToLocalDate(it.dateTimeString)
+            }.filter { it != LocalDate.MIN }.toSet()
 
-                val countsByHour = feedingEvents.groupBy { event ->
-                    extractHourFromTime(event.time)
-                }.mapValues { it.value.size }
+            // Apply filter and determine range
+            var startDate: LocalDate? = null
+            var endDate: LocalDate? = null
 
-                val hourlyGraphData = (0..23).map { hour ->
-                    HourlyFeedingCount(
-                        hour = hour,
-                        displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
-                        count = countsByHour[hour] ?: 0
-                    )
+            val filteredFeedingEvents = when (filter) {
+                is DateFilter.AllTime -> {
+                    startDate = availableDates.minOrNull()
+                    endDate = availableDates.maxOrNull()
+                    allFeedingEvents
                 }
+                is DateFilter.LastNDays -> {
+                    val today = repository.getCurrentDate()
+                    startDate = today.minusDays(filter.days.toLong())
+                    endDate = today
+                    allFeedingEvents.filter { parseToLocalDate(it.dateTimeString).isAfter(startDate.minusDays(1)) }
+                }
+                is DateFilter.CustomRange -> {
+                    startDate = filter.start
+                    endDate = filter.end
+                    allFeedingEvents.filter { 
+                        val date = parseToLocalDate(it.dateTimeString)
+                        (date.isAfter(startDate.minusDays(1)) && date.isBefore(endDate.plusDays(1)))
+                    }
+                }
+            }
 
-                val analysis = calculateFeedingGaps(feedingEvents)
+            val countsByHour = filteredFeedingEvents.groupBy { event ->
+                extractHourFromTime(event.time)
+            }.mapValues { it.value.size }
 
-                // 🌟 1. Compute the daily average gaps for the new chart
-                val dailyGapsData = calculateDailyAverageGaps(feedingEvents)
-
-                FeedingGraphUiState(
-                    hourlyCounts = hourlyGraphData,
-                    totalFeedsInCache = feedingEvents.size,
-                    analysisResult = analysis,
-                    dailyAverageGaps = dailyGapsData // 🌟 2. Assign to view state
+            val hourlyGraphData = (0..23).map { hour ->
+                HourlyFeedingCount(
+                    hour = hour,
+                    displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
+                    count = countsByHour[hour] ?: 0
                 )
             }
-        }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = FeedingGraphUiState()
-        )
 
-    private fun calculateDailyAverageGaps(events: List<UnifiedEventDto>): List<DailyAverageGap> {
-        val onlyFeedings = events.filter { it.type == "FEEDING" && it.dateTimeString.isNotEmpty() }
+            val analysis = calculateFeedingGaps(filteredFeedingEvents)
+
+            // 🌟 1. Compute the daily average gaps for the new chart
+            val dailyGapsData = calculateDailyAverageGaps(filteredFeedingEvents)
+
+            FeedingGraphUiState(
+                hourlyCounts = hourlyGraphData,
+                totalFeedsInCache = filteredFeedingEvents.size,
+                analysisResult = analysis,
+                dailyAverageGaps = dailyGapsData,
+                dateFilter = filter,
+                availableDates = availableDates,
+                showDatePicker = showPicker,
+                isGapChartFullScreen = isFullScreen,
+                selectedGapIndex = selectedIndex,
+                startDate = startDate,
+                endDate = endDate
+            )
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = FeedingGraphUiState(isLoading = true)
+    )
+
+    fun onDateFilterChanged(filter: DateFilter) {
+        _dateFilter.value = filter
+        _showDatePicker.value = false
+        _selectedGapIndex.value = null
+    }
+
+    fun setShowDatePicker(show: Boolean) {
+        _showDatePicker.value = show
+    }
+
+    fun setGapChartFullScreen(fullScreen: Boolean) {
+        _isGapChartFullScreen.value = fullScreen
+    }
+
+    fun setSelectedGapIndex(index: Int?) {
+        _selectedGapIndex.value = index
+    }
+
+    private fun parseToLocalDate(dateTimeStr: String): LocalDate {
+        if (dateTimeStr.isBlank()) return LocalDate.MIN
+        return try {
+            // 1. Try parsing as full timestamp/ISO first
+            val instant = parseToInstant(dateTimeStr)
+            if (instant != Instant.EPOCH) {
+                return instant.atZone(ZoneId.systemDefault()).toLocalDate()
+            }
+            
+            // 2. Fallback: Try parsing as simple YYYY-MM-DD
+            val cleanDate = dateTimeStr.substringBefore("T").substringBefore(" ")
+            LocalDate.parse(cleanDate)
+        } catch (_: Exception) {
+            LocalDate.MIN
+        }
+    }
+
+    private fun calculateDailyAverageGaps(events: List<BabyEvent.Feeding>): List<DailyAverageGap> {
+        val onlyFeedings = events.filter { it.dateTimeString.isNotEmpty() }
         if (onlyFeedings.size < 2) return emptyList()
 
         val sortedFeeds = onlyFeedings.sortedWith(eventComparator)
@@ -134,7 +220,8 @@ class BabyGraphViewModel @Inject constructor(
             DailyAverageGap(
                 dateString = dateStr,
                 averageGapMinutes = dayAvg,
-                rolling14DayAverageMinutes = rollingAvg
+                rolling14DayAverageMinutes = rollingAvg,
+                date = parseToLocalDate(dateStr)
             )
         }
     }
@@ -154,9 +241,9 @@ class BabyGraphViewModel @Inject constructor(
         }
     }
 
-    private fun calculateFeedingGaps(events: List<UnifiedEventDto>): FeedingAnalysisResult? {
+    private fun calculateFeedingGaps(events: List<BabyEvent.Feeding>): FeedingAnalysisResult? {
         // 1. ISOLATE: Filter out everything that isn't a feeding event FIRST
-        val onlyFeedings = events.filter { it.type == "FEEDING" && it.dateTimeString.isNotEmpty() }
+        val onlyFeedings = events.filter { it.dateTimeString.isNotEmpty() }
 
         // Safety check: We need at least two feeding events total to analyze intervals
         if (onlyFeedings.size < 2) {

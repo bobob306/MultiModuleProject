@@ -9,6 +9,7 @@ import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewD
 import com.bsdevs.coffeescreen.screens.homescreen.viewdata.CoffeeHomeScreenViewDatas
 import com.bsdevs.coffeescreen.screens.inputscreen.NavigationEvent
 import com.bsdevs.coffeescreen.screens.inputscreen.viewdata.generateSampleCoffeeDto
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.result.Result
 import com.bsdevs.network.dto.CoffeeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,12 +20,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
 class CoffeeHomeScreenViewModel @Inject constructor(
     private val accountService: AccountService,
-    private val repository: CoffeeRepository
+    private val repository: CoffeeRepository,
+    private val dispatchers: DispatcherProvider
 ) : ViewModel() {
     private val _navigationEvent = Channel<NavigationEvent>()
     val navigationEvent = _navigationEvent.receiveAsFlow()
@@ -55,24 +58,28 @@ class CoffeeHomeScreenViewModel @Inject constructor(
     }
 
     private fun updateDisplay(coffeeList: List<CoffeeDto>) {
-        _viewData.update { currentResult ->
-            val currentData =
-                (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
-            val updatedViewData = currentData.viewData.map {
-                when (it) {
-                    is CoffeeHomeScreenViewDatas.CoffeeList -> {
-                        it.copy(coffeeList = coffeeList)
+        viewModelScope.launch {
+            val updatedViewData = withContext(dispatchers.default) {
+                val currentResult = _viewData.value
+                val currentData = (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
+                currentData.viewData.map {
+                    when (it) {
+                        is CoffeeHomeScreenViewDatas.CoffeeList -> {
+                            it.copy(coffeeList = coffeeList)
+                        }
+                        else -> it
                     }
-
-                    else -> it
                 }
             }
-            Result.Success(
-                data = currentData.copy(
-                    viewData = updatedViewData,
-                    isRefreshing = false
+            _viewData.update { currentResult ->
+                val currentData = (currentResult as? Result.Success<CoffeeHomeScreenViewData>)?.data ?: loadedData
+                Result.Success(
+                    data = currentData.copy(
+                        viewData = updatedViewData,
+                        isRefreshing = false
+                    )
                 )
-            )
+            }
         }
     }
 
