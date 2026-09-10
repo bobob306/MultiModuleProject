@@ -50,8 +50,7 @@ class FormPrefillerImpl @Inject constructor(
     }
 
     private suspend fun loadTemperatureValues(userId: String, entityId: String): Map<String, Any>? {
-        val event = babyCareRepository.getTemperatureEventById(userId, entityId)
-            ?.takeIf { it.type == "TEMPERATURE" } ?: return null
+        val event = babyCareRepository.getTemperatureEventById(userId, entityId) ?: return null
         return buildMap {
             put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)
@@ -61,8 +60,7 @@ class FormPrefillerImpl @Inject constructor(
     }
 
     private suspend fun loadMeasurementValues(userId: String, entityId: String): Map<String, Any>? {
-        val event = babyCareRepository.getMeasurementEventById(userId, entityId)
-            ?.takeIf { it.type == "MEASUREMENT" } ?: return null
+        val event = babyCareRepository.getMeasurementEventById(userId, entityId) ?: return null
         return buildMap {
             put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)
@@ -95,8 +93,7 @@ class FormPrefillerImpl @Inject constructor(
     }
 
     private suspend fun loadVaccinationValues(userId: String, entityId: String): Map<String, Any>? {
-        val event = babyCareRepository.getVaccinationEventById(userId, entityId)
-            ?.takeIf { it.type == "VACCINATION" } ?: return null
+        val event = babyCareRepository.getVaccinationEventById(userId, entityId) ?: return null
         return buildMap {
             put("date", event.dateTimeString.substringBefore("T").substringBefore(" "))
             put("time", event.time)

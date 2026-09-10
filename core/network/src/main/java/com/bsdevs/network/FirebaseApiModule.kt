@@ -2,7 +2,7 @@ package com.bsdevs.network
 
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.connectivity.ConnectivityObserver
-import com.bsdevs.network.connectivity.NetworkConnectivityObserver
+import com.bsdevs.network.connectivity.ConnectivityObserverImpl
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
@@ -21,7 +21,7 @@ object FirebaseApiModule {
     @Provides
     @Singleton
     fun provideConnectivityObserver(@ApplicationContext context: Context): ConnectivityObserver {
-        return NetworkConnectivityObserver(context)
+        return ConnectivityObserverImpl(context)
     }
 
     @Provides

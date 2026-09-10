@@ -1,7 +1,7 @@
 package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.common.result.Result
@@ -13,7 +13,7 @@ import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
-class FormSubmitRouter @Inject constructor(
+class FormSubmitterImpl @Inject constructor(
     private val coffeeRepository: CoffeeRepository,
     private val babyCareRepository: BabyCareRepository,
 ) : FormSubmitter {
@@ -64,13 +64,13 @@ class FormSubmitRouter @Inject constructor(
             .toInstant()
             .toString()
 
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Nappy(
             id = entityId ?: UUID.randomUUID().toString(),
-            type = "NAPPY",
             time = time,
             dateTimeString = utcDateTimeString,
             nappyType = values["nappy_type"] as? String,
             comment = values["comment"] as? String,
+            isPendingSync = true
         )
         entityId?.let {
             babyCareRepository.updateActivityEvent(userId, date, it, event)
@@ -93,13 +93,13 @@ class FormSubmitRouter @Inject constructor(
             .toInstant()
             .toString()
 
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Temperature(
             id = entityId ?: UUID.randomUUID().toString(),
-            type = "TEMPERATURE",
             time = time,
             dateTimeString = utcDateTimeString,
             temperature = tNum.toDouble() / 10.0,
             comment = values["comment"] as? String,
+            isPendingSync = true
         )
         entityId?.let {
             babyCareRepository.updateActivityEvent(userId, date, it, event)
@@ -132,9 +132,8 @@ class FormSubmitRouter @Inject constructor(
             .toInstant()
             .toString()
 
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Measurement(
             id = entityId ?: UUID.randomUUID().toString(),
-            type = "MEASUREMENT",
             time = time,
             dateTimeString = utcDateTimeString,
             height = if (recordHeight) (hNum?.toDouble()?.div(10.0) ?: 50.0) else null,
@@ -142,6 +141,7 @@ class FormSubmitRouter @Inject constructor(
             headCircumference = if (recordHead) (hcNum?.toDouble()?.div(10.0) ?: 40.0) else null,
             isMedical = values["is_medical"] == true,
             comment = values["comment"] as? String,
+            isPendingSync = true
         )
         entityId?.let {
             babyCareRepository.updateActivityEvent(userId, date, it, event)
@@ -164,14 +164,14 @@ class FormSubmitRouter @Inject constructor(
             .toInstant()
             .toString()
         
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Feeding(
             id = entityId ?: UUID.randomUUID().toString(),
-            type = "FEEDING",
             time = time,
             dateTimeString = utcDateTimeString,
             mainFeedingSide = values["feeding_side"] as? String,
             bottleAmountMl = bottleStr?.toIntOrNull(),
             comment = values["comment"] as? String,
+            isPendingSync = true
         )
         entityId?.let {
             babyCareRepository.updateActivityEvent(userId, date, it, event)
@@ -197,15 +197,15 @@ class FormSubmitRouter @Inject constructor(
             .toInstant()
             .toString()
 
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Vaccination(
             id = entityId ?: UUID.randomUUID().toString(),
-            type = "VACCINATION",
             time = time,
             dateTimeString = utcDateTimeString,
             vaccinationNames = names,
             location = values["location"] as? String,
             seriesId = seriesId,
             comment = values["comment"] as? String,
+            isPendingSync = true
         )
         entityId?.let {
             babyCareRepository.updateActivityEvent(userId, date, it, event)

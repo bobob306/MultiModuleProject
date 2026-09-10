@@ -6,7 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.MeasurementDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -32,6 +34,7 @@ class MeasurementViewModel @Inject constructor(
     private val accountService: AccountService,
     private val repository: BabyCareRepository,
     private val userRepository: UserRepository,
+    private val dispatchers: DispatcherProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,27 +46,29 @@ class MeasurementViewModel @Inject constructor(
         _localState,
         repository.measurements
     ) { local, allMeasurements ->
-        val mapped = allMeasurements.map { event ->
-            MeasurementDto(
-                id = event.id,
-                date = event.dateTimeString.substringBefore("T").substringBefore(" "),
-                time = event.time,
-                dateTime = event.dateTimeString,
-                height = event.height,
-                weight = event.weight,
-                headCircumference = event.headCircumference,
-                isMedical = event.isMedical ?: false,
-                comment = event.comment
-            )
-        }
+        withContext(dispatchers.default) {
+            val mapped = allMeasurements.map { event ->
+                MeasurementDto(
+                    id = event.id,
+                    date = event.dateTimeString.substringBefore("T").substringBefore(" "),
+                    time = event.time,
+                    dateTime = event.dateTimeString,
+                    height = event.height,
+                    weight = event.weight,
+                    headCircumference = event.headCircumference,
+                    isMedical = event.isMedical ?: false,
+                    comment = event.comment
+                )
+            }
 
-        val filtered = if (local.showMedicalOnly) {
-            mapped.filter { it.isMedical }
-        } else {
-            mapped
-        }
+            val filtered = if (local.showMedicalOnly) {
+                mapped.filter { it.isMedical }
+            } else {
+                mapped
+            }
 
-        local.copy(allMeasurements = filtered)
+            local.copy(allMeasurements = filtered)
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -111,7 +116,7 @@ class MeasurementViewModel @Inject constructor(
             try {
                 val event = repository.getMeasurementEventById(userId, id)
 
-                if (event != null && event.type == "MEASUREMENT") {
+                if (event != null) {
                     _localState.update {
                         it.copy(
                             id = event.id,
@@ -185,25 +190,25 @@ class MeasurementViewModel @Inject constructor(
             "${currentState.date} ${currentState.time}"
         }
 
-        val unifiedEvent = UnifiedEventDto(
+        val measurementEvent = BabyEvent.Measurement(
             id = measurementId,
-            type = "MEASUREMENT",
             time = currentState.time,
             dateTimeString = utcDateTimeString,
             comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
             height = if (currentState.recordHeight) (currentState.height ?: 50.0) else null,
             weight = if (currentState.recordWeight) (currentState.weight ?: 3.5) else null,
             headCircumference = if (currentState.recordHeadCircumference) (currentState.headCircumference ?: 40.0) else null,
-            isMedical = currentState.isMedical
+            isMedical = currentState.isMedical,
+            isPendingSync = true
         )
 
         viewModelScope.launch {
             _localState.update { it.copy(isLoading = true, error = null) }
             try {
                 if (currentState.id != null) {
-                    repository.updateActivityEvent(userId, currentState.date, currentState.id, unifiedEvent)
+                    repository.updateActivityEvent(userId, currentState.date, currentState.id, measurementEvent)
                 } else {
-                    repository.saveActivityEvent(userId, currentState.date, unifiedEvent)
+                    repository.saveActivityEvent(userId, currentState.date, measurementEvent)
                 }
                 _localState.update { it.copy(isLoading = false) }
                 _events.send(MeasurementEvent.SaveSuccess)

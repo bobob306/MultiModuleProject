@@ -11,7 +11,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FirestoreCoffeeApiService @Inject constructor(
+class CoffeeApiServiceImpl @Inject constructor(
     private val firestoreHolder: FirestoreHolder
 ) : CoffeeApiService {
 

@@ -7,7 +7,7 @@ import com.bsdevs.network.dto.FormSubmissionDto
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.CoffeeDto
 import kotlinx.serialization.json.Json
 
@@ -43,10 +43,10 @@ class MMPTypeConverters {
     fun toShoppingListDto(value: String): ShoppingListDto = json.decodeFromString(value)
 
     @TypeConverter
-    fun fromUnifiedEventDto(value: UnifiedEventDto): String = json.encodeToString(value)
+    fun fromBabyEvent(value: BabyEvent): String = json.encodeToString(value)
 
     @TypeConverter
-    fun toUnifiedEventDto(value: String): UnifiedEventDto = json.decodeFromString(value)
+    fun toBabyEvent(value: String): BabyEvent = json.decodeFromString(value)
 
     @TypeConverter
     fun fromFormSchemaDto(value: FormSchemaDto): String = json.encodeToString(value)

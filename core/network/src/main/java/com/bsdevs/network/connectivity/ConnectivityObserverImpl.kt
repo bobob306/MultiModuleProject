@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-class NetworkConnectivityObserver(
+class ConnectivityObserverImpl(
     context: Context
 ) : ConnectivityObserver {
 

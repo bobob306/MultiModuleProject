@@ -1,7 +1,7 @@
 package com.bsdevs.forms.impl
 
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.common.result.Result
@@ -17,16 +17,16 @@ import org.junit.Before
 import org.junit.Test
 import java.util.TimeZone
 
-class FormSubmitRouterTest {
+class FormSubmitterImplTest {
 
     private val coffeeRepository = mockk<CoffeeRepository>(relaxed = true)
     private val babyCareRepository = mockk<BabyCareRepository>(relaxed = true)
-    private lateinit var router: FormSubmitRouter
+    private lateinit var router: FormSubmitterImpl
 
     @Before
     fun setUp() {
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-        router = FormSubmitRouter(coffeeRepository, babyCareRepository)
+        router = FormSubmitterImpl(coffeeRepository, babyCareRepository)
     }
 
     // --- coffeeLog ---
@@ -94,7 +94,7 @@ class FormSubmitRouterTest {
 
     @Test
     fun `nappyLog routes to BabyCareRepository with NAPPY event type`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
+        val eventSlot = slot<BabyEvent>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
         val result = router.submit("user1", "nappyLog", null, mapOf(
@@ -105,12 +105,13 @@ class FormSubmitRouterTest {
         ))
 
         assertTrue(result is Result.Success)
-        assertEquals("NAPPY", eventSlot.captured.type)
-        assertEquals("10:30", eventSlot.captured.time)
-        assertTrue(eventSlot.captured.dateTimeString.contains("2026-08-31T10:30"))
-        assertTrue(eventSlot.captured.dateTimeString.endsWith("Z"))
-        assertEquals("Wet", eventSlot.captured.nappyType)
-        assertEquals("All good", eventSlot.captured.comment)
+        val event = eventSlot.captured as BabyEvent.Nappy
+        assertEquals("NAPPY", event.type)
+        assertEquals("10:30", event.time)
+        assertTrue(event.dateTimeString.contains("2026-08-31T10:30"))
+        assertTrue(event.dateTimeString.endsWith("Z"))
+        assertEquals("Wet", event.nappyType)
+        assertEquals("All good", event.comment)
     }
 
     @Test
@@ -132,7 +133,7 @@ class FormSubmitRouterTest {
 
     @Test
     fun `feedingLog routes to BabyCareRepository with FEEDING event type`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
+        val eventSlot = slot<BabyEvent>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
         val result = router.submit("user1", "feedingLog", null, mapOf(
@@ -143,12 +144,13 @@ class FormSubmitRouterTest {
         ))
 
         assertTrue(result is Result.Success)
-        assertEquals("FEEDING", eventSlot.captured.type)
-        assertEquals("08:00", eventSlot.captured.time)
-        assertTrue(eventSlot.captured.dateTimeString.contains("2026-08-31T08:00"))
-        assertTrue(eventSlot.captured.dateTimeString.endsWith("Z"))
-        assertEquals("Left", eventSlot.captured.mainFeedingSide)
-        assertEquals(120, eventSlot.captured.bottleAmountMl)
+        val event = eventSlot.captured as BabyEvent.Feeding
+        assertEquals("FEEDING", event.type)
+        assertEquals("08:00", event.time)
+        assertTrue(event.dateTimeString.contains("2026-08-31T08:00"))
+        assertTrue(event.dateTimeString.endsWith("Z"))
+        assertEquals("Left", event.mainFeedingSide)
+        assertEquals(120, event.bottleAmountMl)
     }
 
     @Test
@@ -165,7 +167,7 @@ class FormSubmitRouterTest {
 
     @Test
     fun `temperatureLog routes to BabyCareRepository with TEMPERATURE event type`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
+        val eventSlot = slot<BabyEvent>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
         val result = router.submit("u", "temperatureLog", null, mapOf(
@@ -175,9 +177,10 @@ class FormSubmitRouterTest {
         ))
 
         assertTrue(result is Result.Success)
-        assertEquals("TEMPERATURE", eventSlot.captured.type)
-        assertEquals(37.0, eventSlot.captured.temperature!!, 0.001)
-        assertEquals("09:00", eventSlot.captured.time)
+        val event = eventSlot.captured as BabyEvent.Temperature
+        assertEquals("TEMPERATURE", event.type)
+        assertEquals(37.0, event.temperature!!, 0.001)
+        assertEquals("09:00", event.time)
     }
 
     @Test
@@ -197,7 +200,7 @@ class FormSubmitRouterTest {
 
     @Test
     fun `measurementLog saves height and weight and head circumference converted from wheel ints`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
+        val eventSlot = slot<BabyEvent>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
         router.submit("u", "measurementLog", null, mapOf(
@@ -212,11 +215,12 @@ class FormSubmitRouterTest {
             "is_medical" to true,
         ))
 
-        assertEquals("MEASUREMENT", eventSlot.captured.type)
-        assertEquals(65.0, eventSlot.captured.height!!, 0.001)
-        assertEquals(7.5, eventSlot.captured.weight!!, 0.001)
-        assertEquals(42.5, eventSlot.captured.headCircumference!!, 0.001)
-        assertTrue(eventSlot.captured.isMedical == true)
+        val event = eventSlot.captured as BabyEvent.Measurement
+        assertEquals("MEASUREMENT", event.type)
+        assertEquals(65.0, event.height!!, 0.001)
+        assertEquals(7.5, event.weight!!, 0.001)
+        assertEquals(42.5, event.headCircumference!!, 0.001)
+        assertTrue(event.isMedical == true)
     }
 
     @Test
@@ -228,7 +232,7 @@ class FormSubmitRouterTest {
 
     @Test
     fun `vaccinationLog routes to BabyCareRepository with VACCINATION event type`() = runTest {
-        val eventSlot = slot<UnifiedEventDto>()
+        val eventSlot = slot<BabyEvent>()
         coEvery { babyCareRepository.saveActivityEvent(any(), any(), capture(eventSlot)) } returns Unit
 
         val result = router.submit("user1", "vaccinationLog", null, mapOf(
@@ -240,10 +244,11 @@ class FormSubmitRouterTest {
         ))
 
         assertTrue(result is Result.Success)
-        assertEquals("VACCINATION", eventSlot.captured.type)
-        assertEquals("Clinic A", eventSlot.captured.location)
-        assertEquals("hep_b_series", eventSlot.captured.seriesId)
-        assertEquals(listOf("HepB"), eventSlot.captured.vaccinationNames)
+        val event = eventSlot.captured as BabyEvent.Vaccination
+        assertEquals("VACCINATION", event.type)
+        assertEquals("Clinic A", event.location)
+        assertEquals("hep_b_series", event.seriesId)
+        assertEquals(listOf("HepB"), event.vaccinationNames)
     }
 
     @Test

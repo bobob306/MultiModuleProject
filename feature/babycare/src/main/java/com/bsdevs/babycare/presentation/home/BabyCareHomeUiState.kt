@@ -14,6 +14,11 @@ sealed class HomeFeedItem {
     ) : HomeFeedItem()
 
     data class ActivityRow(val activity: BabyActivity) : HomeFeedItem()
+
+    data class PredictionCard(
+        val predictions: Map<String, String>,
+        val activeModel: String?
+    ) : HomeFeedItem()
 }
 
 data class BabyCareHomeViewData(

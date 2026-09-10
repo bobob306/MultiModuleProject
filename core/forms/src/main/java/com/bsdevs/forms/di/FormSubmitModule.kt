@@ -4,7 +4,7 @@ import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.forms.impl.FormDeleterImpl
 import com.bsdevs.forms.impl.FormPrefillerImpl
-import com.bsdevs.forms.impl.FormSubmitRouter
+import com.bsdevs.forms.impl.FormSubmitterImpl
 import com.bsdevs.data.repository.FormDeleter
 import com.bsdevs.data.repository.FormPrefiller
 import com.bsdevs.data.repository.FormSubmitter
@@ -20,14 +20,14 @@ object FormSubmitModule {
 
     @Provides
     @Singleton
-    fun provideFormSubmitRouter(
+    fun provideFormSubmitterImpl(
         coffeeRepository: CoffeeRepository,
         babyCareRepository: BabyCareRepository,
-    ): FormSubmitRouter = FormSubmitRouter(coffeeRepository, babyCareRepository)
+    ): FormSubmitterImpl = FormSubmitterImpl(coffeeRepository, babyCareRepository)
 
     @Provides
     @Singleton
-    fun provideFormSubmitter(router: FormSubmitRouter): FormSubmitter = router
+    fun provideFormSubmitter(router: FormSubmitterImpl): FormSubmitter = router
 
     @Provides
     @Singleton

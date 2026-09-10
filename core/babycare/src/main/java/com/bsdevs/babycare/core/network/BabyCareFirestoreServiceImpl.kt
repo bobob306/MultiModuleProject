@@ -16,7 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FirestoreBabyCareService @Inject constructor(
+class BabyCareFirestoreServiceImpl @Inject constructor(
     private val firestoreHolder: FirestoreHolder,
     private val userRepository: UserRepository,
     private val dispatchers: DispatcherProvider,
@@ -52,7 +52,10 @@ class FirestoreBabyCareService @Inject constructor(
     override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
         Log.d("FIREBASE_CALL", "Read Latest Month ID (Optimized Query) for Baby: $babyId (Force: $forceRefresh)")
-        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        
+        // Use DEFAULT source even for forceRefresh. Firestore will attempt SERVER first, 
+        // then fall back to CACHE automatically without throwing if offline.
+        val source = Source.DEFAULT 
         try {
             getMonthsCollection(babyId)
                 .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
@@ -62,17 +65,8 @@ class FirestoreBabyCareService @Inject constructor(
                 .documents
                 .firstOrNull()?.id
         } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Failed to get latest month id from $source", e)
-            if (forceRefresh) {
-                // Fallback to cache if server fetch failed
-                getMonthsCollection(babyId)
-                    .orderBy(FieldPath.documentId(), Query.Direction.DESCENDING)
-                    .limit(1)
-                    .get(Source.CACHE)
-                    .await()
-                    .documents
-                    .firstOrNull()?.id
-            } else null
+            Log.w("BABYCARE_SERVICE", "Failed to get latest month id from $source", e)
+            null
         }
     }
 
@@ -112,7 +106,9 @@ class FirestoreBabyCareService @Inject constructor(
     override suspend fun fetchMonthDocument(userId: String, monthId: String, forceRefresh: Boolean): Map<String, Any?>? = withContext(dispatchers.io) {
         val babyId = getAuthorizedBabyId(userId) ?: return@withContext null
         Log.d("FIREBASE_CALL", "Read Month Doc for Baby: $babyId / $monthId (Force: $forceRefresh)")
-        val source = if (forceRefresh) Source.SERVER else Source.DEFAULT
+        
+        // Use DEFAULT source. Firestore attempts SERVER first, then CACHE.
+        val source = Source.DEFAULT
         try {
             val snapshot = getMonthsCollection(babyId).document(monthId).get(source).await()
             val data = if (snapshot.exists()) snapshot.data else null
@@ -122,11 +118,8 @@ class FirestoreBabyCareService @Inject constructor(
             }
             data
         } catch (e: Exception) {
-            Log.e("BABYCARE_SERVICE", "Failed to fetch month doc $monthId from $source", e)
-            if (forceRefresh) {
-                val snapshot = getMonthsCollection(babyId).document(monthId).get(Source.CACHE).await()
-                if (snapshot.exists()) snapshot.data else null
-            } else null
+            Log.w("BABYCARE_SERVICE", "Failed to fetch month doc $monthId from $source", e)
+            null
         }
     }
 

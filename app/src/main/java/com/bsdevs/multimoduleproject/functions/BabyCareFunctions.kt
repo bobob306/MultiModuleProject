@@ -8,7 +8,7 @@ import androidx.appfunctions.AppFunctionService
 import androidx.appfunctions.AppFunctionServiceEntryPoint
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.core.domain.BabyCareRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -84,12 +84,12 @@ abstract class MMPAppFunctions : AppFunctionService() {
             else -> "Wet"
         }
 
-        val event = UnifiedEventDto(
+        val event = BabyEvent.Nappy(
             id = UUID.randomUUID().toString(),
             time = time.format(DateTimeFormatter.ofPattern("HH:mm")),
             dateTimeString = utcDateTimeString,
-            type = "NAPPY",
-            nappyType = internalNappyType
+            nappyType = internalNappyType,
+            isPendingSync = true
         )
 
         return try {

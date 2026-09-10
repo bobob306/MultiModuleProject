@@ -3,7 +3,7 @@ package com.bsdevs.coffeescreen.di
 import com.bsdevs.coffeescreen.data.CoffeeRepository
 import com.bsdevs.coffeescreen.data.CoffeeRepositoryImpl
 import com.bsdevs.coffeescreen.network.CoffeeApiService
-import com.bsdevs.coffeescreen.network.FirestoreCoffeeApiService
+import com.bsdevs.coffeescreen.network.CoffeeApiServiceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -16,7 +16,7 @@ abstract class CoffeeModule {
     @Binds
     @Singleton
     abstract fun bindCoffeeApiService(
-        firestoreCoffeeApiService: FirestoreCoffeeApiService
+        coffeeApiServiceImpl: CoffeeApiServiceImpl
     ): CoffeeApiService
 
     @Binds

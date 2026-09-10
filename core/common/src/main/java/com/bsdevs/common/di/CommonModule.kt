@@ -1,7 +1,7 @@
 package com.bsdevs.common.di
 
-import com.bsdevs.common.DefaultDispatcherProvider
-import com.bsdevs.common.DefaultTimeProvider
+import com.bsdevs.common.DispatcherProviderImpl
+import com.bsdevs.common.TimeProviderImpl
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.TimeProvider
 import dagger.Binds
@@ -15,9 +15,9 @@ import javax.inject.Singleton
 abstract class CommonModule {
     @Binds
     @Singleton
-    abstract fun bindTimeProvider(defaultTimeProvider: DefaultTimeProvider): TimeProvider
+    abstract fun bindTimeProvider(timeProviderImpl: TimeProviderImpl): TimeProvider
 
     @Binds
     @Singleton
-    abstract fun bindDispatcherProvider(defaultDispatcherProvider: DefaultDispatcherProvider): DispatcherProvider
+    abstract fun bindDispatcherProvider(dispatcherProviderImpl: DispatcherProviderImpl): DispatcherProvider
 }

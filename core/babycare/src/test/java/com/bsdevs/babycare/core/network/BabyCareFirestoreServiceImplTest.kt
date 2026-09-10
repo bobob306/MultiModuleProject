@@ -18,13 +18,13 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class FirestoreBabyCareServiceTest {
+class BabyCareFirestoreServiceImplTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
     private lateinit var firestore: FirebaseFirestore
     private lateinit var firestoreHolder: FirestoreHolder
     private lateinit var userRepository: UserRepository
-    private lateinit var service: FirestoreBabyCareService
+    private lateinit var service: BabyCareFirestoreServiceImpl
     private lateinit var dispatchers: DispatcherProvider
 
     private val userId = "user1"
@@ -43,7 +43,7 @@ class FirestoreBabyCareServiceTest {
             override val io = testDispatcher
             override val default = testDispatcher
         }
-        service = FirestoreBabyCareService(firestoreHolder, userRepository, dispatchers)
+        service = BabyCareFirestoreServiceImpl(firestoreHolder, userRepository, dispatchers)
     }
 
     @After

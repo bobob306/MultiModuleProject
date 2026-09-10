@@ -8,5 +8,5 @@ import kotlinx.serialization.Serializable
 data class DailyLogDto(
     val date: String = "", // Document ID (e.g., "2026-08-19")
     val userId: String = "",
-    val events: List<UnifiedEventDto> = emptyList()
+    val events: List<BabyEvent> = emptyList()
 )

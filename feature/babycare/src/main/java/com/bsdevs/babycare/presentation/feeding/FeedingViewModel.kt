@@ -5,9 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.core.domain.BabyCareRepository
+import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.common.TimeProvider
 import com.bsdevs.data.repository.UserRepository
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -36,6 +38,7 @@ class FeedingViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val timerManager: FeedingTimerManager,
     private val timeProvider: TimeProvider,
+    private val dispatchers: DispatcherProvider,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -227,78 +230,80 @@ class FeedingViewModel @Inject constructor(
         val currentState = uiState.value
         val userId = accountService.currentUserId
 
-        val mainFeedingSide = when {
-            currentState.bottleAmountMl != null -> "Bottle"
-            currentState.leftDuration > currentState.rightDuration -> "Left"
-            currentState.rightDuration > currentState.leftDuration -> "Right"
-            currentState.leftDuration > 0 -> "Both"
-            else -> null
-        }
-
-        // Dynamic clean UUID validator parameter logic
-        val isCurrentIdUuid = try {
-            currentState.id?.let { UUID.fromString(it) } != null
-        } catch (e: Exception) {
-            false
-        }
-        val feedingId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
-
         viewModelScope.launch {
             _localState.update { it.copy(isLoading = true, error = null) }
             try {
-                val babyId = userRepository.userProfile.value?.babyId
-                val baby = babyId?.let { userRepository.getBaby(it) }
-
-                val serverPrediction = baby?.nextFeedingTime
-
-                val localDateTime = LocalDateTime.of(
-                    LocalDate.parse(currentState.date),
-                    LocalTime.parse(currentState.startTime)
-                )
-                val utcDateTimeString =
-                    localDateTime.atZone(ZoneId.systemDefault()).toInstant().toString()
-
-                val gapMinutes = try {
-                    serverPrediction?.let { predTimeStr ->
-                        val predDateTime = try {
-                            OffsetDateTime.parse(predTimeStr)
-                                .atZoneSameInstant(ZoneId.systemDefault())
-                                .toLocalDateTime()
-                        } catch (_: Exception) {
-                            try {
-                                LocalDateTime.parse(predTimeStr)
-                            } catch (_: Exception) {
-                                // Fallback to original HH:mm logic
-                                val predLocalTime = LocalTime.parse(predTimeStr)
-                                val cleanDate =
-                                    currentState.date.substringBefore("T").substringBefore(" ")
-                                LocalDateTime.of(LocalDate.parse(cleanDate), predLocalTime)
-                            }
-                        }
-                        Duration.between(predDateTime, localDateTime).toMinutes()
+                val feedingEvent = withContext(dispatchers.default) {
+                    val mainFeedingSide = when {
+                        currentState.bottleAmountMl != null -> "Bottle"
+                        currentState.leftDuration > currentState.rightDuration -> "Left"
+                        currentState.rightDuration > currentState.leftDuration -> "Right"
+                        currentState.leftDuration > 0 -> "Both"
+                        else -> null
                     }
-                } catch (_: Exception) {
-                    null
+
+                    // Dynamic clean UUID validator parameter logic
+                    val isCurrentIdUuid = try {
+                        currentState.id?.let { UUID.fromString(it) } != null
+                    } catch (e: Exception) {
+                        false
+                    }
+                    val feedingId = if (isCurrentIdUuid) currentState.id!! else UUID.randomUUID().toString()
+
+                    val babyId = userRepository.userProfile.value?.babyId
+                    val baby = babyId?.let { userRepository.getBaby(it) }
+
+                    val serverPrediction = baby?.nextFeedingTime
+
+                    val localDateTime = LocalDateTime.of(
+                        LocalDate.parse(currentState.date),
+                        LocalTime.parse(currentState.startTime)
+                    )
+                    val utcDateTimeString =
+                        localDateTime.atZone(ZoneId.systemDefault()).toInstant().toString()
+
+                    val gapMinutes = try {
+                        serverPrediction?.let { predTimeStr ->
+                            val predDateTime = try {
+                                OffsetDateTime.parse(predTimeStr)
+                                    .atZoneSameInstant(ZoneId.systemDefault())
+                                    .toLocalDateTime()
+                            } catch (_: Exception) {
+                                try {
+                                    LocalDateTime.parse(predTimeStr)
+                                } catch (_: Exception) {
+                                    // Fallback to original HH:mm logic
+                                    val predLocalTime = LocalTime.parse(predTimeStr)
+                                    val cleanDate =
+                                        currentState.date.substringBefore("T").substringBefore(" ")
+                                    LocalDateTime.of(LocalDate.parse(cleanDate), predLocalTime)
+                                }
+                            }
+                            Duration.between(predDateTime, localDateTime).toMinutes()
+                        }
+                    } catch (_: Exception) {
+                        null
+                    }
+
+                    // ➕ 1. Map your UI state values directly into a clean BabyEvent.Feeding payload instance
+                    BabyEvent.Feeding(
+                        id = feedingId,
+                        time = currentState.startTime,
+                        dateTimeString = utcDateTimeString,
+
+                        // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
+                        comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
+
+                        mainFeedingSide = mainFeedingSide,
+                        leftDuration = currentState.leftDuration,
+                        rightDuration = currentState.rightDuration,
+                        totalDuration = currentState.leftDuration + currentState.rightDuration,
+                        bottleAmountMl = currentState.bottleAmountMl,
+                        hasVitaminD = currentState.hasVitaminD,
+                        predictionGapMinutes = gapMinutes,
+                        isPendingSync = true
+                    )
                 }
-
-                // ➕ 1. Map your UI state values directly into a clean UnifiedEventDto payload instance
-                val unifiedFeedingEvent = UnifiedEventDto(
-                    id = feedingId,
-                    type = "FEEDING",
-                    time = currentState.startTime,
-                    dateTimeString = utcDateTimeString,
-
-                    // 🌟 ATTACH COMMENT: Trim whitespace and store as null if empty or blank
-                    comment = currentState.comment.trim().takeIf { it.isNotEmpty() },
-
-                    mainFeedingSide = mainFeedingSide,
-                    leftDuration = currentState.leftDuration,
-                    rightDuration = currentState.rightDuration,
-                    totalDuration = currentState.leftDuration + currentState.rightDuration,
-                    bottleAmountMl = currentState.bottleAmountMl,
-                    hasVitaminD = currentState.hasVitaminD,
-                    predictionGapMinutes = gapMinutes
-                )
 
                 // Check if an entry ID already existed inside your state layer
                 val isEditingExistingItem = !currentState.id.isNullOrEmpty()
@@ -309,14 +314,14 @@ class FeedingViewModel @Inject constructor(
                         userId = userId,
                         date = currentState.date,
                         eventId = currentState.id,
-                        updatedEvent = unifiedFeedingEvent
+                        updatedEvent = feedingEvent
                     )
                 } else {
                     // 🚀 TRIGGER A STANDARD ATOMIC INSERT PUSH
                     repository.saveActivityEvent(
                         userId = userId,
                         date = currentState.date,
-                        event = unifiedFeedingEvent
+                        event = feedingEvent
                     )
                 }
 

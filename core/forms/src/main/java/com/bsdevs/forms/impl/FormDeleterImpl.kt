@@ -3,7 +3,7 @@ package com.bsdevs.forms.impl
 import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.result.Result
 import com.bsdevs.data.repository.FormDeleter
-import com.bsdevs.network.dto.UnifiedEventDto
+import com.bsdevs.network.dto.BabyEvent
 import javax.inject.Inject
 
 class FormDeleterImpl @Inject constructor(
@@ -19,11 +19,11 @@ class FormDeleterImpl @Inject constructor(
         else -> Result.Error(UnsupportedOperationException("Delete not supported for target: $target"))
     }
 
-    private suspend fun performDelete(
+    private suspend fun <T : BabyEvent> performDelete(
         userId: String,
         entityId: String,
         label: String,
-        fetcher: suspend (String) -> UnifiedEventDto?
+        fetcher: suspend (String) -> T?
     ): Result<Unit> = try {
         fetcher(userId)?.let { event ->
             val date = event.dateTimeString.substringBefore("T").substringBefore(" ")

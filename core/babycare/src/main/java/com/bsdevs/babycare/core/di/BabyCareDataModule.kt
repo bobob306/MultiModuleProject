@@ -5,7 +5,7 @@ import com.bsdevs.babycare.core.data.ShoppingListRepositoryImpl
 import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.babycare.core.domain.ShoppingListRepository
 import com.bsdevs.babycare.core.network.BabyCareFirestoreService
-import com.bsdevs.babycare.core.network.FirestoreBabyCareService
+import com.bsdevs.babycare.core.network.BabyCareFirestoreServiceImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -31,6 +31,6 @@ abstract class BabyCareDataModule {
     @Binds
     @Singleton
     abstract fun bindBabyCareFirestoreService(
-        firestoreBabyCareService: FirestoreBabyCareService
+        babyCareFirestoreServiceImpl: BabyCareFirestoreServiceImpl
     ): BabyCareFirestoreService
 }

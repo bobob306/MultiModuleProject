@@ -12,7 +12,7 @@ interface TimeProvider {
     fun elapsedRealtime(): Long
 }
 
-class DefaultTimeProvider @Inject constructor() : TimeProvider {
+class TimeProviderImpl @Inject constructor() : TimeProvider {
     override fun currentLocalDate(): LocalDate = LocalDate.now()
     override fun currentLocalTime(): LocalTime = LocalTime.now()
     override fun currentTimeMillis(): Long = System.currentTimeMillis()

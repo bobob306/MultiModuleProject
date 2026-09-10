@@ -86,10 +86,7 @@ class GenericSduiViewModelTest {
 
         viewModel.refresh(screenId)
 
-        coVerify { 
-            val flow = screenRepository.getScreenFlow(screenId, forceRefresh = true)
-            flow.collect(any())
-        }
+        coVerify { screenRepository.getScreenFlow(screenId, forceRefresh = true) }
         coVerify { babyRepository.refreshData(userId, 20) }
     }
 }

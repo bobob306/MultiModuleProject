@@ -14,11 +14,11 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class FirestoreCoffeeApiServiceTest {
+class CoffeeApiServiceImplTest {
 
     private lateinit var firestore: FirebaseFirestore
     private lateinit var firestoreHolder: FirestoreHolder
-    private lateinit var service: FirestoreCoffeeApiService
+    private lateinit var service: CoffeeApiServiceImpl
 
     @Before
     fun setUp() {
@@ -26,7 +26,7 @@ class FirestoreCoffeeApiServiceTest {
         firestore = mockk(relaxed = true)
         firestoreHolder = mockk(relaxed = true)
         every { firestoreHolder.firestore } returns firestore
-        service = FirestoreCoffeeApiService(firestoreHolder)
+        service = CoffeeApiServiceImpl(firestoreHolder)
     }
 
     @After

@@ -75,8 +75,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bsdevs.uicomponents.shimmer
 import com.bsdevs.babycare.presentation.common.BabyActivity
+import com.bsdevs.common.DateTimeUtils
 import com.bsdevs.data.NetworkScreenData
 import kotlinx.coroutines.delay
+import java.time.ZoneId
 import java.util.Locale
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -306,6 +308,16 @@ fun LazyListScope.activityFeedItems(
                     }
                 }
             }
+
+            is HomeFeedItem.PredictionCard -> {
+                item(key = "prediction_card") {
+                    PredictionCard(
+                        predictions = feedItem.predictions,
+                        activeModel = feedItem.activeModel,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                    )
+                }
+            }
         }
     }
 
@@ -335,6 +347,92 @@ fun LazyListScope.activityFeedItems(
 }
 
 // --- Dashboard Components ---
+
+@Composable
+fun PredictionCard(
+    predictions: Map<String, String>,
+    activeModel: String?,
+    modifier: Modifier = Modifier
+) {
+    val zoneId = remember { ZoneId.systemDefault() }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.7f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoGraph,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = "Next Feed Predictions",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Sort models so active is always at the top, or just alpha sort
+            val sortedModels = predictions.keys.sorted()
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                sortedModels.forEach { model ->
+                    val timeStr = predictions[model]
+                    val formattedTime = DateTimeUtils.formatIsoToTime(timeStr, zoneId) ?: "--:--"
+                    val isActive = model == activeModel
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isActive) MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f)
+                                else Color.Transparent
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isActive) {
+                                Text(
+                                    "★ ",
+                                    color = Color(0xFFFBC02D),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            Text(
+                                text = model.replaceFirstChar { it.uppercase() },
+                                style = if (isActive) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                else MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        Text(
+                            text = formattedTime,
+                            style = if (isActive) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            else MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
 
 @OptIn(
     ExperimentalFoundationApi::class,

@@ -60,6 +60,7 @@ import com.bsdevs.authentication.AccountService
 import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.network.dto.DailyLogDto
+import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,7 +98,7 @@ class TemperatureDataViewModel @Inject constructor(
         withContext(dispatchers.default) {
             val allReadings = dailyLogs.flatMap { day ->
                 day.events
-                    .filter { it.type == "TEMPERATURE" }
+                    .filterIsInstance<BabyEvent.Temperature>()
                     .map { event ->
                         TemperatureItem(
                             id = event.id,

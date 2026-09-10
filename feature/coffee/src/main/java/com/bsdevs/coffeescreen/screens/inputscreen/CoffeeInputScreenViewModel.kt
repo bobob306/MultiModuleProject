@@ -19,11 +19,13 @@ import com.bsdevs.common.result.Result
 import com.bsdevs.common.result.Result.Success
 import com.bsdevs.network.dto.CoffeeDto
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -35,6 +37,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CoffeeInputScreenViewModel @Inject constructor(
     private val accountService: AccountService,
@@ -53,37 +56,30 @@ class CoffeeInputScreenViewModel @Inject constructor(
     private val _navigationEvent = Channel<NavigationEvent>()
     val navigationEvent = _navigationEvent.receiveAsFlow() // Expose as Flow
 
-    val isButtonEnabled: StateFlow<Boolean> = viewData.map { currentResult ->
-        if (currentResult is Success) {
-            val viewData = currentResult.data
-            val inputs = viewData.inputs
+    val isButtonEnabled: StateFlow<Boolean> = viewData.flatMapLatest { currentResult ->
+        flow {
+            val enabled = withContext(dispatchers.default) {
+                if (currentResult is Success) {
+                    val viewData = currentResult.data
+                    val inputs = viewData.inputs
 
-            // Check mutable sets (assuming BEANS, ORIGIN, TASTE are the ones)
-            val areSetsValid = inputs.all { input ->
-                when (input) {
-                    is InputVD -> {
-                        when (input.inputType) {
-                            InputType.BEANS, InputType.ORIGIN, InputType.TASTE, InputType.METHOD, InputType.ROASTER -> input.selectedSet.isNotEmpty()
+                    val areSetsValid = inputs.all { input ->
+                        when (input) {
+                            is InputVD -> {
+                                when (input.inputType) {
+                                    InputType.BEANS, InputType.ORIGIN, InputType.TASTE, InputType.METHOD, InputType.ROASTER -> input.selectedSet.isNotEmpty()
+                                }
+                            }
+                            else -> true
                         }
                     }
-
-                    else -> true // Other input types (like InputRadioVD) are checked separately
+                    val isDateValid = viewData.roastDate != null
+                    areSetsValid && isDateValid
+                } else {
+                    false
                 }
             }
-
-            // Check the date field
-            val isDateValid = viewData.roastDate != null
-
-            _viewData.update {
-                Success(
-                    data = viewData.copy(
-                        isButtonEnabled = areSetsValid && isDateValid
-                    )
-                )
-            }
-            areSetsValid && isDateValid
-        } else {
-            false
+            emit(enabled)
         }
     }
         .stateIn(
