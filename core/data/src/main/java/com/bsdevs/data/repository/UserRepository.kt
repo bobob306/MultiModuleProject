@@ -3,9 +3,12 @@ package com.bsdevs.data.repository
 import android.util.Log
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.data.local.dao.UserBabyDao
+import com.bsdevs.data.local.dao.FormDao
+import com.bsdevs.data.local.dao.ScreenDao
 import com.bsdevs.data.local.entities.BabyEntity
 import com.bsdevs.data.local.entities.UserEntity
 import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.common.FirebaseLogger
 import com.bsdevs.network.dto.BabyDto
 import com.bsdevs.network.dto.UserDto
 import com.google.firebase.firestore.Source
@@ -44,7 +47,9 @@ interface UserRepository {
 class UserRepositoryImpl @Inject constructor(
     private val firestoreHolder: FirestoreHolder,
     private val dispatchers: DispatcherProvider,
-    private val userBabyDao: UserBabyDao
+    private val userBabyDao: UserBabyDao,
+    private val formDao: FormDao,
+    private val screenDao: ScreenDao
 ) : UserRepository {
 
     private val firestore get() = firestoreHolder.firestore
@@ -57,7 +62,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun saveUser(user: UserDto): Unit = withContext(dispatchers.io) {
         user.id?.let { id ->
-            Log.d("FIREBASE_CALL", "Write User: $id")
+            FirebaseLogger.logCall("Write User: $id")
             firestore.collection("users").document(id).set(user).await()
             userBabyDao.insertUser(UserEntity(id, user))
             _userProfile.value = user
@@ -66,7 +71,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun saveBaby(baby: BabyDto): Unit = withContext(dispatchers.io) {
         baby.id?.let { id ->
-            Log.d("FIREBASE_CALL", "Write Baby: $id")
+            FirebaseLogger.logCall("Write Baby: $id")
             firestore.collection("babies").document(id).set(baby).await()
             userBabyDao.insertBaby(BabyEntity(id, baby))
             babyCache[id] = baby
@@ -75,7 +80,7 @@ class UserRepositoryImpl @Inject constructor(
 
     override suspend fun babyExists(babyId: String): Boolean = withContext(dispatchers.io) {
         try {
-            Log.d("FIREBASE_CALL", "Read Baby Exists Check: $babyId")
+            FirebaseLogger.logCall("Read Baby Exists Check: $babyId")
             firestore.collection("babies").document(babyId).get().await().exists()
         } catch (e: Exception) {
             false
@@ -83,15 +88,14 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getUser(userId: String, forceRefresh: Boolean): UserDto? = withContext(dispatchers.io) {
-        if (!forceRefresh) {
-            userBabyDao.getUser(userId)?.let { cached ->
-                _userProfile.value = cached.profile
-                return@withContext cached.profile
-            }
+        val cached = userBabyDao.getUser(userId)
+        if (!forceRefresh && cached != null && !CacheConstants.isStale(cached.lastUpdated)) {
+            _userProfile.value = cached.profile
+            return@withContext cached.profile
         }
 
         try {
-            Log.d("FIREBASE_CALL", "Read User: $userId (Force: $forceRefresh)")
+            FirebaseLogger.logCall("Read User: $userId (Force: $forceRefresh, Stale: ${cached?.let { CacheConstants.isStale(it.lastUpdated) } ?: "null"})")
             // Use DEFAULT to allow Firestore to handle offline fallback gracefully.
             val source = Source.DEFAULT
             val snapshot = firestore.collection("users").document(userId).get(source).await()
@@ -111,15 +115,18 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getBaby(babyId: String, forceRefresh: Boolean): BabyDto? = withContext(dispatchers.io) {
+        val cached = userBabyDao.getBaby(babyId)
         if (!forceRefresh) {
-            userBabyDao.getBaby(babyId)?.let { cached ->
+            babyCache[babyId]?.let { return@withContext it }
+
+            if (cached != null && !CacheConstants.isStale(cached.lastUpdated)) {
                 babyCache[babyId] = cached.data
                 return@withContext cached.data
             }
         }
         
         try {
-            Log.d("FIREBASE_CALL", "Read Baby: $babyId (Force: $forceRefresh)")
+            FirebaseLogger.logCall("Read Baby: $babyId (Force: $forceRefresh, Stale: ${cached?.let { CacheConstants.isStale(it.lastUpdated) } ?: "null"})")
             val source = Source.DEFAULT
             val snapshot = firestore.collection("babies").document(babyId).get(source).await()
             val babyDto = snapshot.toObject<BabyDto>()
@@ -137,7 +144,7 @@ class UserRepositoryImpl @Inject constructor(
     }
 
     override fun getBabyFlow(babyId: String): Flow<BabyDto?> = callbackFlow {
-        Log.d("FIREBASE_CALL", "Listen Baby: $babyId")
+        FirebaseLogger.logCall("Listen Baby: $babyId")
         val listener = firestore.collection("babies").document(babyId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -176,21 +183,21 @@ class UserRepositoryImpl @Inject constructor(
                 .filter { it.id != userId }
 
             if (otherParents.isEmpty() && otherParentsFromList.isEmpty()) {
-                Log.d("FIREBASE_CALL", "Delete Baby: $babyId")
+                FirebaseLogger.logCall("Delete Baby: $babyId")
                 firestore.collection("babies").document(babyId).delete().await()
                 userBabyDao.clearBabies()
 
-                Log.d("FIREBASE_CALL", "Delete Baby Logs for: $babyId")
+                FirebaseLogger.logCall("Delete Baby Logs for: $babyId")
                 val months = firestore.collection("babyLogs").document(babyId).collection("months").get().await()
                 months.documents.forEach { it.reference.delete().await() }
                 firestore.collection("babyLogs").document(babyId).delete().await()
 
-                Log.d("FIREBASE_CALL", "Delete Shopping List for: $babyId")
+                FirebaseLogger.logCall("Delete Shopping List for: $babyId")
                 firestore.collection("shoppingLists").document(babyId).delete().await()
             }
         }
 
-        Log.d("FIREBASE_CALL", "Delete Coffee Logs for: $userId")
+        FirebaseLogger.logCall("Delete Coffee Logs for: $userId")
         val coffeeUploads = firestore.collection("coffeeUploads")
             .whereEqualTo("userId", userId)
             .get().await()
@@ -201,7 +208,7 @@ class UserRepositoryImpl @Inject constructor(
             doc.reference.delete().await()
         }
 
-        Log.d("FIREBASE_CALL", "Delete User: $userId")
+        FirebaseLogger.logCall("Delete User: $userId")
         firestore.collection("users").document(userId).delete().await()
         userBabyDao.clearUsers()
         _userProfile.value = null
@@ -213,6 +220,9 @@ class UserRepositoryImpl @Inject constructor(
             clearables.forEach { it.clearCache() }
             userBabyDao.clearUsers()
             userBabyDao.clearBabies()
+            formDao.clearAll()
+            formDao.clearDynamicOptions()
+            screenDao.clearAll()
         } catch (e: Exception) {
             Log.e("UserRepository", "Failed to clear cache", e)
         } finally {

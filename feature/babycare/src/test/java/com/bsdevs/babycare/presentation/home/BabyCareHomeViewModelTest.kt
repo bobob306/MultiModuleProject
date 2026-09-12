@@ -302,6 +302,8 @@ class BabyCareHomeViewModelTest {
 
         // When loading more (gets July)
         viewModel.loadMore()
+        testDispatcher.scheduler.advanceTimeBy(200)
+        testDispatcher.scheduler.runCurrent()
 
         // Then
         state = (viewModel.viewData.value as Result.Success).data
@@ -351,6 +353,9 @@ class BabyCareHomeViewModelTest {
         fakeService.injectMonth(userId, "2026-07", mapOf("days" to mapOf("2026-07-01" to listOf(mapOf("id" to "e2", "type" to "FEEDING")))))
         
         viewModel.loadMore()
+        testDispatcher.scheduler.advanceTimeBy(200)
+        testDispatcher.scheduler.runCurrent()
+        
         assertEquals(1, repository.cachedDays.value.size) // Still just August
     }
 
@@ -358,6 +363,8 @@ class BabyCareHomeViewModelTest {
     fun `viewModel handles repository error correctly`() = runTest {
         // Given a repo that fails during the initial load triggered by ViewModel init
         val userRepo = mockk<UserRepository>(relaxed = true)
+        every { userRepo.userProfile } returns MutableStateFlow(null)
+        
         val crashingService = object : BabyCareFirestoreService by fakeService {
             override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean) = throw RuntimeException("Network Error")
         }

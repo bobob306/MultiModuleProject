@@ -7,12 +7,15 @@ import com.bsdevs.data.SyncManager
 import com.bsdevs.data.local.dao.UserBabyDao
 import com.bsdevs.data.repository.FormRepository
 import com.bsdevs.data.repository.FormRepositoryImpl
+import com.bsdevs.data.repository.MetadataRepository
+import com.bsdevs.data.repository.MetadataRepositoryImpl
 import com.bsdevs.data.repository.ScreenRepository
 import com.bsdevs.data.repository.ScreenRepositoryImpl
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.data.repository.UserRepositoryImpl
 import com.bsdevs.network.FirestoreHolder
 import com.bsdevs.network.FormDtoMapper
+import com.bsdevs.network.MetadataDtoMapper
 import com.bsdevs.network.ScreenDtoMapper
 import dagger.Module
 import dagger.Provides
@@ -26,12 +29,26 @@ object RepositoryModule {
 
     @Provides
     @Singleton
+    fun provideMetadataRepository(
+        firestoreHolder: FirestoreHolder,
+        mapper: MetadataDtoMapper,
+        screenDao: ScreenDao,
+        formDao: FormDao,
+        dispatchers: DispatcherProvider
+    ): MetadataRepository {
+        return MetadataRepositoryImpl(firestoreHolder, mapper, screenDao, formDao, dispatchers)
+    }
+
+    @Provides
+    @Singleton
     fun provideUserRepository(
         firestoreHolder: FirestoreHolder,
         dispatchers: DispatcherProvider,
-        userBabyDao: UserBabyDao
+        userBabyDao: UserBabyDao,
+        formDao: FormDao,
+        screenDao: ScreenDao
     ): UserRepository {
-        return UserRepositoryImpl(firestoreHolder, dispatchers, userBabyDao)
+        return UserRepositoryImpl(firestoreHolder, dispatchers, userBabyDao, formDao, screenDao)
     }
 
     @Provides
@@ -50,11 +67,12 @@ object RepositoryModule {
     @Singleton
     fun provideFormRepository(
         firestoreHolder: FirestoreHolder,
+        userRepository: UserRepository,
         mapper: FormDtoMapper,
         dispatchers: DispatcherProvider,
         formDao: FormDao,
         syncManager: SyncManager
     ): FormRepository {
-        return FormRepositoryImpl(firestoreHolder, mapper, dispatchers, formDao, syncManager)
+        return FormRepositoryImpl(firestoreHolder, userRepository, mapper, dispatchers, formDao, syncManager)
     }
 }

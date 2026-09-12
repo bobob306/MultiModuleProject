@@ -8,7 +8,6 @@ import com.bsdevs.babycare.core.domain.BabyCareRepository
 import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.common.DispatcherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -63,72 +62,77 @@ class BabyGraphViewModel @Inject constructor(
         _isGapChartFullScreen,
         _selectedGapIndex
     ) { dailyLogs, filter, showPicker, isFullScreen, selectedIndex ->
-        withContext(dispatchers.default) {
-            val allEvents = dailyLogs.flatMap { it.events }
-            val allFeedingEvents = allEvents.filterIsInstance<BabyEvent.Feeding>()
-            
-            // Available dates for the picker (only those with feeding events)
-            val availableDates = allFeedingEvents.map { 
-                parseToLocalDate(it.dateTimeString)
-            }.filter { it != LocalDate.MIN }.toSet()
+        val allEvents = dailyLogs.flatMap { it.events }
+        val allFeedingEvents = allEvents.filterIsInstance<BabyEvent.Feeding>()
+        
+        // Available dates for the picker (only those with feeding events)
+        val availableDates = allFeedingEvents.map { 
+            parseToLocalDate(it.dateTimeString)
+        }.filter { it != LocalDate.MIN }.toSet()
 
-            // Apply filter and determine range
-            var startDate: LocalDate? = null
-            var endDate: LocalDate? = null
+        // Apply filter and determine range
+        var startDate: LocalDate? = null
+        var endDate: LocalDate? = null
 
-            val filteredFeedingEvents = when (filter) {
-                is DateFilter.AllTime -> {
-                    startDate = availableDates.minOrNull()
-                    endDate = availableDates.maxOrNull()
-                    allFeedingEvents
-                }
-                is DateFilter.LastNDays -> {
-                    val today = repository.getCurrentDate()
-                    startDate = today.minusDays(filter.days.toLong())
-                    endDate = today
-                    allFeedingEvents.filter { parseToLocalDate(it.dateTimeString).isAfter(startDate.minusDays(1)) }
-                }
-                is DateFilter.CustomRange -> {
-                    startDate = filter.start
-                    endDate = filter.end
-                    allFeedingEvents.filter { 
-                        val date = parseToLocalDate(it.dateTimeString)
-                        (date.isAfter(startDate.minusDays(1)) && date.isBefore(endDate.plusDays(1)))
-                    }
+        val filteredFeedingEvents = when (filter) {
+            is DateFilter.AllTime -> {
+                startDate = availableDates.minOrNull()
+                endDate = availableDates.maxOrNull()
+                allFeedingEvents
+            }
+            is DateFilter.LastNDays -> {
+                val today = repository.getCurrentDate()
+                startDate = today.minusDays(filter.days.toLong())
+                endDate = today
+                allFeedingEvents.filter { parseToLocalDate(it.dateTimeString).isAfter(startDate.minusDays(1)) }
+            }
+            is DateFilter.CustomRange -> {
+                startDate = filter.start
+                endDate = filter.end
+                allFeedingEvents.filter { 
+                    val date = parseToLocalDate(it.dateTimeString)
+                    (date.isAfter(startDate.minusDays(1)) && date.isBefore(endDate.plusDays(1)))
                 }
             }
+        }
 
-            val countsByHour = filteredFeedingEvents.groupBy { event ->
-                extractHourFromTime(event.time)
-            }.mapValues { it.value.size }
+        val countsByHour = filteredFeedingEvents.groupBy { event ->
+            extractHourFromTime(event.time)
+        }.mapValues { it.value.size }
 
-            val hourlyGraphData = (0..23).map { hour ->
-                HourlyFeedingCount(
-                    hour = hour,
-                    displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
-                    count = countsByHour[hour] ?: 0
-                )
-            }
-
-            val analysis = calculateFeedingGaps(filteredFeedingEvents)
-
-            // 🌟 1. Compute the daily average gaps for the new chart
-            val dailyGapsData = calculateDailyAverageGaps(filteredFeedingEvents)
-
-            FeedingGraphUiState(
-                hourlyCounts = hourlyGraphData,
-                totalFeedsInCache = filteredFeedingEvents.size,
-                analysisResult = analysis,
-                dailyAverageGaps = dailyGapsData,
-                dateFilter = filter,
-                availableDates = availableDates,
-                showDatePicker = showPicker,
-                isGapChartFullScreen = isFullScreen,
-                selectedGapIndex = selectedIndex,
-                startDate = startDate,
-                endDate = endDate
+        val hourlyGraphData = (0..23).map { hour ->
+            HourlyFeedingCount(
+                hour = hour,
+                displayLabel = String.format(Locale.getDefault(), "%02d:00", hour),
+                count = countsByHour[hour] ?: 0
             )
         }
+
+        val analysis = calculateFeedingGaps(filteredFeedingEvents)
+
+        // 🌟 1. Compute the daily average gaps for the new chart
+        val dailyGapsData = calculateDailyAverageGaps(filteredFeedingEvents)
+
+        // 🛡️ Safety: Ensure selected index is still valid for the new filtered range
+        val sanitizedSelectedIndex = if (selectedIndex != null && selectedIndex >= dailyGapsData.size) {
+            null
+        } else {
+            selectedIndex
+        }
+
+        FeedingGraphUiState(
+            hourlyCounts = hourlyGraphData,
+            totalFeedsInCache = filteredFeedingEvents.size,
+            analysisResult = analysis,
+            dailyAverageGaps = dailyGapsData,
+            dateFilter = filter,
+            availableDates = availableDates,
+            showDatePicker = showPicker,
+            isGapChartFullScreen = isFullScreen,
+            selectedGapIndex = sanitizedSelectedIndex,
+            startDate = startDate,
+            endDate = endDate
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -136,9 +140,9 @@ class BabyGraphViewModel @Inject constructor(
     )
 
     fun onDateFilterChanged(filter: DateFilter) {
+        _selectedGapIndex.value = null // 🌟 Clear selection FIRST to avoid transient out-of-bounds UI states
         _dateFilter.value = filter
         _showDatePicker.value = false
-        _selectedGapIndex.value = null
     }
 
     fun setShowDatePicker(show: Boolean) {

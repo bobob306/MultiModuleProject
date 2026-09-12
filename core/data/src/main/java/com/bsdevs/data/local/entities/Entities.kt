@@ -70,6 +70,13 @@ data class FormSubmissionEntity(
     val isPendingSync: Boolean = false
 )
 
+@Entity(tableName = "dynamic_options")
+data class DynamicOptionsEntity(
+    @PrimaryKey val type: String,
+    val options: List<String>,
+    val lastUpdated: Long = System.currentTimeMillis()
+)
+
 @Entity(tableName = "coffee_logs")
 data class CoffeeEntity(
     @PrimaryKey val id: String,

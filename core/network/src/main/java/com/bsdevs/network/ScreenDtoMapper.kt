@@ -21,12 +21,14 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "title" to dto.title,
                     "subtitle" to dto.subtitle,
                     "backgroundColor" to dto.backgroundColor,
+                    "requiredRoles" to dto.requiredRoles,
                     "IMAGE" to mapOf(
                         "index" to dto.image.index,
                         "url" to dto.image.url,
                         "contentDescription" to dto.image.contentDescription,
                         "height" to dto.image.height,
-                        "width" to dto.image.width
+                        "width" to dto.image.width,
+                        "requiredRoles" to dto.image.requiredRoles
                     )
                 )
                 is ScreenDto.ImageDto -> mapOf(
@@ -35,17 +37,20 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "url" to dto.url,
                     "contentDescription" to dto.contentDescription,
                     "height" to dto.height,
-                    "width" to dto.width
+                    "width" to dto.width,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.TitleDto -> mapOf(
                     "type" to "TITLE",
                     "index" to dto.index,
-                    "content" to dto.content
+                    "content" to dto.content,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.SubtitleDto -> mapOf(
                     "type" to "SUBTITLE",
                     "index" to dto.index,
-                    "content" to dto.content
+                    "content" to dto.content,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.SpacerDto -> mapOf(
                     "type" to "SPACER",
@@ -53,7 +58,8 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "size" to arrayListOf(
                         dto.size.type.name,
                         if (dto.size.type == SpacerType.HEIGHT) dto.size.size else dto.size.weight
-                    )
+                    ),
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.NavigationButtonDto -> mapOf(
                     "type" to "NAVIGATION_BUTTON",
@@ -61,16 +67,19 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                     "label" to dto.label,
                     "destination" to dto.destination,
                     "location" to dto.location?.name,
-                    "sort" to dto.sort?.name
+                    "sort" to dto.sort?.name,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.SmallTitleDto -> mapOf(
                     "type" to "SMALL_TITLE",
                     "index" to dto.index,
-                    "content" to dto.content
+                    "content" to dto.content,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.ActivityFeedDto -> mapOf(
                     "type" to "ACTIVITY_FEED",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.TileRowDto -> mapOf(
                     "type" to "TILE_ROW",
@@ -82,47 +91,58 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             "iconName" to tile.iconName,
                             "destination" to tile.destination,
                             "subtitleType" to tile.subtitleType,
-                            "sharedElementKey" to tile.sharedElementKey
+                            "sharedElementKey" to tile.sharedElementKey,
+                            "requiredRoles" to tile.requiredRoles
                         )
-                    }
+                    },
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.GrowthChartDto -> mapOf(
                     "type" to "GROWTH_CHART",
                     "index" to dto.index,
                     "title" to dto.title,
-                    "dataType" to dto.dataType
+                    "dataType" to dto.dataType,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.MeasurementHistoryDto -> mapOf(
                     "type" to "MEASUREMENT_HISTORY",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.VaccinationHistoryDto -> mapOf(
                     "type" to "VACCINATION_HISTORY",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.TemperatureHistoryDto -> mapOf(
                     "type" to "TEMPERATURE_HISTORY",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.TemperatureChartDto -> mapOf(
                     "type" to "TEMPERATURE_CHART",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.FeedingFrequencyChartDto -> mapOf(
                     "type" to "FEEDING_FREQUENCY_CHART",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.FeedingGapChartDto -> mapOf(
                     "type" to "FEEDING_GAP_CHART",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.FeedingInsightCardDto -> mapOf(
                     "type" to "FEEDING_INSIGHT_CARD",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 is ScreenDto.ShoppingListDto -> mapOf(
                     "type" to "SHOPPING_LIST",
-                    "index" to dto.index
+                    "index" to dto.index,
+                    "requiredRoles" to dto.requiredRoles
                 )
                 else -> emptyMap<String, Any?>()
             }
@@ -144,12 +164,14 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             title = item["title"] as String,
                             subtitle = item["subtitle"] as String,
                             backgroundColor = item["backgroundColor"].toString().toIntOrNull(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>(),
                             image = ScreenDto.ImageDto(
                                 index = image["index"].toString().toInt(),
                                 url = image["url"] as String,
                                 contentDescription = image["contentDescription"] as String,
                                 height = image["height"].toString().toInt(),
                                 width = image["width"].toString().toInt(),
+                                requiredRoles = (image["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                             ),
                         )
                     }
@@ -161,20 +183,23 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             contentDescription = item["contentDescription"] as String,
                             height = item["height"].toString().toInt(),
                             width = item["width"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "TITLE" -> {
                         ScreenDto.TitleDto(
                             index = item["index"].toString().toInt(),
-                            content = item["content"] as String
+                            content = item["content"] as String,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "SUBTITLE" -> {
                         ScreenDto.SubtitleDto(
                             index = item["index"].toString().toInt(),
-                            content = item["content"] as String
+                            content = item["content"] as String,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
@@ -187,7 +212,8 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                                 size = if (type == "HEIGHT") size[1].toString().toInt() else null,
                                 weight = if (type == "WEIGHT") size[1].toString()
                                     .toFloat() else null,
-                            )
+                            ),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
@@ -197,20 +223,23 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                             label = item["label"] as String,
                             destination = item["destination"] as String,
                             location = item["location"].toString().toLocationType,
-                            sort = item["sort"].toString().toButtonType
+                            sort = item["sort"].toString().toButtonType,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "SMALL_TITLE" -> {
                         ScreenDto.SmallTitleDto(
                             index = item["index"].toString().toInt(),
-                            content = item["content"] as String
+                            content = item["content"] as String,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "ACTIVITY_FEED" -> {
                         ScreenDto.ActivityFeedDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
@@ -222,12 +251,14 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                                 iconName = tileMap["iconName"] as String,
                                 destination = tileMap["destination"] as String,
                                 subtitleType = tileMap["subtitleType"] as? String,
-                                sharedElementKey = tileMap["sharedElementKey"] as? String
+                                sharedElementKey = tileMap["sharedElementKey"] as? String,
+                                requiredRoles = (tileMap["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                             )
                         } ?: emptyList()
                         ScreenDto.TileRowDto(
                             index = item["index"].toString().toInt(),
-                            tiles = tiles
+                            tiles = tiles,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
@@ -235,60 +266,69 @@ class ScreenDtoMapperImpl @Inject constructor() : ScreenDtoMapper {
                         ScreenDto.GrowthChartDto(
                             index = item["index"].toString().toInt(),
                             title = item["title"] as String,
-                            dataType = item["dataType"] as String
+                            dataType = item["dataType"] as String,
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "MEASUREMENT_HISTORY" -> {
                         ScreenDto.MeasurementHistoryDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "VACCINATION_HISTORY" -> {
                         ScreenDto.VaccinationHistoryDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "TEMPERATURE_HISTORY" -> {
                         ScreenDto.TemperatureHistoryDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "TEMPERATURE_CHART" -> {
                         ScreenDto.TemperatureChartDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "FEEDING_FREQUENCY_CHART" -> {
                         ScreenDto.FeedingFrequencyChartDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "FEEDING_GAP_CHART" -> {
                         ScreenDto.FeedingGapChartDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "FEEDING_INSIGHT_CARD" -> {
                         ScreenDto.FeedingInsightCardDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     "SHOPPING_LIST" -> {
                         ScreenDto.ShoppingListDto(
-                            index = item["index"].toString().toInt()
+                            index = item["index"].toString().toInt(),
+                            requiredRoles = (item["requiredRoles"] as? List<*>)?.filterIsInstance<String>()
                         )
                     }
 
                     else -> {
-                        ScreenDto.Unknown(99)
+                        ScreenDto.Unknown(99, null)
                     }
 
                 }

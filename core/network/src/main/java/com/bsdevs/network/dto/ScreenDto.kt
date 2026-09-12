@@ -8,15 +8,20 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class ScreenDto {
     abstract val index: Int
+    abstract val requiredRoles: List<String>?
 
     @Serializable
-    data class Unknown(@SerialName("index") override val index: Int) : ScreenDto()
+    data class Unknown(
+        @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
+    ) : ScreenDto()
 
     @Serializable
     @SerialName("TITLE")
     data class TitleDto(
         @SerialName("index") override val index: Int,
         @SerialName("content") val content: String,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -24,6 +29,7 @@ sealed class ScreenDto {
     data class SubtitleDto(
         @SerialName("index") override val index: Int,
         @SerialName("content") val content: String,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -31,6 +37,7 @@ sealed class ScreenDto {
     data class SpacerDto(
         @SerialName("index") override val index: Int,
         @SerialName("size") val size: SizeDto,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -41,6 +48,7 @@ sealed class ScreenDto {
         @SerialName("contentDescription") val contentDescription: String? = null,
         @SerialName("height") val height: Int,
         @SerialName("width") val width: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -51,6 +59,7 @@ sealed class ScreenDto {
         @SerialName("title") val title: String,
         @SerialName("subtitle") val subtitle: String,
         @SerialName("backgroundColor") val backgroundColor: Int?,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -61,6 +70,7 @@ sealed class ScreenDto {
         @SerialName("location") val location: LocationType? = INTERNAL,
         @SerialName("destination") val destination: String,
         @SerialName("sort") val sort: ButtonType? = PRIMARY,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -68,12 +78,14 @@ sealed class ScreenDto {
     data class SmallTitleDto(
         @SerialName("index") override val index: Int,
         @SerialName("content") val content: String,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("ACTIVITY_FEED")
     data class ActivityFeedDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -81,6 +93,7 @@ sealed class ScreenDto {
     data class TileRowDto(
         @SerialName("index") override val index: Int,
         @SerialName("tiles") val tiles: List<TileDto> = emptyList(),
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -89,54 +102,63 @@ sealed class ScreenDto {
         @SerialName("index") override val index: Int,
         @SerialName("title") val title: String,
         @SerialName("dataType") val dataType: String,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("MEASUREMENT_HISTORY")
     data class MeasurementHistoryDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("VACCINATION_HISTORY")
     data class VaccinationHistoryDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("TEMPERATURE_HISTORY")
     data class TemperatureHistoryDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("TEMPERATURE_CHART")
     data class TemperatureChartDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("FEEDING_FREQUENCY_CHART")
     data class FeedingFrequencyChartDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("FEEDING_GAP_CHART")
     data class FeedingGapChartDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("FEEDING_INSIGHT_CARD")
     data class FeedingInsightCardDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
     @SerialName("SHOPPING_LIST")
     data class ShoppingListDto(
         @SerialName("index") override val index: Int,
+        @SerialName("requiredRoles") override val requiredRoles: List<String>? = null
     ) : ScreenDto()
 
     @Serializable
@@ -147,6 +169,7 @@ sealed class ScreenDto {
         @SerialName("destination") val destination: String,
         @SerialName("subtitleType") val subtitleType: String? = null,
         @SerialName("sharedElementKey") val sharedElementKey: String? = null,
+        @SerialName("requiredRoles") val requiredRoles: List<String>? = null
     )
 }
 

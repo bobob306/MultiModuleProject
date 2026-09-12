@@ -3,6 +3,7 @@ package com.bsdevs.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.AutoMigration
 import com.bsdevs.data.local.dao.*
 import com.bsdevs.data.local.entities.*
 
@@ -15,9 +16,13 @@ import com.bsdevs.data.local.entities.*
         BabyEventEntity::class,
         FormSchemaEntity::class,
         FormSubmissionEntity::class,
-        CoffeeEntity::class
+        CoffeeEntity::class,
+        DynamicOptionsEntity::class
     ],
-    version = 2,
+    version = 3,
+    autoMigrations = [
+        AutoMigration(from = 2, to = 3)
+    ],
     exportSchema = true
 )
 @TypeConverters(MMPTypeConverters::class)

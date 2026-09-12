@@ -10,6 +10,7 @@ import com.bsdevs.data.local.entities.ShoppingItemEntity
 import com.bsdevs.data.repository.Clearable
 import com.bsdevs.data.repository.UserRepository
 import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.common.FirebaseLogger
 import com.bsdevs.network.dto.ShoppingListDoc
 import com.bsdevs.network.dto.ShoppingListDto
 import com.google.firebase.firestore.FieldValue
@@ -80,6 +81,7 @@ class ShoppingListRepositoryImpl @Inject constructor(
 
         // Sync from network
         networkListenerJob = repositoryScope.launch {
+            FirebaseLogger.logCall("Listen Shopping List: $babyId")
             firestore.collection("shoppingLists")
                 .document(babyId)
                 .snapshots()
@@ -109,6 +111,7 @@ class ShoppingListRepositoryImpl @Inject constructor(
 
             // Try to save to Firestore
             try {
+                FirebaseLogger.logCall("Add Shopping Item: $itemId for Baby: $babyId")
                 firestore.collection("shoppingLists")
                     .document(babyId)
                     .set(mapOf("items" to mapOf(itemId to finalItem)), SetOptions.merge())
@@ -130,6 +133,7 @@ class ShoppingListRepositoryImpl @Inject constructor(
             shoppingDao.insertItems(listOf(ShoppingItemEntity(itemId, babyId, item, isPendingSync = true)))
 
             try {
+                FirebaseLogger.logCall("Update Shopping Item: $itemId for Baby: $babyId")
                 firestore.collection("shoppingLists")
                     .document(babyId)
                     .update("items.$itemId", item)
@@ -148,6 +152,7 @@ class ShoppingListRepositoryImpl @Inject constructor(
             shoppingDao.markDeleted(itemId)
 
             try {
+                FirebaseLogger.logCall("Delete Shopping Item: $itemId for Baby: $babyId")
                 firestore.collection("shoppingLists")
                     .document(babyId)
                     .update("items.$itemId", FieldValue.delete())

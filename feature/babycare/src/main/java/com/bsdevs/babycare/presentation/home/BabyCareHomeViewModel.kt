@@ -22,9 +22,11 @@ import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.VaccinationDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
@@ -35,7 +37,7 @@ import java.time.ZoneId
 import java.util.Locale
 import javax.inject.Inject
 
-@OptIn(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class BabyCareHomeViewModel @Inject constructor(
     private val repository: BabyCareRepository,
@@ -76,12 +78,14 @@ class BabyCareHomeViewModel @Inject constructor(
 
         // 🌟 2. Observe the repository cache in the background
         viewModelScope.launch {
-            repository.cachedDays.collect { dailyLogs ->
-                // Transition to success if we have data to show (Offline-first)
-                if (dailyLogs.isNotEmpty() || (_viewData.value !is Result.Loading)) {
-                    updateDisplayFeed(dailyLogs)
+            repository.cachedDays
+                .debounce(100) // 🛡️ Prevent rapid-fire UI updates during batch sync or pagination
+                .collect { dailyLogs ->
+                    // Transition to success if we have data to show (Offline-first)
+                    if (dailyLogs.isNotEmpty() || (_viewData.value !is Result.Loading)) {
+                        updateDisplayFeed(dailyLogs)
+                    }
                 }
-            }
         }
 
         // Trigger initial data load immediately on launch
