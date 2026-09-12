@@ -65,4 +65,10 @@ class MMPTypeConverters {
 
     @TypeConverter
     fun toCoffeeDto(value: String): CoffeeDto = json.decodeFromString(value)
+
+    @TypeConverter
+    fun fromStringList(value: List<String>): String = json.encodeToString(value)
+
+    @TypeConverter
+    fun toStringList(value: String): List<String> = json.decodeFromString(value)
 }

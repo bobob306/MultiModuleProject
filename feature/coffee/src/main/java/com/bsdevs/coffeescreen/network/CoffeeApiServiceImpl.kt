@@ -1,8 +1,8 @@
 package com.bsdevs.coffeescreen.network
 
-import android.util.Log
 import com.bsdevs.network.dto.CoffeeInputScreenDto
 import com.bsdevs.network.FirestoreHolder
+import com.bsdevs.common.FirebaseLogger
 import com.bsdevs.network.dto.CoffeeDto
 import com.bsdevs.network.dto.ShotDto
 import kotlinx.coroutines.tasks.await
@@ -18,7 +18,7 @@ class CoffeeApiServiceImpl @Inject constructor(
     private val firestore get() = firestoreHolder.firestore
 
     override suspend fun getCoffeeInputScreenData(): CoffeeInputScreenDto? {
-        Log.d("FIREBASE_CALL", "Read Screen: coffeeInput")
+        FirebaseLogger.logCall("Read Screen: coffeeInput")
         val documentSnapshot = firestore.collection("screens").document("coffeeInput").get().await()
         return documentSnapshot.toObject(CoffeeInputScreenDto::class.java)
     }
@@ -37,12 +37,12 @@ class CoffeeApiServiceImpl @Inject constructor(
             "id" to coffee.id
         )
         val label = coffee.label ?: coffee.id ?: "unknown"
-        Log.d("FIREBASE_CALL", "Write Coffee: $label")
+        FirebaseLogger.logCall("Write Coffee: $label")
         firestore.collection("coffeeUploads").document(label).set(item).await()
     }
 
     override suspend fun getCoffeeById(userId: String, coffeeId: String): CoffeeDto? {
-        Log.d("FIREBASE_CALL", "Read Coffee By ID: $coffeeId")
+        FirebaseLogger.logCall("Read Coffee By ID: $coffeeId")
         val snapshot = firestore.collection("coffeeUploads")
             .whereEqualTo("userId", userId)
             .whereEqualTo("id", coffeeId)
@@ -52,7 +52,7 @@ class CoffeeApiServiceImpl @Inject constructor(
     }
 
     override suspend fun getAllCoffee(userId: String): List<CoffeeDto> {
-        Log.d("FIREBASE_CALL", "Read All Coffee for user: $userId")
+        FirebaseLogger.logCall("Read All Coffee for user: $userId")
         val snapshot = firestore.collection("coffeeUploads")
             .whereEqualTo("userId", userId)
             .get()
@@ -61,7 +61,7 @@ class CoffeeApiServiceImpl @Inject constructor(
     }
 
     override suspend fun getShotsForCoffee(coffeeLabel: String): List<ShotDto> {
-        Log.d("FIREBASE_CALL", "Read Shots for Coffee: $coffeeLabel")
+        FirebaseLogger.logCall("Read Shots for Coffee: $coffeeLabel")
         val snapshot = firestore.collection("coffeeUploads")
             .document(coffeeLabel)
             .collection("shots")
@@ -72,7 +72,7 @@ class CoffeeApiServiceImpl @Inject constructor(
 
     override suspend fun uploadShot(coffeeLabel: String, shot: ShotDto) {
         val shotId = shot.id ?: UUID.randomUUID().toString()
-        Log.d("FIREBASE_CALL", "Write Shot: $shotId for $coffeeLabel")
+        FirebaseLogger.logCall("Write Shot: $shotId for $coffeeLabel")
         firestore.collection("coffeeUploads")
             .document(coffeeLabel)
             .collection("shots")

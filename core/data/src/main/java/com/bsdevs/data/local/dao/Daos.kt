@@ -8,6 +8,7 @@ import com.bsdevs.data.local.entities.BabyEntity
 import com.bsdevs.data.local.entities.BabyEventEntity
 import com.bsdevs.data.local.entities.FormSchemaEntity
 import com.bsdevs.data.local.entities.FormSubmissionEntity
+import com.bsdevs.data.local.entities.DynamicOptionsEntity
 import com.bsdevs.data.local.entities.ScreenEntity
 import com.bsdevs.data.local.entities.ShoppingItemEntity
 import com.bsdevs.data.local.entities.UserEntity
@@ -97,6 +98,9 @@ interface BabyEventDao {
     @Query("SELECT * FROM baby_events WHERE isPendingSync = 1")
     suspend fun getPendingSync(): List<BabyEventEntity>
 
+    @Query("SELECT * FROM baby_events WHERE id = :eventId LIMIT 1")
+    suspend fun getEventById(eventId: String): BabyEventEntity?
+
     @Query("DELETE FROM baby_events WHERE id = :eventId")
     suspend fun deleteById(eventId: String)
     
@@ -123,6 +127,15 @@ interface FormDao {
 
     @Query("SELECT * FROM form_submissions WHERE isPendingSync = 1")
     suspend fun getPendingSubmissions(): List<FormSubmissionEntity>
+
+    @Query("SELECT * FROM dynamic_options WHERE type = :type")
+    suspend fun getDynamicOptions(type: String): DynamicOptionsEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDynamicOptions(options: DynamicOptionsEntity)
+
+    @Query("DELETE FROM dynamic_options")
+    suspend fun clearDynamicOptions()
 
     @Query("DELETE FROM form_schemas")
     suspend fun clearAll()

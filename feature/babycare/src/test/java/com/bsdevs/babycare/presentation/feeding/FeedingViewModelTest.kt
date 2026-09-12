@@ -124,6 +124,7 @@ class FeedingViewModelTest {
             userRepository,
             timerManager,
             timeProvider,
+            dispatchers,
             context,
             savedStateHandle
         )

@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bsdevs.common.DispatcherProvider
 import com.bsdevs.homescreen.FormSeeds
-import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.data.repository.FormRepository
+import com.bsdevs.data.repository.MetadataRepository
 import com.bsdevs.data.repository.ScreenRepository
+import com.bsdevs.network.FormDtoMapper
+import com.bsdevs.network.dto.AppMetadataDto
+import com.bsdevs.network.dto.FormSchemaDto
+import com.bsdevs.network.dto.ScreenDto
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +29,8 @@ data class DeveloperMenuUiState(
 class DeveloperMenuViewModel @Inject constructor(
     private val formRepository: FormRepository,
     private val screenRepository: ScreenRepository,
+    private val metadataRepository: MetadataRepository,
+    private val formMapper: FormDtoMapper,
     private val dispatchers: DispatcherProvider
 ) : ViewModel() {
 
@@ -35,24 +41,30 @@ class DeveloperMenuViewModel @Inject constructor(
         viewModelScope.launch(dispatchers.io) {
             _uiState.update { it.copy(isSeeding = true, error = null, seedSuccess = false) }
             try {
-                // Sync Forms
-                formRepository.updateForm("coffeeLog", FormSeeds.coffeeLog)
-                formRepository.updateForm("nappyLog", FormSeeds.nappyLog)
-                formRepository.updateForm("temperatureLog", FormSeeds.temperatureLog)
-                formRepository.updateForm("measurementLog", FormSeeds.measurementLog)
-                formRepository.updateForm("vaccinationLog", FormSeeds.vaccinationLog)
+                val screens = mutableMapOf<String, List<ScreenDto>>()
+                val forms = mutableMapOf<String, FormSchemaDto>()
 
-                // Cleanup Sleep experiment data
+                // Populate Forms
+                forms["coffeeLog"] = formMapper.mapToDto(FormSeeds.coffeeLog)
+                forms["nappyLog"] = formMapper.mapToDto(FormSeeds.nappyLog)
+                forms["temperatureLog"] = formMapper.mapToDto(FormSeeds.temperatureLog)
+                forms["measurementLog"] = formMapper.mapToDto(FormSeeds.measurementLog)
+                forms["vaccinationLog"] = formMapper.mapToDto(FormSeeds.vaccinationLog)
+
+                // Populate Screens
+                screens["baby_home"] = getBabyHomeScreen()
+                screens["measurement_screen"] = getMeasurementScreen()
+                screens["vaccination_history"] = getVaccinationHistoryScreen()
+                screens["temperature_screen"] = getTemperatureHistoryScreen()
+                screens["analysis_screen"] = getAnalysisScreen()
+                screens["shopping_list"] = getShoppingListScreen()
+
+                val metadata = AppMetadataDto(screens = screens, forms = forms)
+                metadataRepository.updateMetadata(metadata)
+
+                // Individual deletions if still needed
                 formRepository.deleteForm("sleepLog")
                 screenRepository.deleteScreen("sleep_screen")
-
-                // Sync Screens
-                seedBabyHomeScreen()
-                seedMeasurementScreen()
-                seedVaccinationHistoryScreen()
-                seedTemperatureHistoryScreen()
-                seedAnalysisScreen()
-                seedShoppingListScreen()
 
                 _uiState.update { it.copy(isSeeding = false, seedSuccess = true) }
             } catch (e: Exception) {
@@ -61,17 +73,16 @@ class DeveloperMenuViewModel @Inject constructor(
         }
     }
 
-    private suspend fun seedMeasurementScreen() {
-        val measurementScreen = listOf(
+    private fun getMeasurementScreen(): List<ScreenDto> {
+        return listOf(
             ScreenDto.GrowthChartDto(index = 0, title = "Weight Trend (kg)", dataType = "WEIGHT"),
             ScreenDto.GrowthChartDto(index = 1, title = "Height Trend (cm)", dataType = "HEIGHT"),
             ScreenDto.GrowthChartDto(index = 2, title = "Head Circumference (cm)", dataType = "HEAD"),
             ScreenDto.MeasurementHistoryDto(index = 3)
         )
-        screenRepository.updateScreen("measurement_screen", measurementScreen)
     }
 
-    private suspend fun seedBabyHomeScreen() {
+    private fun getBabyHomeScreen(): List<ScreenDto> {
         val babyHomeTiles = listOf(
             ScreenDto.TileDto(
                 index = 0,
@@ -119,45 +130,41 @@ class DeveloperMenuViewModel @Inject constructor(
                 iconName = "AutoGraph",
                 destination = "babycare://graph",
                 subtitleType = "ANALYSIS",
-                sharedElementKey = "tile_analysis"
+                sharedElementKey = "tile_analysis",
+                requiredRoles = listOf("parent", "admin")
             )
         )
 
-        val babyHomeScreen = listOf(
+        return listOf(
             ScreenDto.TileRowDto(index = 0, tiles = babyHomeTiles),
             ScreenDto.ActivityFeedDto(index = 1)
         )
-        screenRepository.updateScreen("baby_home", babyHomeScreen)
     }
 
-    private suspend fun seedVaccinationHistoryScreen() {
-        val vaccinationHistoryScreen = listOf(
+    private fun getVaccinationHistoryScreen(): List<ScreenDto> {
+        return listOf(
             ScreenDto.VaccinationHistoryDto(index = 0)
         )
-        screenRepository.updateScreen("vaccination_history", vaccinationHistoryScreen)
     }
 
-    private suspend fun seedTemperatureHistoryScreen() {
-        val temperatureHistoryScreen = listOf(
+    private fun getTemperatureHistoryScreen(): List<ScreenDto> {
+        return listOf(
             ScreenDto.TemperatureChartDto(index = 0),
             ScreenDto.TemperatureHistoryDto(index = 1)
         )
-        screenRepository.updateScreen("temperature_screen", temperatureHistoryScreen)
     }
 
-    private suspend fun seedAnalysisScreen() {
-        val analysisScreen = listOf(
+    private fun getAnalysisScreen(): List<ScreenDto> {
+        return listOf(
             ScreenDto.FeedingFrequencyChartDto(index = 0),
             ScreenDto.FeedingGapChartDto(index = 1),
             ScreenDto.FeedingInsightCardDto(index = 2)
         )
-        screenRepository.updateScreen("analysis_screen", analysisScreen)
     }
 
-    private suspend fun seedShoppingListScreen() {
-        val shoppingListScreen = listOf(
+    private fun getShoppingListScreen(): List<ScreenDto> {
+        return listOf(
             ScreenDto.ShoppingListDto(index = 0)
         )
-        screenRepository.updateScreen("shopping_list", shoppingListScreen)
     }
 }

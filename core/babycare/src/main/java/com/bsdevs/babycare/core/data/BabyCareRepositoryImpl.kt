@@ -12,6 +12,7 @@ import com.bsdevs.data.SyncManager
 import com.bsdevs.data.Syncable
 import com.bsdevs.data.local.dao.BabyEventDao
 import com.bsdevs.data.local.entities.BabyEventEntity
+import com.bsdevs.data.repository.CacheConstants
 import com.bsdevs.data.repository.Clearable
 import com.bsdevs.data.repository.UserRepository
 import kotlinx.coroutines.flow.*
@@ -50,6 +51,7 @@ class BabyCareRepositoryImpl @Inject constructor(
     override val vaccinations: StateFlow<List<BabyEvent.Vaccination>> = _vaccinations.asStateFlow()
 
     private var currentAnchorMonth: YearMonth? = null
+    private var lastSyncTimestamp: Long = 0L
 
     override suspend fun sync() {
         val userId = userRepository.userProfile.value?.id ?: return
@@ -135,8 +137,8 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
 
         // 2. 🛡️ Optimization: If we already have data in memory AND we have already performed a network fetch 
-        // in this session (anchor is set), don't hit the network unless force refreshed.
-        if (!forceRefresh && _cachedDays.value.isNotEmpty() && currentAnchorMonth != null) {
+        // in this session (anchor is set) AND it's not stale, don't hit the network unless force refreshed.
+        if (!forceRefresh && _cachedDays.value.isNotEmpty() && currentAnchorMonth != null && !CacheConstants.isStale(lastSyncTimestamp)) {
             return@withContext RepositoryFetchResult(
                 nextAnchorMonth = currentAnchorMonth,
                 hasMoreData = true
@@ -146,6 +148,9 @@ class BabyCareRepositoryImpl @Inject constructor(
         try {
             // 3. 🌐 Network Sync: Fetch the latest pointers from Firestore
             val latestMonthId = apiService.getLatestMonthId(userId, forceRefresh)
+
+            // Update timestamp on successful network touch start
+            lastSyncTimestamp = System.currentTimeMillis()
 
             // 1. Fetch all measurements once (Separate collection)
             val measurementList = apiService.fetchAllMeasurements(userId).map { parseBabyEvent(it) as BabyEvent.Measurement }
@@ -443,14 +448,25 @@ class BabyCareRepositoryImpl @Inject constructor(
         val cached = _cachedDays.value.asSequence().flatMap { it.events }.firstOrNull { it.id == activityId }
         if (cached != null) return@withContext cached
         
-        apiService.getAllMonthIds(userId).asSequence().firstNotNullOfOrNull { monthId ->
-            fetchMonthFromService(userId, monthId).asSequence().flatMap { it.events }.firstOrNull { it.id == activityId }
+        val local = babyEventDao.getEventById(activityId)
+        if (local != null) return@withContext local.event.withPendingSync(local.isPendingSync)
+
+        // Optimized Network Fallback: Only check the most recent month if not in DB
+        val latestMonthId = apiService.getLatestMonthId(userId)
+        if (latestMonthId != null) {
+            val event = fetchMonthFromService(userId, latestMonthId).flatMap { it.events }.firstOrNull { it.id == activityId }
+            if (event != null) return@withContext event
         }
+        
+        null
     }
 
     override suspend fun getMeasurementEventById(userId: String, activityId: String): BabyEvent.Measurement? = withContext(dispatchers.io) {
         val cached = _measurements.value.firstOrNull { it.id == activityId }
         if (cached != null) return@withContext cached
+
+        val local = babyEventDao.getEventById(activityId)
+        if (local != null) return@withContext local.event as? BabyEvent.Measurement
 
         apiService.fetchAllMeasurements(userId).map { parseBabyEvent(it) as BabyEvent.Measurement }
             .firstOrNull { it.id == activityId } ?: getActivityEventById(userId, activityId) as? BabyEvent.Measurement
@@ -459,6 +475,9 @@ class BabyCareRepositoryImpl @Inject constructor(
     override suspend fun getVaccinationEventById(userId: String, activityId: String): BabyEvent.Vaccination? = withContext(dispatchers.io) {
         val cached = _vaccinations.value.firstOrNull { it.id == activityId }
         if (cached != null) return@withContext cached
+
+        val local = babyEventDao.getEventById(activityId)
+        if (local != null) return@withContext local.event as? BabyEvent.Vaccination
         
         apiService.fetchAllVaccinations(userId).map { parseBabyEvent(it) as BabyEvent.Vaccination }
             .firstOrNull { it.id == activityId }

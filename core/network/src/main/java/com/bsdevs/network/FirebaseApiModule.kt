@@ -37,4 +37,10 @@ object FirebaseApiModule {
 
     @Provides
     fun provideFormDtoMapper(): FormDtoMapper = FormDtoMapperImpl()
+
+    @Provides
+    fun provideMetadataDtoMapper(
+        screenMapper: ScreenDtoMapper,
+        formMapper: FormDtoMapper
+    ): MetadataDtoMapper = MetadataDtoMapperImpl(screenMapper, formMapper)
 }

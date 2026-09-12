@@ -65,7 +65,7 @@ class MeasurementViewModelTest {
         if (activityId != null) {
             savedStateHandle["activityId"] = activityId
         }
-        viewModel = MeasurementViewModel(accountService, repository, userRepository, savedStateHandle)
+        viewModel = MeasurementViewModel(accountService, repository, userRepository, dispatchers, savedStateHandle)
     }
 
     @Test
