@@ -8,6 +8,7 @@ import com.bsdevs.data.local.dao.FormDao
 import com.bsdevs.data.local.dao.CoffeeDao
 import com.bsdevs.data.local.dao.ScreenDao
 import com.bsdevs.data.local.dao.ShoppingDao
+import com.bsdevs.data.local.dao.TaskDao
 import com.bsdevs.data.local.dao.UserBabyDao
 import dagger.Module
 import dagger.Provides
@@ -27,7 +28,7 @@ object DatabaseModule {
                 context,
                 MMPDatabase::class.java,
                 "mmp_database"
-            ).build()
+            ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
@@ -47,4 +48,7 @@ object DatabaseModule {
 
     @Provides
     fun provideCoffeeDao(db: MMPDatabase): CoffeeDao = db.coffeeDao()
+
+    @Provides
+    fun provideTaskDao(db: MMPDatabase): TaskDao = db.taskDao()
 }

@@ -443,7 +443,7 @@ fun NavGraphBuilder.babyCareSection(
             val shoppingViewModel: ShoppingListViewModel = hiltViewModel()
             GenericSduiScreen(
                 screenId = "shopping_list",
-                title = "Shopping List",
+                title = "Shopping & Tasks",
                 lazyFeatureContent = { component ->
                     when (component) {
                         is NetworkScreenData.ShoppingListDataNetwork -> {

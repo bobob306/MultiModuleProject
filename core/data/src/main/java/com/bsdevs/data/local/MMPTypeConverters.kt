@@ -6,6 +6,7 @@ import com.bsdevs.network.dto.FormSchemaDto
 import com.bsdevs.network.dto.FormSubmissionDto
 import com.bsdevs.network.dto.ScreenDto
 import com.bsdevs.network.dto.ShoppingListDto
+import com.bsdevs.network.dto.TaskDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.CoffeeDto
@@ -41,6 +42,12 @@ class MMPTypeConverters {
 
     @TypeConverter
     fun toShoppingListDto(value: String): ShoppingListDto = json.decodeFromString(value)
+
+    @TypeConverter
+    fun fromTaskDto(value: TaskDto): String = json.encodeToString(value)
+
+    @TypeConverter
+    fun toTaskDto(value: String): TaskDto = json.decodeFromString(value)
 
     @TypeConverter
     fun fromBabyEvent(value: BabyEvent): String = json.encodeToString(value)
