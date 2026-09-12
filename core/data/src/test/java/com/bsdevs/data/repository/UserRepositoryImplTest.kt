@@ -1,6 +1,8 @@
 package com.bsdevs.data.repository
 
 import com.bsdevs.common.DispatcherProvider
+import com.bsdevs.data.local.dao.FormDao
+import com.bsdevs.data.local.dao.ScreenDao
 import com.bsdevs.data.local.dao.UserBabyDao
 import com.bsdevs.data.local.entities.BabyEntity
 import com.bsdevs.data.local.entities.UserEntity
@@ -28,6 +30,8 @@ class UserRepositoryImplTest {
     private lateinit var userRepository: UserRepositoryImpl
     private lateinit var dispatchers: DispatcherProvider
     private lateinit var userBabyDao: UserBabyDao
+    private lateinit var formDao: FormDao
+    private lateinit var screenDao: ScreenDao
 
     @Before
     fun setUp() {
@@ -38,13 +42,15 @@ class UserRepositoryImplTest {
         firestoreHolder = mockk(relaxed = true)
         every { firestoreHolder.firestore } returns firestore
         userBabyDao = mockk(relaxed = true)
+        formDao = mockk(relaxed = true)
+        screenDao = mockk(relaxed = true)
 
         dispatchers = object : DispatcherProvider {
             override val main = testDispatcher
             override val io = testDispatcher
             override val default = testDispatcher
         }
-        userRepository = UserRepositoryImpl(firestoreHolder, dispatchers, userBabyDao)
+        userRepository = UserRepositoryImpl(firestoreHolder, dispatchers, userBabyDao, formDao, screenDao)
     }
 
     @After

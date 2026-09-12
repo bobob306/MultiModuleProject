@@ -27,7 +27,7 @@ class FakeScreenRepository : ScreenRepository {
         throw UnsupportedOperationException("Not used in tests")
     }
 
-    override suspend fun getScreenFlow(screen: String, forceRefresh: Boolean): Flow<Result<List<ScreenDto>>> {
+    override fun getScreenFlow(screen: String, forceRefresh: Boolean): Flow<Result<List<ScreenDto>>> {
         return screenFlows.getOrPut(screen) { MutableStateFlow(Result.Loading) }
     }
 

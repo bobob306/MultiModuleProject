@@ -71,7 +71,7 @@ class GenericSduiViewModelTest {
         val dtos = listOf(ScreenDto.TitleDto(0, "Title"))
         val mappedData = listOf(mockk<NetworkScreenData>())
 
-        coEvery { screenRepository.getScreenFlow(screenId) } returns flowOf(Result.Success(dtos))
+        every { screenRepository.getScreenFlow(screenId) } returns flowOf(Result.Success(dtos))
         every { mapper.mapToData(any()) } returns mappedData
 
         viewModel.getUiState(screenId).test {
@@ -96,7 +96,7 @@ class GenericSduiViewModelTest {
         val mappedData = listOf(mockk<NetworkScreenData>())
 
         userProfileFlow.value = UserDto(roles = listOf("user"))
-        coEvery { screenRepository.getScreenFlow(screenId) } returns flowOf(Result.Success(dtos))
+        every { screenRepository.getScreenFlow(screenId) } returns flowOf(Result.Success(dtos))
         
         val captor = slot<List<ScreenDto>>()
         every { mapper.mapToData(capture(captor)) } returns mappedData
@@ -115,11 +115,11 @@ class GenericSduiViewModelTest {
         val screenId = "test_screen"
         val userId = "user123"
         every { accountService.currentUserId } returns userId
-        coEvery { screenRepository.getScreenFlow(screenId, forceRefresh = true) } returns flowOf(Result.Loading)
+        every { screenRepository.getScreenFlow(screenId, forceRefresh = true) } returns flowOf(Result.Loading)
 
         viewModel.refresh(screenId)
 
-        coVerify { screenRepository.getScreenFlow(screenId, forceRefresh = true) }
+        verify { screenRepository.getScreenFlow(screenId, forceRefresh = true) }
         coVerify { babyRepository.refreshData(userId, 20) }
     }
 }

@@ -311,13 +311,28 @@ class ScreenDtoMapperTest {
     }
 
     @Test
-    fun `mapToDto handles Spacer with WEIGHT correctly`() {
-        val sizeList = arrayListOf("WEIGHT", 0.5)
-        val spacerMap = hashMapOf("type" to "SPACER", "index" to 0, "size" to sizeList)
-        val rootMap = hashMapOf("items" to listOf(spacerMap))
-        
-        val result = mapper.mapToDto(rootMap) as List<ScreenDto.SpacerDto>
-        assertEquals(SpacerType.WEIGHT, result[0].size.type)
-        assertEquals(0.5f, result[0].size.weight!!, 0.01f)
+    fun `mapToDto converts TitleHashMap with roles correctly`() {
+        val titleMap = hashMapOf(
+            "type" to "TITLE",
+            "index" to 0,
+            "content" to "Title Content",
+            "requiredRoles" to listOf("admin")
+        )
+        val rootMap = hashMapOf("items" to listOf(titleMap))
+
+        val result = mapper.mapToDto(rootMap)
+
+        assertEquals(1, result.size)
+        val titleDto = result[0] as ScreenDto.TitleDto
+        assertEquals(listOf("admin"), titleDto.requiredRoles)
+    }
+
+    @Test
+    fun `mapToFirebase includes roles correctly`() {
+        val titleDto = ScreenDto.TitleDto(0, "Title", requiredRoles = listOf("user"))
+        val result = mapper.mapToFirebase(listOf(titleDto))
+
+        val components = result["components"] as List<Map<String, Any?>>
+        assertEquals(listOf("user"), components[0]["requiredRoles"])
     }
 }

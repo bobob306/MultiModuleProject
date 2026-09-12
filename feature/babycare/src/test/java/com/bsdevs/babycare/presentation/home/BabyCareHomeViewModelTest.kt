@@ -88,7 +88,7 @@ class BabyCareHomeViewModelTest {
         screenRepository = mockk(relaxed = true)
         mapper = mockk(relaxed = true)
         
-        coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(emptyList()))
+        every { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(emptyList()))
         every { mapper.mapToData(any()) } returns emptyList()
         
         // viewModel init triggers initialLoad which uses repository
@@ -137,7 +137,7 @@ class BabyCareHomeViewModelTest {
         val mockData = mockk<NetworkScreenData>()
         val dynamicUi = listOf(mockData)
         every { mapper.mapToData(any()) } returns dynamicUi
-        coEvery { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(listOf(mockk())))
+        every { screenRepository.getScreenFlow("baby_home", any()) } returns flowOf(Result.Success(listOf(mockk())))
         
         // When recreating VM to trigger init
         val vm = BabyCareHomeViewModel(repository, accountService, screenRepository, userRepo, mapper, dispatchers)
