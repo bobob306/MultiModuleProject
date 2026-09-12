@@ -17,9 +17,10 @@ import com.bsdevs.data.local.entities.*
         FormSchemaEntity::class,
         FormSubmissionEntity::class,
         CoffeeEntity::class,
-        DynamicOptionsEntity::class
+        DynamicOptionsEntity::class,
+        TaskEntity::class
     ],
-    version = 3,
+    version = 4,
     autoMigrations = [
         AutoMigration(from = 2, to = 3)
     ],
@@ -33,4 +34,5 @@ abstract class MMPDatabase : RoomDatabase() {
     abstract fun babyEventDao(): BabyEventDao
     abstract fun formDao(): FormDao
     abstract fun coffeeDao(): CoffeeDao
+    abstract fun taskDao(): TaskDao
 }

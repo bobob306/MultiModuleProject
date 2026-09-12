@@ -10,6 +10,7 @@ import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.network.dto.UserDto
 import com.bsdevs.network.dto.BabyEvent
 import com.bsdevs.network.dto.CoffeeDto
+import com.bsdevs.network.dto.TaskDto
 
 @Entity(tableName = "screens")
 data class ScreenEntity(
@@ -37,6 +38,16 @@ data class ShoppingItemEntity(
     @PrimaryKey val id: String,
     val babyId: String,
     val item: ShoppingListDto,
+    val lastUpdated: Long = System.currentTimeMillis(),
+    val isPendingSync: Boolean = false,
+    val isDeleted: Boolean = false
+)
+
+@Entity(tableName = "task_items")
+data class TaskEntity(
+    @PrimaryKey val id: String,
+    val babyId: String,
+    val item: TaskDto,
     val lastUpdated: Long = System.currentTimeMillis(),
     val isPendingSync: Boolean = false,
     val isDeleted: Boolean = false

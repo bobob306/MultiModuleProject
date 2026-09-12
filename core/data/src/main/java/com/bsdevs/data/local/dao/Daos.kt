@@ -11,6 +11,7 @@ import com.bsdevs.data.local.entities.FormSubmissionEntity
 import com.bsdevs.data.local.entities.DynamicOptionsEntity
 import com.bsdevs.data.local.entities.ScreenEntity
 import com.bsdevs.data.local.entities.ShoppingItemEntity
+import com.bsdevs.data.local.entities.TaskEntity
 import com.bsdevs.data.local.entities.UserEntity
 import com.bsdevs.data.local.entities.CoffeeEntity
 import kotlinx.coroutines.flow.Flow
@@ -78,6 +79,27 @@ interface ShoppingDao {
     suspend fun deleteById(itemId: String)
 
     @Query("DELETE FROM shopping_items")
+    suspend fun clearAll()
+}
+
+@Dao
+interface TaskDao {
+    @Query("SELECT * FROM task_items WHERE babyId = :babyId AND isDeleted = 0")
+    fun getTasks(babyId: String): Flow<List<TaskEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTasks(tasks: List<TaskEntity>)
+
+    @Query("UPDATE task_items SET isDeleted = 1, isPendingSync = 1 WHERE id = :taskId")
+    suspend fun markDeleted(taskId: String)
+
+    @Query("SELECT * FROM task_items WHERE isPendingSync = 1")
+    suspend fun getPendingSync(): List<TaskEntity>
+
+    @Query("DELETE FROM task_items WHERE id = :taskId")
+    suspend fun deleteById(taskId: String)
+
+    @Query("DELETE FROM task_items")
     suspend fun clearAll()
 }
 

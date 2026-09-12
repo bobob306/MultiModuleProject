@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -33,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bsdevs.network.dto.ShoppingListDto
 import com.bsdevs.uicomponents.DeleteConfirmationDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,30 +43,62 @@ fun LazyListScope.ShoppingListItems(
 ) {
     item(key = "shopping_header") {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        ShoppingListHeader(
-            name = uiState.newItemName,
-            onNameChange = viewModel::onNewItemNameChange,
-            onSave = viewModel::addItem
-        )
+        
+        Column {
+            TabRow(selectedTabIndex = uiState.selectedTab.ordinal) {
+                Tab(
+                    selected = uiState.selectedTab == ShoppingListTab.SHOPPING,
+                    onClick = { viewModel.selectTab(ShoppingListTab.SHOPPING) },
+                    text = { Text("Shopping") }
+                )
+                Tab(
+                    selected = uiState.selectedTab == ShoppingListTab.TASKS,
+                    onClick = { viewModel.selectTab(ShoppingListTab.TASKS) },
+                    text = { Text("Tasks") }
+                )
+            }
+            
+            ShoppingListHeader(
+                name = uiState.newItemName,
+                label = if (uiState.selectedTab == ShoppingListTab.SHOPPING) "New Shopping Item" else "New Task",
+                onNameChange = viewModel::onNewItemNameChange,
+                onSave = viewModel::addItem
+            )
+        }
     }
 
     item(key = "shopping_content") {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            uiState.items.forEach { item ->
-                ShoppingListItem(
-                    item = item,
-                    onEdit = { viewModel.setEditingItem(item.id) },
-                    onDelete = { item.id?.let { viewModel.setDeletingItem(it) } }
-                )
+            if (uiState.selectedTab == ShoppingListTab.SHOPPING) {
+                uiState.items.forEach { item ->
+                    ShoppingListItem(
+                        name = item.name ?: "",
+                        onEdit = { viewModel.setEditingItem(item.id) },
+                        onDelete = { item.id?.let { viewModel.setDeletingItem(it) } }
+                    )
+                }
+            } else {
+                uiState.taskItems.forEach { task ->
+                    ShoppingListItem(
+                        name = task.name ?: "",
+                        onEdit = { viewModel.setEditingItem(task.id) },
+                        onDelete = { task.id?.let { viewModel.setDeletingItem(it) } }
+                    )
+                }
             }
         }
 
         if (uiState.deletingItemId != null) {
+            val deletingName = if (uiState.selectedTab == ShoppingListTab.SHOPPING) {
+                uiState.itemToDelete?.name
+            } else {
+                uiState.taskToEdit?.name
+            }
             DeleteConfirmationDialog(
-                title = "Delete Item",
-                text = "Are you sure you want to delete '${uiState.itemToDelete?.name}'? This cannot be undone.",
+                title = if (uiState.selectedTab == ShoppingListTab.SHOPPING) "Delete Item" else "Delete Task",
+                text = "Are you sure you want to delete '$deletingName'? This cannot be undone.",
                 onConfirm = viewModel::confirmDelete,
                 onDismiss = { viewModel.setDeletingItem(null) }
             )
@@ -74,6 +107,7 @@ fun LazyListScope.ShoppingListItems(
         if (uiState.editingItemId != null) {
             EditItemDialog(
                 name = uiState.editingName,
+                label = if (uiState.selectedTab == ShoppingListTab.SHOPPING) "Item Name" else "Task Name",
                 onNameChange = viewModel::onEditingNameChange,
                 onDismiss = { viewModel.setEditingItem(null) },
                 onConfirm = viewModel::saveEdit
@@ -85,6 +119,7 @@ fun LazyListScope.ShoppingListItems(
 @Composable
 fun ShoppingListHeader(
     name: String,
+    label: String,
     onNameChange: (String) -> Unit,
     onSave: () -> Unit
 ) {
@@ -92,7 +127,7 @@ fun ShoppingListHeader(
         OutlinedTextField(
             value = name,
             onValueChange = onNameChange,
-            label = { Text("New Item") },
+            label = { Text(label) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -108,7 +143,7 @@ fun ShoppingListHeader(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListItem(
-    item: ShoppingListDto,
+    name: String,
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -163,7 +198,7 @@ fun ShoppingListItem(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = item.name ?: "",
+                text = name,
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -174,18 +209,19 @@ fun ShoppingListItem(
 @Composable
 fun EditItemDialog(
     name: String,
+    label: String,
     onNameChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Edit Item") },
+        title = { Text("Edit") },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                label = { Text("Item Name") }
+                label = { Text(label) }
             )
         },
         confirmButton = {
