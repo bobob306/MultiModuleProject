@@ -3,8 +3,10 @@ package com.bsdevs.firstscreen.screen
 import app.cash.turbine.test
 import com.bsdevs.authentication.AccountService
 import com.bsdevs.network.dto.UserDto
+import com.bsdevs.data.repository.MetadataRepository
 import com.bsdevs.data.repository.UserRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +27,7 @@ class SplashScreenViewModelTest {
 
     private lateinit var accountService: AccountService
     private lateinit var userRepository: UserRepository
+    private lateinit var metadataRepository: MetadataRepository
     private lateinit var viewModel: SplashScreenViewModel
 
     @Before
@@ -32,7 +35,8 @@ class SplashScreenViewModelTest {
         Dispatchers.setMain(testDispatcher)
         accountService = mockk()
         userRepository = mockk()
-        viewModel = SplashScreenViewModel(accountService, userRepository)
+        metadataRepository = mockk(relaxed = true)
+        viewModel = SplashScreenViewModel(accountService, userRepository, metadataRepository)
     }
 
     @After
@@ -47,6 +51,7 @@ class SplashScreenViewModelTest {
         viewModel.navigationEvent.test {
             viewModel.onAppStart()
             assertEquals(SplashScreenNavigationEvents.NavigateToSignInScreen, awaitItem())
+            coVerify { metadataRepository.fetchMetadata() }
         }
     }
 
@@ -60,6 +65,7 @@ class SplashScreenViewModelTest {
         viewModel.navigationEvent.test {
             viewModel.onAppStart()
             assertEquals(SplashScreenNavigationEvents.NavigateToHomeScreen, awaitItem())
+            coVerify { metadataRepository.fetchMetadata() }
         }
     }
 
@@ -73,6 +79,7 @@ class SplashScreenViewModelTest {
         viewModel.navigationEvent.test {
             viewModel.onAppStart()
             assertEquals(SplashScreenNavigationEvents.NavigateToHomeScreen, awaitItem())
+            coVerify { metadataRepository.fetchMetadata() }
         }
     }
 }

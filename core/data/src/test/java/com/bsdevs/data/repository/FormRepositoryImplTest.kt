@@ -34,6 +34,7 @@ class FormRepositoryImplTest {
     private lateinit var mapper: FormDtoMapper
     private lateinit var formDao: FormDao
     private lateinit var syncManager: SyncManager
+    private lateinit var userRepository: UserRepository
     private lateinit var repository: FormRepositoryImpl
     private lateinit var dispatchers: DispatcherProvider
 
@@ -43,6 +44,7 @@ class FormRepositoryImplTest {
         firestore = mockk(relaxed = true)
         firestoreHolder = mockk(relaxed = true)
         every { firestoreHolder.firestore } returns firestore
+        userRepository = mockk(relaxed = true)
         mapper = mockk()
         formDao = mockk(relaxed = true)
         syncManager = mockk(relaxed = true)
@@ -52,7 +54,7 @@ class FormRepositoryImplTest {
             override val io = testDispatcher
             override val default = testDispatcher
         }
-        repository = FormRepositoryImpl(firestoreHolder, mapper, dispatchers, formDao, syncManager)
+        repository = FormRepositoryImpl(firestoreHolder, userRepository, mapper, dispatchers, formDao, syncManager)
     }
 
     @After
