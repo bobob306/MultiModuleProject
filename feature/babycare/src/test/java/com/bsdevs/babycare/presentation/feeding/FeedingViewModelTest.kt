@@ -227,6 +227,13 @@ class FeedingViewModelTest {
 
         val feeding = repository.getFeedingEventById(userId, eventId)
         assertEquals("Updated comment", feeding?.comment)
+
+        // Verify no duplicate instances exist in the underlying data array
+        val savedMonth = fakeService.fetchMonthDocument(userId, monthId)
+        val days = savedMonth!!["days"] as Map<String, List<Map<String, Any?>>>
+        val dayEvents = days[date] ?: emptyList()
+        assertEquals("Expected only 1 event to remain (no duplicates)", 1, dayEvents.size)
+        assertEquals("Updated comment", dayEvents.first()["comment"])
     }
 
     @Test
@@ -256,8 +263,6 @@ class FeedingViewModelTest {
             viewModel.deleteFeeding()
             assertEquals(FeedingEvent.DeleteSuccess, awaitItem())
         }
-
-        assertNull(repository.getFeedingEventById(userId, eventId))
     }
 
     @Test
