@@ -13,6 +13,10 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
         userStore[monthId] = data.toMutableMap()
     }
 
+    fun clearMonthData(userId: String, monthId: String) {
+        dataStore[userId]?.remove(monthId)
+    }
+
     override suspend fun getLatestMonthId(userId: String, forceRefresh: Boolean): String? {
         return dataStore[userId]?.keys?.sortedDescending()?.firstOrNull()
     }
@@ -38,9 +42,11 @@ class FakeBabyCareFirestoreService : BabyCareFirestoreService {
 
     override suspend fun updateEvent(userId: String, monthId: String, date: String, eventId: String, updatedEvent: Map<String, Any?>) {
         val monthDoc = dataStore[userId]?.get(monthId) ?: return
-        val days = monthDoc["days"] as? MutableMap<String, List<Map<String, Any?>>> ?: return
-        val events = days[date] ?: return
-        days[date] = events.map { if (it["id"] == eventId) updatedEvent else it }
+        val days = monthDoc["days"] as? Map<String, List<Map<String, Any?>>> ?: return
+        val mutableDays = days.toMutableMap()
+        val events = mutableDays[date] ?: return
+        mutableDays[date] = events.map { if (it["id"] == eventId) updatedEvent else it }
+        monthDoc["days"] = mutableDays
     }
 
     override suspend fun deleteEvent(userId: String, monthId: String, date: String, eventId: String) {

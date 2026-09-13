@@ -406,7 +406,31 @@ class BabyCareRepositoryImpl @Inject constructor(
         }
 
         try {
-            syncSave(userId, date, updatedEvent)
+            when (updatedEvent) {
+                is BabyEvent.Measurement -> apiService.updateMeasurement(userId, eventId, toMap(updatedEvent))
+                is BabyEvent.Vaccination -> apiService.updateVaccination(userId, eventId, toMap(updatedEvent))
+                else -> {
+                    val monthId = extractMonthString(date)
+                    apiService.updateEvent(userId, monthId, date, eventId, toMap(updatedEvent))
+                }
+            }
+            getAuthorizedBabyId(userId)?.let { babyId ->
+                babyEventDao.insertEvents(listOf(BabyEventEntity(eventId, babyId, date, updatedEvent, isPendingSync = false)))
+            }
+            
+            // 🧠 Update memory to reflect synced status
+            val syncedEvent = updatedEvent.withPendingSync(false)
+            when (syncedEvent) {
+                is BabyEvent.Measurement -> {
+                    _measurements.value = _measurements.value.map { if (it.id == eventId) syncedEvent else it }
+                }
+                is BabyEvent.Vaccination -> {
+                    _vaccinations.value = _vaccinations.value.map { if (it.id == eventId) syncedEvent else it }
+                }
+                else -> {
+                    updateLocalCacheWithModifiedEvent(date, userId, eventId, syncedEvent)
+                }
+            }
         } catch (e: Exception) {
             Log.e("BABYCARE_REPO", "Network sync failed for updated event", e)
         }
