@@ -147,13 +147,9 @@ class FormRepositoryImpl @Inject constructor(
 
     override suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>) {
         try {
-            // ONLY seed into Room for immediate offline availability if missing
-            val existingCached = formDao.getSchema(formId)
-            if (existingCached == null) {
-                Log.d("FORM_REPO", "First time use: Seeding $formId into local Room cache")
-                val dto = mapper.mapToDto(data)
-                formDao.insertSchema(FormSchemaEntity(formId, dto))
-            }
+            Log.d("FORM_REPO", "Seeding/updating $formId into local Room cache")
+            val dto = mapper.mapToDto(data)
+            formDao.insertSchema(FormSchemaEntity(formId, dto))
         } catch (e: Exception) {
             Log.e("FORM_REPO", "Failed to seed local form $formId", e)
         }
