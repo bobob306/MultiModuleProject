@@ -48,7 +48,10 @@ fun FormFieldItem(
     onFieldChanged: (String, Any) -> Unit,
 ) {
     val isVisible = field.showWhen?.let { condition ->
-        fieldValues[condition.fieldKey] == condition.equals
+        val actual = fieldValues[condition.fieldKey]
+        val expected = condition.equals
+        actual == expected || 
+        (actual != null && actual.toString().lowercase() == expected.toString().lowercase())
     } ?: true
     if (!isVisible) return
 

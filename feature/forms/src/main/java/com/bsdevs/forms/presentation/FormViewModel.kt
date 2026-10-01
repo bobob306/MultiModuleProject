@@ -147,7 +147,12 @@ class FormViewModel @Inject constructor(
 
         val missingLabels = schema.fields
             .filter { field ->
-                val visible = field.showWhen?.let { values[it.fieldKey] == it.equals } ?: true
+                val visible = field.showWhen?.let { condition ->
+                    val actual = values[condition.fieldKey]
+                    val expected = condition.equals
+                    actual == expected || 
+                    (actual != null && actual.toString().lowercase() == expected.toString().lowercase())
+                } ?: true
                 field.required && visible && !values.containsKey(field.fieldKey)
             }
             .map { it.label }

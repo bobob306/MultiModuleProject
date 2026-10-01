@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.flowOf
 class FakeFormRepository : FormRepository {
     val seededForms = mutableMapOf<String, Map<String, Any>>()
 
-    override suspend fun getFormSchema(formId: String): Flow<Result<FormSchemaDto>> =
+    override suspend fun getFormSchema(formId: String, forceRefresh: Boolean): Flow<Result<FormSchemaDto>> =
         flowOf(Result.Error(UnsupportedOperationException("Not used in ViewModel tests")))
 
     override suspend fun submitForm(userId: String, formId: String, values: Map<String, Any>): Result<Unit> =

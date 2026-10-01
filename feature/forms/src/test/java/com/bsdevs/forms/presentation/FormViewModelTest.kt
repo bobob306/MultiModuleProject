@@ -406,7 +406,7 @@ private class FakeFormRepository : FormRepository {
     private fun getOrCreate(formId: String) =
         flows.getOrPut(formId) { MutableStateFlow(Result.Loading) }
 
-    override suspend fun getFormSchema(formId: String): Flow<Result<FormSchemaDto>> = getOrCreate(formId)
+    override suspend fun getFormSchema(formId: String, forceRefresh: Boolean): Flow<Result<FormSchemaDto>> = getOrCreate(formId)
     override suspend fun submitForm(userId: String, formId: String, values: Map<String, Any>): Result<Unit> = Result.Success(Unit)
     override suspend fun getPreviousSubmission(userId: String, formId: String): FormSubmissionDto? = null
     override suspend fun seedFormIfAbsent(formId: String, data: Map<String, Any>) {}
