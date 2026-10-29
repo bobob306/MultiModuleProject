@@ -381,7 +381,7 @@ fun GrowthChartSection(
             } ?: 0.0
 
             val relevantWhoData = whoData.takeIf { showWhoOverlay && parsedBirthDate != null }?.let { data ->
-                val filtered = data.filter { it.month <= ageAtLastMeasurementMonths + 2 }
+                val filtered = data.filter { it.month <= maxOf(12.0, ageAtLastMeasurementMonths + 2) }
                 if (filtered.size < 2 && data.size >= 2) data.take(2) else filtered
             } ?: emptyList()
 
